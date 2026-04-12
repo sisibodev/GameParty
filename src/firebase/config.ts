@@ -1,5 +1,10 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth, GoogleAuthProvider } from 'firebase/auth'
+import {
+  initializeAuth,
+  GoogleAuthProvider,
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+} from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getDatabase } from 'firebase/database'
 import type { Database } from 'firebase/database'
@@ -18,11 +23,16 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 
-export const auth = getAuth(app)
+// initializeAuth로 명시적 설정 — 비Firebase Hosting(GitHub Pages 등)에서
+// init.json 없이도 signInWithRedirect/Popup 모두 정상 동작하게 함
+export const auth = initializeAuth(app, {
+  persistence: browserLocalPersistence,
+  popupRedirectResolver: browserPopupRedirectResolver,
+})
+
 export const googleProvider = new GoogleAuthProvider()
 export const db = getFirestore(app)
 
-// Realtime Database — 주식 보드게임 멀티플레이에 사용. databaseURL 설정 후 활성화됨.
 export const rtdb: Database | null = import.meta.env.VITE_FIREBASE_DATABASE_URL
   ? getDatabase(app)
   : null
