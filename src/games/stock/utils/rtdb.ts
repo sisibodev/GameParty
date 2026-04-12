@@ -165,12 +165,18 @@ export async function calculateRoundResult(roomId: string, round: number) {
   const companies = Object.values(room.companies)
   const cardPlaysThisRound = room.cardPlays?.[round] ?? {}
 
-  // 각 회사별 유효 등락률 계산
-  const effectiveRates: Record<string, number> = {}
+  // 기본 등락률 (카드 적용 전) 저장
+  const baseRates: Record<string, number> = {}
   for (const company of companies) {
     const prevPrice = company.priceHistory[round - 1] ?? company.priceHistory[0]
     const seededPrice = company.priceHistory[round] ?? prevPrice
-    let rate = prevPrice > 0 ? (seededPrice - prevPrice) / prevPrice : 0
+    baseRates[company.id] = prevPrice > 0 ? (seededPrice - prevPrice) / prevPrice : 0
+  }
+
+  // 각 회사별 유효 등락률 계산
+  const effectiveRates: Record<string, number> = { ...baseRates }
+  for (const company of companies) {
+    let rate = effectiveRates[company.id]
 
     // 특수 카드 적용
     const playsOnThis = Object.values(cardPlaysThisRound).filter(p => p.companyId === company.id)
@@ -234,6 +240,7 @@ export async function calculateRoundResult(roomId: string, round: number) {
 
   const roundResult: RoundResult = {
     round,
+    baseRates,
     finalRates: effectiveRates,
     roundCardType: roundCard,
     rankSnapshot,

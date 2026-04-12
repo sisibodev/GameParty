@@ -107,7 +107,8 @@ export interface RoomSettings {
 
 export interface RoundResult {
   round: number
-  finalRates: { [companyId: string]: number }  // 최종 등락률 (소수, 예: 0.15 = +15%)
+  baseRates: { [companyId: string]: number }   // 카드 적용 전 등락률
+  finalRates: { [companyId: string]: number }  // 최종 등락률 (카드 모두 적용 후)
   roundCardType: RoundCardType
   rankSnapshot: { uid: string; rank: number }[]
 }

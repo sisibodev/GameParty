@@ -13,6 +13,8 @@
   background: var(--color-bg);
 }
 
+/* ── 헤더 ─────────────────────────────────────────── */
+
 .header {
   display: flex;
   align-items: center;
@@ -32,6 +34,8 @@
   border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
+/* ── 바디 ─────────────────────────────────────────── */
+
 .body {
   flex: 1;
   display: flex;
@@ -43,7 +47,7 @@
   width: 100%;
 }
 
-/* ── 계산 중 스피너 ───────────────────────────────── */
+/* ── 계산 중 스피너 ──────────────────────────────── */
 
 .calculating {
   flex: 1;
@@ -68,40 +72,6 @@
   animation: spin 0.8s linear infinite;
 }
 
-/* ── 라운드 카드 박스 ─────────────────────────────── */
-
-.roundCardBox {
-  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15));
-  border: 1px solid rgba(168, 85, 247, 0.4);
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.roundCardInner {
-  padding: 1.25rem;
-  text-align: center;
-}
-
-.roundCardTitle {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-text-muted);
-  margin-bottom: 0.5rem;
-}
-
-.roundCardName {
-  font-size: 1.3rem;
-  font-weight: 800;
-  margin-bottom: 0.4rem;
-}
-
-.roundCardDesc {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
 /* ── 공통 카드 ────────────────────────────────────── */
 
 .card {
@@ -111,11 +81,20 @@
   padding: 1rem 1.1rem;
 }
 
+.rankCard {
+  animation: fadeSlideIn 0.4s ease;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .sectionTitle {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--color-text-muted);
   margin-bottom: 0.75rem;
 }
@@ -125,13 +104,13 @@
 .priceList {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.4rem;
 }
 
 .priceRow {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.55rem;
   padding: 0.35rem 0;
   border-bottom: 1px solid var(--color-border);
 }
@@ -139,12 +118,7 @@
 .priceRow:last-child { border-bottom: none; }
 
 .companyEmoji { font-size: 1.1rem; flex-shrink: 0; }
-
-.companyName {
-  flex: 1;
-  font-size: 0.88rem;
-  font-weight: 500;
-}
+.companyName  { flex: 1; font-size: 0.88rem; font-weight: 500; }
 
 .priceChange {
   display: flex;
@@ -154,9 +128,9 @@
 }
 
 .priceVal {
-  font-size: 0.85rem;
+  font-size: 0.83rem;
   font-variant-numeric: tabular-nums;
-  color: var(--color-text);
+  transition: color 0.3s;
 }
 
 .rateVal {
@@ -165,6 +139,7 @@
   font-variant-numeric: tabular-nums;
   min-width: 4.5rem;
   text-align: right;
+  transition: color 0.3s;
 }
 
 .pnl {
@@ -173,40 +148,186 @@
   font-variant-numeric: tabular-nums;
   min-width: 5.5rem;
   text-align: right;
+  animation: fadeSlideIn 0.3s ease;
 }
 
-/* ── 카드 사용 내역 ──────────────────────────────── */
+/* ── 카드 플립 공통 ───────────────────────────────── */
 
-.cardPlayList {
+.cardFlip,
+.roundCardFlip {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cardFlip.flipped,
+.roundCardFlip.flipped {
+  transform: rotateY(180deg);
+}
+
+/* ── 카드 뒷면 ────────────────────────────────────── */
+
+.cardBack,
+.cardFront {
+  border-radius: 10px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  position: absolute;
+  inset: 0;
+}
+
+.cardBack {
+  background: linear-gradient(160deg, #0d1b2a 0%, #0a1628 50%, #0d1f38 100%);
+  border: 1.5px solid #1e3a5f;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-}
-
-.cardPlayRow {
-  display: flex;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 0.83rem;
-  padding: 0.3rem 0;
-  border-bottom: 1px solid var(--color-border);
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
 }
 
-.cardPlayRow:last-child { border-bottom: none; }
-
-.cardPlayName {
-  font-weight: 600;
-  min-width: 5rem;
+.cardBackRound {
+  background: linear-gradient(160deg, #1a0d2e 0%, #180a28 50%, #1f0d38 100%);
+  border-color: #3a1e6f;
 }
 
-.cardPlayType {
-  color: var(--color-primary);
-  font-weight: 600;
+.cardBackSvg {
+  width: 75%;
+  height: auto;
+  opacity: 0.7;
 }
 
-.cardPlayTarget {
+.cardBackIcon {
+  font-size: 1.4rem;
+  margin-top: 0.2rem;
+  filter: drop-shadow(0 0 6px rgba(255,193,7,0.4));
+}
+
+.cardBackCornerTL,
+.cardBackCornerBR {
+  position: absolute;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.2);
+}
+
+.cardBackCornerTL { top: 4px; left: 6px; }
+.cardBackCornerBR { bottom: 4px; right: 6px; }
+
+/* ── 특수카드 앞면 ────────────────────────────────── */
+
+.cardFront {
+  transform: rotateY(180deg);
+  background: linear-gradient(160deg, #0f1923 0%, #141e2e 100%);
+  border: 1.5px solid #666;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.4rem;
+  text-align: center;
+  gap: 0.3rem;
+}
+
+.cardFrontType {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.cardFrontDesc {
+  font-size: 0.58rem;
   color: var(--color-text-muted);
-  flex: 1;
+  line-height: 1.3;
+}
+
+.cardFrontTarget {
+  font-size: 0.62rem;
+  color: rgba(255,255,255,0.5);
+  margin-top: 0.1rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 0.25rem;
+  width: 100%;
+  text-align: center;
+}
+
+/* ── 특수카드 목록 ────────────────────────────────── */
+
+.specialCardsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.cardWrap {
+  perspective: 800px;
+  transition: transform 0.2s;
+}
+
+.cardFlip {
+  width: 88px;
+  height: 120px;
+  cursor: default;
+}
+
+.cardHighlight {
+  transform: scale(1.06);
+  filter: drop-shadow(0 0 10px rgba(255, 193, 7, 0.5));
+}
+
+/* ── 라운드카드 ───────────────────────────────────── */
+
+.roundCardWrap {
+  perspective: 1000px;
+  display: flex;
+  justify-content: center;
+}
+
+.roundCardFlip {
+  width: 160px;
+  height: 210px;
+}
+
+.roundCardFront {
+  transform: rotateY(180deg);
+  background: linear-gradient(160deg, #0f1020 0%, #151025 100%);
+  border: 2px solid #fff;
+  border-radius: 14px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 0.75rem;
+  text-align: center;
+  gap: 0.5rem;
+  position: absolute;
+  inset: 0;
+}
+
+.roundCardLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+}
+
+.roundCardName {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.roundCardDesc {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
 }
 
 /* ── 순위 ─────────────────────────────────────────── */
@@ -214,14 +335,14 @@
 .rankList {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .rankRow {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0.5rem;
+  padding: 0.45rem 0.5rem;
   border-radius: 8px;
   font-size: 0.88rem;
 }
@@ -231,25 +352,22 @@
   font-weight: 700;
 }
 
-.rankNum {
-  min-width: 2.75rem;
-  font-weight: 700;
-  font-size: 1rem;
-}
-
+.rankNum { min-width: 2.75rem; font-size: 1rem; }
 .rankName { flex: 1; }
 
-.rankAssets {
-  font-variant-numeric: tabular-nums;
-  font-size: 0.85rem;
+/* ── 하단 상태 메시지 ─────────────────────────────── */
+
+.revealingHint {
+  text-align: center;
   color: var(--color-text-muted);
+  font-size: 0.83rem;
+  padding: 0.5rem 0;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
-.myRankNote {
-  text-align: center;
-  font-size: 0.78rem;
-  color: var(--color-text-muted);
-  margin-top: 0.75rem;
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
 }
 
 /* ── 다음 라운드 버튼 ─────────────────────────────── */
@@ -265,7 +383,7 @@
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s;
-  margin-top: 0.25rem;
+  animation: fadeSlideIn 0.4s ease;
 }
 
 .nextBtn:hover { background: var(--color-primary-hover); }
@@ -275,4 +393,5 @@
   color: var(--color-text-muted);
   font-size: 0.85rem;
   padding: 1rem 0;
+  animation: fadeSlideIn 0.4s ease;
 }
