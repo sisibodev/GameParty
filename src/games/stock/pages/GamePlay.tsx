@@ -106,7 +106,7 @@ export default function GamePlay() {
 
     // 같은 회사에 이미 사용했는지 체크
     if (me.usedSpecialThisRound > 0) {
-      const alreadyUsed = Object.values(room.cardPlays[room.currentRound] ?? {})
+      const alreadyUsed = Object.values(room.cardPlays?.[room.currentRound] ?? {})
         .filter(p => p.userId === user.uid)
         .map(p => p.companyId)
       if (alreadyUsed.includes(companyId)) {
@@ -125,9 +125,9 @@ export default function GamePlay() {
   const companies = Object.values(room.companies)
   const selCompany = selectedCompany ? room.companies[selectedCompany] : null
   const selPrice = selCompany ? selCompany.priceHistory[room.currentRound - 1] ?? selCompany.priceHistory[0] : 0
-  const mySpecialCards = me?.cards.filter(c => c.category === 'special' && !c.used) ?? []
-  const myInfoCards = me?.cards.filter(c => c.category === 'info' && !c.used) ?? []
-  const myHolding = selectedCompany ? (me?.portfolio[selectedCompany] ?? 0) : 0
+  const mySpecialCards = me?.cards?.filter(c => c.category === 'special' && !c.used) ?? []
+  const myInfoCards = me?.cards?.filter(c => c.category === 'info' && !c.used) ?? []
+  const myHolding = selectedCompany ? (me?.portfolio?.[selectedCompany] ?? 0) : 0
 
   const timerPct = room.settings.timerSeconds > 0 ? timeLeft / room.settings.timerSeconds : 0
   const timerColor = timerPct > 0.4 ? '#4caf50' : timerPct > 0.15 ? '#ff9800' : '#f44336'
@@ -159,7 +159,7 @@ export default function GamePlay() {
             const curPrice = c.priceHistory[room.currentRound - 1] ?? c.priceHistory[0]
             const prevPrice = c.priceHistory[room.currentRound - 2] ?? c.priceHistory[0]
             const change = prevPrice > 0 ? (curPrice - prevPrice) / prevPrice : 0
-            const holding = me?.portfolio[c.id] ?? 0
+            const holding = me?.portfolio?.[c.id] ?? 0
             return (
               <div
                 key={c.id}
@@ -319,7 +319,7 @@ export default function GamePlay() {
             <p className={styles.modalDesc}>{CARD_DESC[pendingCard.type]}</p>
             <div className={styles.modalCompanies}>
               {companies.map(c => {
-                const usedOnThis = Object.values(room.cardPlays[room.currentRound] ?? {})
+                const usedOnThis = Object.values(room.cardPlays?.[room.currentRound] ?? {})
                   .filter(p => p.userId === user.uid && p.companyId === c.id).length > 0
                 return (
                   <button
