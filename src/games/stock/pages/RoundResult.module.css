@@ -1,0 +1,278 @@
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  color: var(--color-text-muted);
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 1.5rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.roundBadge {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── 계산 중 스피너 ───────────────────────────────── */
+
+.calculating {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: var(--color-text-muted);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ── 라운드 카드 박스 ─────────────────────────────── */
+
+.roundCardBox {
+  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15));
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.roundCardInner {
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.roundCardTitle {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.roundCardName {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: 0.4rem;
+}
+
+.roundCardDesc {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* ── 공통 카드 ────────────────────────────────────── */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+
+.sectionTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.75rem;
+}
+
+/* ── 주가 변동 ────────────────────────────────────── */
+
+.priceList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.priceRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.priceRow:last-child { border-bottom: none; }
+
+.companyEmoji { font-size: 1.1rem; flex-shrink: 0; }
+
+.companyName {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.priceChange {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.priceVal {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.rateVal {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 4.5rem;
+  text-align: right;
+}
+
+.pnl {
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 5.5rem;
+  text-align: right;
+}
+
+/* ── 카드 사용 내역 ──────────────────────────────── */
+
+.cardPlayList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cardPlayRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.83rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cardPlayRow:last-child { border-bottom: none; }
+
+.cardPlayName {
+  font-weight: 600;
+  min-width: 5rem;
+}
+
+.cardPlayType {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.cardPlayTarget {
+  color: var(--color-text-muted);
+  flex: 1;
+}
+
+/* ── 순위 ─────────────────────────────────────────── */
+
+.rankList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.rankRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+
+.rankRowMe {
+  background: rgba(99, 102, 241, 0.08);
+  font-weight: 700;
+}
+
+.rankNum {
+  min-width: 2.75rem;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.rankName { flex: 1; }
+
+.rankAssets {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.myRankNote {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-top: 0.75rem;
+}
+
+/* ── 다음 라운드 버튼 ─────────────────────────────── */
+
+.nextBtn {
+  width: 100%;
+  padding: 1rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 0.25rem;
+}
+
+.nextBtn:hover { background: var(--color-primary-hover); }
+
+.waitHint {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  padding: 1rem 0;
+}

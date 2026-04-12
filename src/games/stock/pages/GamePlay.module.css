@@ -1,0 +1,482 @@
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  color: var(--color-text-muted);
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+/* ── 상단 바 ───────────────────────────────────────── */
+
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.roundLabel {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.timerWrap {
+  flex: 1;
+  position: relative;
+  height: 8px;
+  background: var(--color-surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.timerBar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 1s linear, background 0.3s;
+}
+
+.timerText {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cashLabel {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+/* ── 메인 레이아웃 ─────────────────────────────────── */
+
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── 종목 패널 (좌측) ─────────────────────────────── */
+
+.companiesPanel {
+  width: 200px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+  padding: 0.5rem 0;
+}
+
+.companyRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-left: 3px solid transparent;
+}
+
+.companyRow:hover { background: var(--color-surface-2); }
+
+.companyRowSelected {
+  background: rgba(99, 102, 241, 0.08);
+  border-left-color: var(--color-primary);
+}
+
+.companyEmoji { font-size: 1.2rem; flex-shrink: 0; }
+
+.companyInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.companyName {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.holdingBadge {
+  font-size: 0.65rem;
+  color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 4px;
+  padding: 0 4px;
+  align-self: flex-start;
+}
+
+.priceInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  flex-shrink: 0;
+}
+
+.price {
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.change {
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 우측 패널 ────────────────────────────────────── */
+
+.rightPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.75rem;
+  gap: 0.75rem;
+}
+
+/* ── 차트 ─────────────────────────────────────────── */
+
+.chartArea {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.chartPlaceholder {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.chartSvgWrap {
+  width: 100%;
+  padding: 0.5rem 1rem;
+}
+
+.chartSvg {
+  width: 100%;
+  height: 100px;
+  display: block;
+}
+
+.chartMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.25rem 0;
+}
+
+/* ── 매매 영역 ────────────────────────────────────── */
+
+.tradeArea {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  flex-shrink: 0;
+}
+
+.tradeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+
+.tradePrice {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.qtyRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.qtyBtn {
+  width: 32px;
+  height: 32px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qtyBtn:hover { background: var(--color-border); }
+
+.qty {
+  font-size: 1rem;
+  font-weight: 700;
+  min-width: 3rem;
+  text-align: center;
+}
+
+.tradeBtns {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.buyBtn, .sellBtn {
+  flex: 1;
+  padding: 0.6rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.buyBtn {
+  background: #ef5350;
+  color: white;
+}
+
+.sellBtn {
+  background: #1565c0;
+  color: white;
+}
+
+.buyBtn:hover:not(:disabled), .sellBtn:hover:not(:disabled) { filter: brightness(1.15); }
+.buyBtn:disabled, .sellBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.tradePlaceholder {
+  color: var(--color-text-muted);
+  font-size: 0.83rem;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+/* ── 카드 섹션 ────────────────────────────────────── */
+
+.cardSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cardGroup {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+}
+
+.cardGroupLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.cardList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.cardBtn {
+  padding: 0.3rem 0.65rem;
+  background: var(--color-surface-2);
+  border: 1px solid #666;
+  color: var(--color-text);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.1s;
+}
+
+.cardBtn:hover:not(:disabled) { filter: brightness(1.2); }
+.cardBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.draftArea {
+  background: rgba(255, 193, 7, 0.05);
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+}
+
+.draftBtn {
+  border-color: #ffc107 !important;
+  background: rgba(255, 193, 7, 0.1);
+}
+
+/* ── 순위 오버레이 ────────────────────────────────── */
+
+.rankOverlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(15, 15, 25, 0.96);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  min-width: 240px;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.rankOverlay h3 {
+  font-size: 1rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.rankRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  font-size: 0.9rem;
+}
+
+.rankRowMe { color: var(--color-primary); font-weight: 700; }
+
+.rankNum {
+  min-width: 2.5rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.rankName { flex: 1; }
+
+.rankHint {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  margin-top: 0.75rem;
+}
+
+/* ── 카드 대상 모달 ──────────────────────────────── */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  max-width: 360px;
+  width: 90%;
+}
+
+.modal h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.modalDesc {
+  font-size: 0.83rem;
+  color: var(--color-text-muted);
+  margin-bottom: 1rem;
+}
+
+.modalCompanies {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.modalCompanyBtn {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.modalCompanyBtn:hover:not(:disabled) { background: var(--color-border); }
+.modalCompanyBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.modalCancel {
+  width: 100%;
+  padding: 0.6rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* ── 방장 강제 종료 버튼 ──────────────────────────── */
+
+.endBtn {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  padding: 0.6rem 1.25rem;
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.5);
+  color: #ef9a9a;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 50;
+}
+
+.endBtn:hover { background: rgba(244, 67, 54, 0.25); }
