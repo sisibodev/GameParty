@@ -286,7 +286,7 @@ export async function playSpecialCard(
 /** 드래프트 선택 */
 export async function chooseDraft(
   roomId: string,
-  round: number,
+  _round: number,
   uid: string,
   chosenCardId: string,
 ) {

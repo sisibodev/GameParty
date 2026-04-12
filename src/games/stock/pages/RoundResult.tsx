@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
 import { subscribeRoom, unsubscribeRoom, calculateRoundResult, nextRound } from '../utils/rtdb'
 import { formatRate } from '../utils/scenario'
-import { CARD_LABEL, CARD_DESC } from '../utils/cards'
+import { CARD_LABEL } from '../utils/cards'
 import type { Room } from '../types'
 import styles from './RoundResult.module.css'
 
