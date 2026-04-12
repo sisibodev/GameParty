@@ -1,36 +1,32 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { startGoogleSignIn } from '../firebase/auth'
+import { signInWithGoogle } from '../firebase/auth'
 import { useAuth } from '../contexts/AuthContext'
 import styles from './LoginPage.module.css'
 
 export default function LoginPage() {
-  const { user, loading, redirectError, clearRedirectError } = useAuth()
+  const { user, loading } = useAuth()
   const navigate = useNavigate()
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 이미 로그인된 경우 로비로 이동
   useEffect(() => {
     if (!loading && user) navigate('/', { replace: true })
   }, [loading, user, navigate])
-
-  // 리다이렉트 후 접근 거부 에러 처리
-  useEffect(() => {
-    if (redirectError === 'ACCESS_DENIED') {
-      setError('접근이 허용되지 않은 계정입니다.\n플랫폼 운영자에게 문의하세요.')
-      clearRedirectError()
-    }
-  }, [redirectError, clearRedirectError])
 
   async function handleGoogleLogin() {
     setIsSigningIn(true)
     setError(null)
     try {
-      await startGoogleSignIn()
-      // 리다이렉트 되므로 이후 코드는 실행 안 됨
-    } catch {
-      setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.')
+      await signInWithGoogle()
+      navigate('/', { replace: true })
+    } catch (err) {
+      if (err instanceof Error && err.message === 'ACCESS_DENIED') {
+        setError('접근이 허용되지 않은 계정입니다.\n플랫폼 운영자에게 문의하세요.')
+      } else {
+        setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.')
+      }
+    } finally {
       setIsSigningIn(false)
     }
   }
