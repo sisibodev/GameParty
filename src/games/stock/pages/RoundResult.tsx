@@ -201,17 +201,12 @@ export default function RoundResult() {
           <div className={styles.rankList}>
             {playersSorted.map(({ uid, rank, player }) => {
               const isMe = uid === user.uid
-              const totalAssets = (player?.cash ?? 0) + Object.entries(player?.portfolio ?? {}).reduce((sum, [cid, qty]) => {
-                const p = room.companies[cid]?.priceHistory[room.currentRound] ?? 0
-                return sum + p * (qty as number)
-              }, 0)
               return (
                 <div key={uid} className={`${styles.rankRow} ${isMe ? styles.rankRowMe : ''}`}>
                   <span className={styles.rankNum}>
                     {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}위`}
                   </span>
                   <span className={styles.rankName}>{player?.name ?? uid}</span>
-                  <span className={styles.rankAssets}>{totalAssets.toLocaleString()}원</span>
                 </div>
               )
             })}
