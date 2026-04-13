@@ -3,28 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
 import { subscribeRoom, unsubscribeRoom, calculateRoundResult, nextRound } from '../utils/rtdb'
 import { formatRate } from '../utils/scenario'
-import { CARD_LABEL, CARD_DESC, CARD_COLOR } from '../utils/cards'
+import { CARD_LABEL, CARD_DESC, CARD_COLOR, ROUND_CARD_META } from '../utils/cards'
 import type { Room, CardPlay, RoundCardType } from '../types'
 import styles from './RoundResult.module.css'
-
-// ── 라운드 카드 메타 ──────────────────────────────────────────────────────────
-
-const ROUND_CARD_META: Record<string, { label: string; desc: string; color: string }> = {
-  market_boom:    { label: '시장 활황',   desc: '전 종목 +10%p',           color: '#4caf50' },
-  market_crash:   { label: '시장 폭락',   desc: '전 종목 -10%p',           color: '#f44336' },
-  big_boom:       { label: '대호재',      desc: '전 종목 +25%p',           color: '#00e676' },
-  big_crash:      { label: '대폭락',      desc: '전 종목 -25%p',           color: '#ff1744' },
-  volatility_up:  { label: '변동성 확대', desc: '전 종목 등락률 ×1.5',     color: '#ff9800' },
-  volatility_down:{ label: '변동성 축소', desc: '전 종목 등락률 ×0.5',     color: '#78909c' },
-  reversal_day:   { label: '역전의 날',   desc: '전 종목 등락 부호 반전',  color: '#ab47bc' },
-  calm:           { label: '무풍지대',    desc: '전 종목 0% 확정',         color: '#607d8b' },
-  polarization:   { label: '양극화',      desc: '상위 절반 +15%p / 하위 -15%p', color: '#ff7043' },
-  bubble:         { label: '버블',        desc: '상승 종목 ×1.3',          color: '#ffd740' },
-  panic:          { label: '공황',        desc: '전 종목 ×0.7',            color: '#e53935' },
-  rate_hike:      { label: '금리 인상',   desc: '전 종목 -5%p',            color: '#546e7a' },
-  liquidity:      { label: '유동성 장세', desc: '전 종목 +5%p',            color: '#26a69a' },
-  news_blackout:  { label: '뉴스 블랙아웃', desc: '이번 라운드 정보 카드 무효', color: '#424242' },
-}
 
 // ── 클라이언트 사이드 카드 효과 재계산 ───────────────────────────────────────
 

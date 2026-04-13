@@ -3,7 +3,7 @@ import {
 } from 'firebase/database'
 import type { DatabaseReference } from 'firebase/database'
 import { rtdb } from '../../../firebase/config'
-import type { Room, RoomSettings, Player, Trade, RoundResult } from '../types'
+import type { Room, RoomSettings, Player, Trade, RoundResult, RoundCardType } from '../types'
 import { generateCompanies, autoCompanyCount } from './scenario'
 import { createStarterCards, drawDraftOptions, drawRoundCard, drawBonusCards } from './cards'
 
@@ -120,6 +120,7 @@ export async function startGame(roomId: string) {
     [`rooms/${roomId}/roundStartAt`]: serverTimestamp(),
     [`rooms/${roomId}/companies`]: companiesObj,
     [`rooms/${roomId}/roundReady`]: {},
+    [`rooms/${roomId}/roundCard/1`]: drawRoundCard(),  // 1라운드 카드 미리 추첨
   }
   await update(ref(db()), updates)
 }
@@ -162,7 +163,8 @@ export async function calculateRoundResult(roomId: string, round: number) {
   const snap = await get(ref(db(), `rooms/${roomId}`))
   const room = snap.val() as Room
 
-  const roundCard = drawRoundCard()
+  // 라운드 시작 시 미리 추첨된 카드 사용 (없으면 새로 추첨)
+  const roundCard: RoundCardType = (room.roundCard?.[round] as RoundCardType) ?? drawRoundCard()
   const companies = Object.values(room.companies)
   const cardPlaysThisRound = room.cardPlays?.[round] ?? {}
 
@@ -342,6 +344,21 @@ export function unsubscribeRoom(roomRef: DatabaseReference) {
   off(roomRef)
 }
 
+/** 정보 카드 사용 — 카드 used 처리 + usedInfoThisRound 증가 */
+export async function useInfoCard(roomId: string, uid: string, cardId: string) {
+  const playerSnap = await get(ref(db(), `rooms/${roomId}/players/${uid}`))
+  const player = playerSnap.val() as Player
+  const cardsRaw = player.cards
+  const cardsArr: Player['cards'] = Array.isArray(cardsRaw)
+    ? cardsRaw
+    : Object.values(cardsRaw ?? {})
+  const updatedCards = cardsArr.map(c => c.id === cardId ? { ...c, used: true } : c)
+  await update(ref(db(), `rooms/${roomId}/players/${uid}`), {
+    cards: updatedCards,
+    usedInfoThisRound: (player.usedInfoThisRound ?? 0) + 1,
+  })
+}
+
 /** 라운드 레디 설정 */
 export async function setRoundReady(roomId: string, uid: string, ready: boolean) {
   await update(ref(db(), `rooms/${roomId}/roundReady`), { [uid]: ready })
@@ -367,6 +384,7 @@ export async function nextRound(roomId: string, nextRound: number, totalRounds: 
     [`rooms/${roomId}/currentRound`]: nextRound,
     [`rooms/${roomId}/roundStartAt`]: serverTimestamp(),
     [`rooms/${roomId}/roundReady`]: {},
+    [`rooms/${roomId}/roundCard/${nextRound}`]: drawRoundCard(),  // 다음 라운드 카드 미리 추첨
   }
 
   // 3라운드마다 보너스 카드 지급 (라운드 4, 7, 10... = 3, 6, 9라운드 결과 직후)

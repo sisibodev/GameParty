@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
-import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady } from '../utils/rtdb'
+import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady, useInfoCard } from '../utils/rtdb'
 import { formatKRW, formatRate } from '../utils/scenario'
-import { CARD_LABEL, CARD_COLOR, CARD_DESC } from '../utils/cards'
+import { CARD_LABEL, CARD_COLOR, CARD_DESC, ROUND_CARD_META } from '../utils/cards'
 import type { Room, Company, Card } from '../types'
 import styles from './GamePlay.module.css'
 
@@ -17,7 +17,8 @@ export default function GamePlay() {
   const [tradeQty, setTradeQty] = useState(1)
   const [showRank, setShowRank] = useState(false)
   const [timeLeft, setTimeLeft] = useState(0)
-  const [pendingCard, setPendingCard] = useState<Card | null>(null)  // 사용할 카드 선택 상태
+  const [pendingCard, setPendingCard] = useState<Card | null>(null)   // 특수 카드 대상 선택
+  const [infoResult, setInfoResult] = useState<{ title: string; body: string; color?: string } | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const roomRef = useRef<ReturnType<typeof subscribeRoom> | null>(null)
   const endingRef = useRef(false)  // 중복 endRound 방지
@@ -133,6 +134,25 @@ export default function GamePlay() {
     await playSpecialCard(roomId, room.currentRound, user.uid, companyId, pendingCard.id, pendingCard.type as string)
     setPendingCard(null)
   }, [pendingCard, room, user, roomId])
+
+  const handleUseInfoCard = useCallback(async (card: Card) => {
+    if (!room || !user || !roomId) return
+    const me = room.players[user.uid]
+    if (me.usedInfoThisRound >= me.maxInfoThisRound) return
+
+    if (card.type === 'round_forecast') {
+      const roundCard = room.roundCard?.[room.currentRound]
+      if (roundCard) {
+        const meta = ROUND_CARD_META[roundCard]
+        await useInfoCard(roomId, user.uid, card.id)
+        setInfoResult({
+          title: '이번 라운드 이벤트',
+          body: meta ? `${meta.label}\n${meta.desc}` : roundCard,
+          color: meta?.color,
+        })
+      }
+    }
+  }, [room, user, roomId])
 
   if (!room || !user) return <div className={styles.loading}>로딩 중...</div>
 
@@ -306,8 +326,10 @@ export default function GamePlay() {
                     <button
                       key={card.id}
                       className={styles.cardBtn}
-                      style={{ borderColor: '#2196f3' }}
+                      style={{ borderColor: CARD_COLOR[card.type] ?? '#2196f3' }}
                       title={CARD_DESC[card.type]}
+                      disabled={me.usedInfoThisRound >= me.maxInfoThisRound}
+                      onClick={() => handleUseInfoCard(card)}
                     >
                       {CARD_LABEL[card.type]}
                     </button>
@@ -396,6 +418,19 @@ export default function GamePlay() {
         </button>
         <span className={styles.readyCount}>{readyCount} / {totalCount} 준비</span>
       </div>
+
+      {/* 정보 카드 결과 모달 */}
+      {infoResult && (
+        <div className={styles.modalOverlay} onClick={() => setInfoResult(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 style={{ color: infoResult.color ?? 'var(--color-text)' }}>{infoResult.title}</h3>
+            {infoResult.body.split('\n').map((line, i) => (
+              <p key={i} className={i === 0 ? styles.infoResultName : styles.infoResultDesc}>{line}</p>
+            ))}
+            <button className={styles.modalCancel} onClick={() => setInfoResult(null)}>확인</button>
+          </div>
+        </div>
+      )}
 
       {/* 방장 강제 종료 버튼 */}
       {user.uid === room.host && (

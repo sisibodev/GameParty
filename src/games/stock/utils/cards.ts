@@ -42,6 +42,7 @@ const DRAFT_INFO_POOL: InfoCardType[] = [
   'market_scan',
   'portfolio_scan',
   'premium',
+  'round_forecast',
 ]
 
 export function drawDraftOptions(): [Card, Card] {
@@ -99,6 +100,7 @@ export const CARD_LABEL: Record<string, string> = {
   market_scan: '시장 스캔',
   portfolio_scan: '포트폴리오 스캔',
   premium: '특급 카드',
+  round_forecast: '이벤트 예보',
   market_boom: '시장 활황',
   market_crash: '시장 폭락',
   big_boom: '대호재',
@@ -130,6 +132,7 @@ export const CARD_DESC: Record<string, string> = {
   market_scan: '전체 회사 순수 등락 상위 2개 / 하위 2개 공개',
   portfolio_scan: '선택한 플레이어의 보유 종목 목록 공개',
   premium: '이번 라운드 특수 카드 +1장, 정보 카드 +1장',
+  round_forecast: '이번 라운드 이벤트 카드를 미리 확인',
   market_boom: '전 종목 수익률 +10%p',
   market_crash: '전 종목 수익률 -10%p',
   big_boom: '전 종목 수익률 +25%p',
@@ -161,4 +164,24 @@ export const CARD_COLOR: Record<string, string> = {
   market_scan: '#2196f3',
   portfolio_scan: '#2196f3',
   premium: '#ff9800',
+  round_forecast: '#ff9800',
+}
+
+// ─── 라운드 카드 메타 (공유) ─────────────────────────────────────────────────
+
+export const ROUND_CARD_META: Record<string, { label: string; desc: string; color: string }> = {
+  market_boom:    { label: '시장 활황',     desc: '전 종목 +10%p',                    color: '#4caf50' },
+  market_crash:   { label: '시장 폭락',     desc: '전 종목 -10%p',                    color: '#f44336' },
+  big_boom:       { label: '대호재',        desc: '전 종목 +25%p',                    color: '#00e676' },
+  big_crash:      { label: '대폭락',        desc: '전 종목 -25%p',                    color: '#ff1744' },
+  volatility_up:  { label: '변동성 확대',   desc: '전 종목 등락률 ×1.5',              color: '#ff9800' },
+  volatility_down:{ label: '변동성 축소',   desc: '전 종목 등락률 ×0.5',              color: '#78909c' },
+  reversal_day:   { label: '역전의 날',     desc: '전 종목 등락 부호 반전',            color: '#ab47bc' },
+  calm:           { label: '무풍지대',      desc: '전 종목 0% 확정',                  color: '#607d8b' },
+  polarization:   { label: '양극화',        desc: '상위 절반 +15%p / 하위 -15%p',     color: '#ff7043' },
+  bubble:         { label: '버블',          desc: '상승 종목 ×1.3',                   color: '#ffd740' },
+  panic:          { label: '공황',          desc: '전 종목 ×0.7',                     color: '#e53935' },
+  rate_hike:      { label: '금리 인상',     desc: '전 종목 -5%p',                     color: '#546e7a' },
+  liquidity:      { label: '유동성 장세',   desc: '전 종목 +5%p',                     color: '#26a69a' },
+  news_blackout:  { label: '뉴스 블랙아웃', desc: '이번 라운드 정보 카드 무효',        color: '#424242' },
 }

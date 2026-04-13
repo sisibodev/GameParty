@@ -22,13 +22,14 @@ export type SpecialCardType =
   | 'reversal'      // 반전 부호 반전
 
 export type InfoCardType =
-  | 'trend'         // 등락 예보
-  | 'detect'        // 카드 탐지
-  | 'shadow'        // 미행
-  | 'whistleblower' // 내부고발
-  | 'market_scan'   // 시장 스캔
-  | 'portfolio_scan'// 포트폴리오 스캔
-  | 'premium'       // 특급 카드
+  | 'trend'           // 등락 예보
+  | 'detect'          // 카드 탐지
+  | 'shadow'          // 미행
+  | 'whistleblower'   // 내부고발
+  | 'market_scan'     // 시장 스캔
+  | 'portfolio_scan'  // 포트폴리오 스캔
+  | 'premium'         // 특급 카드
+  | 'round_forecast'  // 라운드 이벤트 예보
 
 export type RoundCardType =
   | 'market_boom'       // 시장 활황 +10%p
