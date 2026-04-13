@@ -140,4 +140,5 @@ export interface Room {
   }
   roundCard: { [round: number]: RoundCardType }
   roundResults: { [round: number]: RoundResult }
+  roundReady?: { [uid: string]: boolean }
 }

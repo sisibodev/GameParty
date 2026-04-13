@@ -119,6 +119,7 @@ export async function startGame(roomId: string) {
     [`rooms/${roomId}/currentRound`]: 1,
     [`rooms/${roomId}/roundStartAt`]: serverTimestamp(),
     [`rooms/${roomId}/companies`]: companiesObj,
+    [`rooms/${roomId}/roundReady`]: {},
   }
   await update(ref(db()), updates)
 }
@@ -341,6 +342,11 @@ export function unsubscribeRoom(roomRef: DatabaseReference) {
   off(roomRef)
 }
 
+/** 라운드 레디 설정 */
+export async function setRoundReady(roomId: string, uid: string, ready: boolean) {
+  await update(ref(db(), `rooms/${roomId}/roundReady`), { [uid]: ready })
+}
+
 /** 방장이 라운드 종료 처리 (결과 계산 후 상태 업데이트) */
 export async function endRound(roomId: string) {
   await update(ref(db(), `rooms/${roomId}`), { status: 'round_result' })
@@ -360,6 +366,7 @@ export async function nextRound(roomId: string, nextRound: number, totalRounds: 
     [`rooms/${roomId}/status`]: 'playing',
     [`rooms/${roomId}/currentRound`]: nextRound,
     [`rooms/${roomId}/roundStartAt`]: serverTimestamp(),
+    [`rooms/${roomId}/roundReady`]: {},
   }
 
   // 3라운드마다 보너스 카드 지급 (라운드 4, 7, 10... = 3, 6, 9라운드 결과 직후)

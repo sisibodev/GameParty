@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
-import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound } from '../utils/rtdb'
+import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady } from '../utils/rtdb'
 import { formatKRW, formatRate } from '../utils/scenario'
 import { CARD_LABEL, CARD_COLOR, CARD_DESC } from '../utils/cards'
 import type { Room, Company, Card } from '../types'
@@ -20,6 +20,7 @@ export default function GamePlay() {
   const [pendingCard, setPendingCard] = useState<Card | null>(null)  // 사용할 카드 선택 상태
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const roomRef = useRef<ReturnType<typeof subscribeRoom> | null>(null)
+  const endingRef = useRef(false)  // 중복 endRound 방지
 
   useEffect(() => {
     if (!roomId) return
@@ -41,9 +42,23 @@ export default function GamePlay() {
         const remaining = Math.max(0, r.settings.timerSeconds - elapsed)
         setTimeLeft(remaining)
       }
+
+      // 전원 레디 → 방장이 라운드 종료
+      const playerUids = Object.keys(r.players)
+      const roundReady = r.roundReady ?? {}
+      const allReady = playerUids.length > 0 && playerUids.every(uid => roundReady[uid])
+      if (allReady && !endingRef.current) {
+        endingRef.current = true
+        endRound(roomId)
+      }
     })
     return () => { if (roomRef.current) unsubscribeRoom(roomRef.current) }
   }, [roomId, navigate])
+
+  // 라운드 변경 시 레디 상태 리셋
+  useEffect(() => {
+    endingRef.current = false
+  }, [room?.currentRound])
 
   // 카운트다운
   useEffect(() => {
@@ -133,6 +148,12 @@ export default function GamePlay() {
   const timerColor = timerPct > 0.4 ? '#4caf50' : timerPct > 0.15 ? '#ff9800' : '#f44336'
 
   const playersSorted = Object.values(room.players).sort((a, b) => a.rank - b.rank || b.cash - a.cash)
+
+  // 레디 상태
+  const roundReady = room.roundReady ?? {}
+  const isReady = roundReady[user.uid] ?? false
+  const readyCount = Object.values(roundReady).filter(Boolean).length
+  const totalCount = Object.keys(room.players).length
 
   // 드래프트 카드 (2라운드부터)
   const myDraftOptions = me?.draftOptions ?? []
@@ -365,9 +386,20 @@ export default function GamePlay() {
         </div>
       )}
 
+      {/* 레디 버튼 */}
+      <div className={styles.readyBar}>
+        <button
+          className={`${styles.readyBtn} ${isReady ? styles.readyBtnOn : ''}`}
+          onClick={() => setRoundReady(roomId!, user.uid, !isReady)}
+        >
+          {isReady ? '✓ 준비 완료' : '레디'}
+        </button>
+        <span className={styles.readyCount}>{readyCount} / {totalCount} 준비</span>
+      </div>
+
       {/* 방장 강제 종료 버튼 */}
       {user.uid === room.host && (
-        <button className={styles.endBtn} onClick={() => endRound(roomId!)}>
+        <button className={styles.endBtn} onClick={() => { endingRef.current = true; endRound(roomId!) }}>
           라운드 종료
         </button>
       )}
