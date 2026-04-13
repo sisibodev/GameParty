@@ -5,7 +5,7 @@ import type { DatabaseReference } from 'firebase/database'
 import { rtdb } from '../../../firebase/config'
 import type { Room, RoomSettings, Player, Trade, RoundResult } from '../types'
 import { generateCompanies, autoCompanyCount } from './scenario'
-import { createStarterCards, drawDraftOptions, drawRoundCard } from './cards'
+import { createStarterCards, drawDraftOptions, drawRoundCard, drawBonusCards } from './cards'
 
 function db() {
   if (!rtdb) throw new Error('Realtime Database가 초기화되지 않았습니다.')
@@ -271,22 +271,28 @@ export async function playSpecialCard(
   cardType: string,
 ) {
   const playId = `${uid}-${cardId}`
-  await set(ref(db(), `rooms/${roomId}/cardPlays/${round}/${playId}`), {
-    playId,
-    userId: uid,
-    companyId,
-    cardType,
-    cardId,
-  })
-  // 카드 used 처리
-  const cardsSnap = await get(ref(db(), `rooms/${roomId}/players/${uid}/cards`))
-  const cards = cardsSnap.val() as Player['cards']
-  const idx = cards.findIndex(c => c.id === cardId)
-  if (idx !== -1) {
-    await update(ref(db(), `rooms/${roomId}/players/${uid}/cards/${idx}`), { used: true })
-  }
+  const [, playerSnap] = await Promise.all([
+    set(ref(db(), `rooms/${roomId}/cardPlays/${round}/${playId}`), {
+      playId,
+      userId: uid,
+      companyId,
+      cardType,
+      cardId,
+    }),
+    get(ref(db(), `rooms/${roomId}/players/${uid}`)),
+  ])
+
+  const player = playerSnap.val() as Player
+  // Firebase RTDB may return arrays as {0:{...}, 1:{...}} objects
+  const cardsRaw = player.cards
+  const cardsArr: Player['cards'] = Array.isArray(cardsRaw)
+    ? cardsRaw
+    : Object.values(cardsRaw)
+  const updatedCards = cardsArr.map(c => c.id === cardId ? { ...c, used: true } : c)
+
   await update(ref(db(), `rooms/${roomId}/players/${uid}`), {
-    usedSpecialThisRound: (await get(ref(db(), `rooms/${roomId}/players/${uid}/usedSpecialThisRound`))).val() + 1,
+    cards: updatedCards,
+    usedSpecialThisRound: (player.usedSpecialThisRound ?? 0) + 1,
   })
 }
 
@@ -297,12 +303,29 @@ export async function chooseDraft(
   uid: string,
   chosenCardId: string,
 ) {
-  const optionsSnap = await get(ref(db(), `rooms/${roomId}/players/${uid}/draftOptions`))
-  const options = optionsSnap.val() as string[] | null
-  if (!options) return
+  const playerSnap = await get(ref(db(), `rooms/${roomId}/players/${uid}`))
+  const player = playerSnap.val() as Player
+  if (!player) return
+
+  // Firebase RTDB may return arrays as objects — normalize both
+  const optionsRaw = player.draftOptions
+  const options: Player['cards'] = Array.isArray(optionsRaw)
+    ? optionsRaw
+    : Object.values(optionsRaw ?? {})
+  if (!options.length) return
+
+  const chosenCard = options.find(c => c.id === chosenCardId)
+  if (!chosenCard) return
+
+  const cardsRaw = player.cards
+  const cardsArr: Player['cards'] = Array.isArray(cardsRaw)
+    ? cardsRaw
+    : Object.values(cardsRaw ?? {})
+  const updatedCards = [...cardsArr, { ...chosenCard, used: false }]
 
   await update(ref(db(), `rooms/${roomId}/players/${uid}`), {
     draftChosen: chosenCardId,
+    cards: updatedCards,
   })
 }
 
@@ -339,6 +362,9 @@ export async function nextRound(roomId: string, nextRound: number, totalRounds: 
     [`rooms/${roomId}/roundStartAt`]: serverTimestamp(),
   }
 
+  // 3라운드마다 보너스 카드 지급 (라운드 4, 7, 10...)
+  const isBonusRound = nextRound > 1 && nextRound % 3 === 1
+
   for (const uid of Object.keys(players)) {
     updates[`rooms/${roomId}/players/${uid}/usedSpecialThisRound`] = 0
     updates[`rooms/${roomId}/players/${uid}/usedInfoThisRound`] = 0
@@ -349,6 +375,16 @@ export async function nextRound(roomId: string, nextRound: number, totalRounds: 
     if (nextRound >= 2) {
       const [cardA, cardB] = drawDraftOptions()
       updates[`rooms/${roomId}/players/${uid}/draftOptions`] = [cardA, cardB]
+    }
+
+    if (isBonusRound) {
+      const player = players[uid]
+      const cardsRaw = player.cards
+      const cardsArr: Player['cards'] = Array.isArray(cardsRaw)
+        ? cardsRaw
+        : Object.values(cardsRaw ?? {})
+      const bonusCards = drawBonusCards(1)
+      updates[`rooms/${roomId}/players/${uid}/cards`] = [...cardsArr, ...bonusCards]
     }
   }
 

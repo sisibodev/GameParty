@@ -75,7 +75,7 @@ export interface Player {
   maxSpecialThisRound: number     // 이번 라운드 사용 가능한 특수 카드 한도
   maxInfoThisRound: number        // 이번 라운드 사용 가능한 정보 카드 한도
   draftChosen: string | null      // 이번 라운드 드래프트 선택
-  draftOptions: string[]          // 이번 라운드 드래프트 선택지
+  draftOptions: Card[]            // 이번 라운드 드래프트 선택지
 }
 
 // ─── 거래 / 카드 사용 ──────────────────────────────────────────────────────────

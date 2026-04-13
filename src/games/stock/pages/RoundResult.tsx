@@ -47,37 +47,6 @@ function applySpecialCard(
   return r
 }
 
-function applyRoundCard(
-  rates: Record<string, number>,
-  roundCard: RoundCardType,
-): Record<string, number> {
-  const r = { ...rates }
-  const ids = Object.keys(r)
-  if (roundCard === 'calm') { ids.forEach(id => { r[id] = 0 }); return r }
-  if (roundCard === 'news_blackout') return r
-  switch (roundCard) {
-    case 'market_boom':    ids.forEach(id => { r[id] += 0.10 }); break
-    case 'market_crash':   ids.forEach(id => { r[id] -= 0.10 }); break
-    case 'big_boom':       ids.forEach(id => { r[id] += 0.25 }); break
-    case 'big_crash':      ids.forEach(id => { r[id] -= 0.25 }); break
-    case 'volatility_up':  ids.forEach(id => { r[id] *= 1.5  }); break
-    case 'volatility_down':ids.forEach(id => { r[id] *= 0.5  }); break
-    case 'reversal_day':   ids.forEach(id => { r[id] = -r[id] }); break
-    case 'polarization': {
-      const sorted = [...ids].sort((a, b) => r[b] - r[a])
-      const half = Math.ceil(sorted.length / 2)
-      sorted.slice(0, half).forEach(id => { r[id] += 0.15 })
-      sorted.slice(half).forEach(id => { r[id] -= 0.15 })
-      break
-    }
-    case 'bubble':    ids.forEach(id => { if (r[id] > 0) r[id] *= 1.3 }); break
-    case 'panic':     ids.forEach(id => { r[id] *= 0.7 }); break
-    case 'rate_hike': ids.forEach(id => { r[id] -= 0.05 }); break
-    case 'liquidity': ids.forEach(id => { r[id] += 0.05 }); break
-  }
-  return r
-}
-
 // ── 카드 뒷면 SVG ────────────────────────────────────────────────────────────
 
 function CardBack({ variant = 'special' }: { variant?: 'special' | 'round' }) {
