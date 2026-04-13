@@ -47,6 +47,31 @@ function applySpecialCard(
   return r
 }
 
+// ── 스파크라인 차트 ───────────────────────────────────────────────────────────
+
+function SparklineChart({ prices }: { prices: number[] }) {
+  if (prices.length < 2) return <svg width={52} height={30} />
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  const range = max - min || 1
+  const W = 52, H = 30, pad = 3
+  const pts = prices.map((p, i) => {
+    const x = pad + (i / (prices.length - 1)) * (W - pad * 2)
+    const y = pad + (1 - (p - min) / range) * (H - pad * 2)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  })
+  const isUp = prices[prices.length - 1] >= prices[0]
+  const color = isUp ? '#4caf50' : '#f44336'
+  const fillPts = `${pts[0].split(',')[0]},${H - pad} ${pts.join(' ')} ${pts[pts.length - 1].split(',')[0]},${H - pad}`
+  return (
+    <svg width={W} height={H} className={styles.sparkline}>
+      <polygon points={fillPts} fill={color} opacity={0.12} />
+      <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="1.5"
+        strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 // ── 카드 뒷면 SVG ────────────────────────────────────────────────────────────
 
 function CardBack({ variant = 'special' }: { variant?: 'special' | 'round' }) {
@@ -289,6 +314,27 @@ export default function RoundResult() {
   const cardPlays = Object.values(room.cardPlays?.[room.currentRound] ?? {})
   const playersSorted = [...result.rankSnapshot].sort((a, b) => a.rank - b.rank)
 
+  // 포트폴리오 수익 계산
+  const myPortfolio = companies
+    .map(c => {
+      const holding = me?.portfolio?.[c.id] ?? 0
+      const prevPrice = c.priceHistory[room.currentRound - 1] ?? c.priceHistory[0]
+      const newPrice = c.priceHistory[room.currentRound] ?? prevPrice
+      const roundPnl = holding * (newPrice - prevPrice)
+      const rate = prevPrice > 0 ? (newPrice - prevPrice) / prevPrice : 0
+      const value = holding * newPrice
+      return { company: c, holding, prevPrice, newPrice, roundPnl, rate, value }
+    })
+    .filter(p => p.holding > 0)
+
+  const portfolioValue = companies.reduce((sum, c) => {
+    const holding = me?.portfolio?.[c.id] ?? 0
+    const newPrice = c.priceHistory[room.currentRound] ?? c.priceHistory[room.currentRound - 1] ?? 0
+    return sum + holding * newPrice
+  }, 0)
+  const totalAssets = (me?.cash ?? 0) + portfolioValue
+  const totalRoundPnl = myPortfolio.reduce((sum, p) => sum + p.roundPnl, 0)
+
   async function handleNext() {
     if (!roomId) return
     await nextRound(roomId, room!.currentRound + 1, room!.settings.rounds)
@@ -315,8 +361,15 @@ export default function RoundResult() {
               const finalPrice = c.priceHistory[room.currentRound] ?? prevPrice
               const pnl = phase === 'done' ? holding * (finalPrice - prevPrice) : null
 
+              // priceHistory 배열 정규화 (Firebase RTDB 객체 변환 대응)
+              const priceArr: number[] = Array.isArray(c.priceHistory)
+                ? c.priceHistory
+                : Object.values(c.priceHistory as Record<string, number>)
+              const sparkPrices = priceArr.slice(0, room.currentRound + 1)
+
               return (
                 <div key={c.id} className={styles.priceRow}>
+                  <SparklineChart prices={sparkPrices} />
                   <span className={styles.companyEmoji}>{c.emoji}</span>
                   <span className={styles.companyName}>{c.name}</span>
                   <div className={styles.priceChange}>
@@ -337,6 +390,61 @@ export default function RoundResult() {
             })}
           </div>
         </div>
+
+        {/* 내 포트폴리오 수익 (완료 후) */}
+        {phase === 'done' && (
+          <div className={`${styles.card} ${styles.rankCard}`}>
+            <h3 className={styles.sectionTitle}>내 수익</h3>
+            {myPortfolio.length > 0 ? (
+              <table className={styles.portfolioTable}>
+                <thead>
+                  <tr>
+                    <th>종목</th>
+                    <th>보유</th>
+                    <th>등락</th>
+                    <th>이번 수익</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {myPortfolio.map(({ company, holding, rate, roundPnl }) => (
+                    <tr key={company.id}>
+                      <td>{company.emoji} {company.name}</td>
+                      <td>{holding}주</td>
+                      <td style={{ color: rate >= 0 ? '#4caf50' : '#f44336', fontWeight: 700 }}>
+                        {formatRate(rate)}
+                      </td>
+                      <td style={{ color: roundPnl >= 0 ? '#4caf50' : '#f44336', fontWeight: 700 }}>
+                        {roundPnl >= 0 ? '+' : ''}{roundPnl.toLocaleString()}원
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className={styles.portfolioTotalRow}>
+                    <td colSpan={3}>라운드 총 수익</td>
+                    <td style={{ color: totalRoundPnl >= 0 ? '#4caf50' : '#f44336' }}>
+                      {totalRoundPnl >= 0 ? '+' : ''}{totalRoundPnl.toLocaleString()}원
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            ) : (
+              <p className={styles.noHolding}>보유 종목 없음</p>
+            )}
+            <div className={styles.assetSummary}>
+              <div className={styles.assetRow}>
+                <span>현금</span>
+                <span>{(me?.cash ?? 0).toLocaleString()}원</span>
+              </div>
+              <div className={styles.assetRow}>
+                <span>주식 평가액</span>
+                <span>{portfolioValue.toLocaleString()}원</span>
+              </div>
+              <div className={`${styles.assetRow} ${styles.assetTotal}`}>
+                <span>총 자산</span>
+                <span>{totalAssets.toLocaleString()}원</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 특수카드 공개 영역 */}
         {cardPlays.length > 0 && (
@@ -378,6 +486,9 @@ export default function RoundResult() {
                       {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}위`}
                     </span>
                     <span className={styles.rankName}>{player?.name ?? uid}</span>
+                    {isMe && (
+                      <span className={styles.rankMyAssets}>{totalAssets.toLocaleString()}원</span>
+                    )}
                   </div>
                 )
               })}
