@@ -202,9 +202,36 @@ export default function GamePlay() {
                   <span className={styles.tradePrice}>{formatKRW(selPrice)}</span>
                 </div>
                 <div className={styles.qtyRow}>
-                  <button className={styles.qtyBtn} onClick={() => setTradeQty(q => Math.max(1, q - 1))}>-</button>
-                  <span className={styles.qty}>{tradeQty}주</span>
-                  <button className={styles.qtyBtn} onClick={() => setTradeQty(q => q + 1)}>+</button>
+                  <button className={styles.qtyBtn} onClick={() => setTradeQty(q => Math.max(1, q - 10))}>-10</button>
+                  <button className={styles.qtyBtn} onClick={() => setTradeQty(q => Math.max(1, q - 1))}>-1</button>
+                  <input
+                    type="number"
+                    className={styles.qtyInput}
+                    value={tradeQty}
+                    min={1}
+                    onChange={e => {
+                      const v = parseInt(e.target.value)
+                      if (!isNaN(v) && v >= 1) setTradeQty(v)
+                    }}
+                  />
+                  <button className={styles.qtyBtn} onClick={() => setTradeQty(q => q + 1)}>+1</button>
+                  <button className={styles.qtyBtn} onClick={() => setTradeQty(q => q + 10)}>+10</button>
+                </div>
+                <div className={styles.qtyShortcuts}>
+                  <button
+                    className={styles.qtyShortBtn}
+                    onClick={() => setTradeQty(Math.max(1, Math.floor((me?.cash ?? 0) / selPrice)))}
+                    disabled={selPrice === 0 || (me?.cash ?? 0) < selPrice}
+                  >
+                    최대 매수
+                  </button>
+                  <button
+                    className={styles.qtyShortBtn}
+                    onClick={() => setTradeQty(Math.max(1, myHolding))}
+                    disabled={myHolding === 0}
+                  >
+                    전부 매도
+                  </button>
                 </div>
                 <div className={styles.tradeBtns}>
                   <button className={styles.buyBtn} onClick={() => handleTrade('buy')}
