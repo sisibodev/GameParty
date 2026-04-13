@@ -362,8 +362,19 @@ export async function nextRound(roomId: string, nextRound: number, totalRounds: 
     [`rooms/${roomId}/roundStartAt`]: serverTimestamp(),
   }
 
-  // 3라운드마다 보너스 카드 지급 (라운드 4, 7, 10...)
+  // 3라운드마다 보너스 카드 지급 (라운드 4, 7, 10... = 3, 6, 9라운드 결과 직후)
   const isBonusRound = nextRound > 1 && nextRound % 3 === 1
+
+  // 등수별 보너스 장수 계산: 상위 2명 1장, 중위 2명 2장, 최하위 나머지 3장
+  const bonusCountByUid: Record<string, number> = {}
+  if (isBonusRound) {
+    const sorted = Object.values(players).sort((a, b) => a.rank - b.rank)
+    sorted.forEach((p, i) => {
+      if (i < 2) bonusCountByUid[p.uid] = 1       // 상위 2명
+      else if (i < 4) bonusCountByUid[p.uid] = 2  // 중위 2명
+      else bonusCountByUid[p.uid] = 3              // 최하위 나머지
+    })
+  }
 
   for (const uid of Object.keys(players)) {
     updates[`rooms/${roomId}/players/${uid}/usedSpecialThisRound`] = 0
@@ -383,7 +394,8 @@ export async function nextRound(roomId: string, nextRound: number, totalRounds: 
       const cardsArr: Player['cards'] = Array.isArray(cardsRaw)
         ? cardsRaw
         : Object.values(cardsRaw ?? {})
-      const bonusCards = drawBonusCards(1)
+      const count = bonusCountByUid[uid] ?? 1
+      const bonusCards = drawBonusCards(count)
       updates[`rooms/${roomId}/players/${uid}/cards`] = [...cardsArr, ...bonusCards]
     }
   }
