@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
-import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady, useInfoCard } from '../utils/rtdb'
+import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady, useInfoCard, usePremiumCard } from '../utils/rtdb'
 import { formatKRW, formatRate } from '../utils/scenario'
 import { CARD_LABEL, CARD_COLOR, CARD_DESC, ROUND_CARD_META } from '../utils/cards'
 import type { Room, Company, Card } from '../types'
@@ -17,7 +17,9 @@ export default function GamePlay() {
   const [tradeQty, setTradeQty] = useState(1)
   const [showRank, setShowRank] = useState(false)
   const [timeLeft, setTimeLeft] = useState(0)
-  const [pendingCard, setPendingCard] = useState<Card | null>(null)   // 특수 카드 대상 선택
+  const [pendingCard, setPendingCard] = useState<Card | null>(null)        // 특수 카드 대상 선택
+  const [pendingInfoCard, setPendingInfoCard] = useState<Card | null>(null) // 정보 카드 대상 선택
+  const [infoTargetType, setInfoTargetType] = useState<'company' | 'player'>('company')
   const [infoResult, setInfoResult] = useState<{ title: string; body: string; color?: string } | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const roomRef = useRef<ReturnType<typeof subscribeRoom> | null>(null)
@@ -140,19 +142,113 @@ export default function GamePlay() {
     const me = room.players[user.uid]
     if (me.usedInfoThisRound >= me.maxInfoThisRound) return
 
-    if (card.type === 'round_forecast') {
-      const roundCard = room.roundCard?.[room.currentRound]
-      if (roundCard) {
+    const round = room.currentRound
+    const companies = Object.values(room.companies)
+
+    switch (card.type) {
+      // ── 대상 선택 필요 (회사) ──
+      case 'trend':
+      case 'detect':
+        setPendingInfoCard(card)
+        setInfoTargetType('company')
+        return
+
+      // ── 대상 선택 필요 (플레이어) ──
+      case 'shadow':
+      case 'portfolio_scan':
+        setPendingInfoCard(card)
+        setInfoTargetType('player')
+        return
+
+      // ── 즉시 발동 ──
+      case 'round_forecast': {
+        const roundCard = room.roundCard?.[round]
+        if (!roundCard) return
         const meta = ROUND_CARD_META[roundCard]
         await useInfoCard(roomId, user.uid, card.id)
+        setInfoResult({ title: '이번 라운드 이벤트', body: meta ? `${meta.label}\n${meta.desc}` : roundCard, color: meta?.color })
+        break
+      }
+      case 'whistleblower': {
+        const plays = Object.values(room.cardPlays?.[round] ?? {})
+        const cnt: Record<string, number> = {}
+        for (const p of plays) cnt[p.companyId] = (cnt[p.companyId] ?? 0) + 1
+        const topId = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]?.[0]
+        const topC = topId ? room.companies[topId] : null
+        await useInfoCard(roomId, user.uid, card.id)
         setInfoResult({
-          title: '이번 라운드 이벤트',
-          body: meta ? `${meta.label}\n${meta.desc}` : roundCard,
-          color: meta?.color,
+          title: '내부고발',
+          body: topC ? `${topC.emoji} ${topC.name}\n특수 카드 ${cnt[topId]}장 집중` : '아직 사용된 특수 카드 없음',
+          color: '#ff9800',
         })
+        break
+      }
+      case 'market_scan': {
+        const sorted = [...companies].sort((a, b) => {
+          const rA = a.priceHistory[round - 1] > 0 ? (a.priceHistory[round] - a.priceHistory[round - 1]) / a.priceHistory[round - 1] : 0
+          const rB = b.priceHistory[round - 1] > 0 ? (b.priceHistory[round] - b.priceHistory[round - 1]) / b.priceHistory[round - 1] : 0
+          return rB - rA
+        })
+        const top2 = sorted.slice(0, 2).map(c => `${c.emoji} ${c.name}`).join('  ')
+        const bot2 = sorted.slice(-2).map(c => `${c.emoji} ${c.name}`).join('  ')
+        await useInfoCard(roomId, user.uid, card.id)
+        setInfoResult({ title: '시장 스캔', body: `▲ 상위  ${top2}\n▼ 하위  ${bot2}`, color: '#2196f3' })
+        break
+      }
+      case 'premium': {
+        await usePremiumCard(roomId, user.uid, card.id)
+        setInfoResult({ title: '특급 카드', body: '이번 라운드\n특수 카드 +1장\n정보 카드 +1장', color: '#ff9800' })
+        break
       }
     }
   }, [room, user, roomId])
+
+  const confirmInfoCardTarget = useCallback(async (targetId: string) => {
+    if (!pendingInfoCard || !room || !user || !roomId) return
+    const round = room.currentRound
+
+    switch (pendingInfoCard.type) {
+      case 'trend': {
+        const c = room.companies[targetId]
+        const prev = c.priceHistory[round - 1] ?? c.priceHistory[0]
+        const next = c.priceHistory[round] ?? prev
+        const dir = next >= prev ? '▲ 상승' : '▼ 하락'
+        await useInfoCard(roomId, user.uid, pendingInfoCard.id)
+        setInfoResult({ title: '등락 예보', body: `${c.emoji} ${c.name}\n${dir}`, color: '#2196f3' })
+        break
+      }
+      case 'detect': {
+        const c = room.companies[targetId]
+        const count = Object.values(room.cardPlays?.[round] ?? {}).filter(p => p.companyId === targetId).length
+        await useInfoCard(roomId, user.uid, pendingInfoCard.id)
+        setInfoResult({ title: '카드 탐지', body: `${c.emoji} ${c.name}\n특수 카드 ${count}장 사용됨`, color: '#2196f3' })
+        break
+      }
+      case 'shadow': {
+        const player = room.players[targetId]
+        const tradesRaw = room.trades?.[round]?.[targetId] ?? {}
+        const companyIds = Object.keys(tradesRaw)
+        const body = companyIds.length > 0
+          ? companyIds.map(cid => { const c = room.companies[cid]; return c ? `${c.emoji} ${c.name}` : cid }).join('\n')
+          : '아직 거래 없음'
+        await useInfoCard(roomId, user.uid, pendingInfoCard.id)
+        setInfoResult({ title: `미행 — ${player?.name ?? targetId}`, body, color: '#2196f3' })
+        break
+      }
+      case 'portfolio_scan': {
+        const player = room.players[targetId]
+        const port = player?.portfolio ?? {}
+        const held = Object.entries(port).filter(([, qty]) => (qty as number) > 0)
+        const body = held.length > 0
+          ? held.map(([cid]) => { const c = room.companies[cid]; return c ? `${c.emoji} ${c.name}` : cid }).join('\n')
+          : '보유 종목 없음'
+        await useInfoCard(roomId, user.uid, pendingInfoCard.id)
+        setInfoResult({ title: `포트폴리오 스캔 — ${player?.name ?? targetId}`, body, color: '#2196f3' })
+        break
+      }
+    }
+    setPendingInfoCard(null)
+  }, [pendingInfoCard, room, user, roomId])
 
   if (!room || !user) return <div className={styles.loading}>로딩 중...</div>
 
@@ -298,19 +394,22 @@ export default function GamePlay() {
                 <span className={styles.cardGroupLabel}>
                   특수 카드 ({me.usedSpecialThisRound}/{me.maxSpecialThisRound})
                 </span>
-                <div className={styles.cardList}>
-                  {mySpecialCards.map(card => (
-                    <button
-                      key={card.id}
-                      className={styles.cardBtn}
-                      style={{ borderColor: CARD_COLOR[card.type] ?? '#666' }}
-                      onClick={() => handleUseSpecialCard(card)}
-                      disabled={me.usedSpecialThisRound >= me.maxSpecialThisRound}
-                      title={CARD_DESC[card.type]}
-                    >
-                      {CARD_LABEL[card.type]}
-                    </button>
-                  ))}
+                <div className={styles.handCardGrid}>
+                  {mySpecialCards.map(card => {
+                    const disabled = me.usedSpecialThisRound >= me.maxSpecialThisRound
+                    const color = CARD_COLOR[card.type] ?? '#666'
+                    return (
+                      <div
+                        key={card.id}
+                        className={`${styles.handCard} ${disabled ? styles.handCardDisabled : ''}`}
+                        style={{ borderColor: color }}
+                        onClick={() => !disabled && handleUseSpecialCard(card)}
+                      >
+                        <div className={styles.handCardName} style={{ color }}>{CARD_LABEL[card.type]}</div>
+                        <div className={styles.handCardDesc}>{CARD_DESC[card.type]}</div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -321,19 +420,22 @@ export default function GamePlay() {
                 <span className={styles.cardGroupLabel}>
                   정보 카드 ({me.usedInfoThisRound}/{me.maxInfoThisRound})
                 </span>
-                <div className={styles.cardList}>
-                  {myInfoCards.map(card => (
-                    <button
-                      key={card.id}
-                      className={styles.cardBtn}
-                      style={{ borderColor: CARD_COLOR[card.type] ?? '#2196f3' }}
-                      title={CARD_DESC[card.type]}
-                      disabled={me.usedInfoThisRound >= me.maxInfoThisRound}
-                      onClick={() => handleUseInfoCard(card)}
-                    >
-                      {CARD_LABEL[card.type]}
-                    </button>
-                  ))}
+                <div className={styles.handCardGrid}>
+                  {myInfoCards.map(card => {
+                    const disabled = me.usedInfoThisRound >= me.maxInfoThisRound
+                    const color = CARD_COLOR[card.type] ?? '#2196f3'
+                    return (
+                      <div
+                        key={card.id}
+                        className={`${styles.handCard} ${disabled ? styles.handCardDisabled : ''}`}
+                        style={{ borderColor: color }}
+                        onClick={() => !disabled && handleUseInfoCard(card)}
+                      >
+                        <div className={styles.handCardName} style={{ color }}>{CARD_LABEL[card.type]}</div>
+                        <div className={styles.handCardDesc}>{CARD_DESC[card.type]}</div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -342,22 +444,24 @@ export default function GamePlay() {
             {room.currentRound >= 2 && myDraftOptions.length > 0 && !draftChosen && (
               <div className={styles.draftArea}>
                 <span className={styles.cardGroupLabel}>드래프트 — 1장을 보관하세요</span>
-                <div className={styles.cardList}>
+                <div className={styles.handCardGrid}>
                   {myDraftOptions.map((opt: unknown) => {
                     const card = opt as Card
+                    const color = CARD_COLOR[card.type] ?? (card.category === 'info' ? '#2196f3' : '#666')
                     return (
-                      <button
+                      <div
                         key={card.id}
-                        className={`${styles.cardBtn} ${styles.draftBtn}`}
-                        title={CARD_DESC[card.type]}
+                        className={`${styles.handCard} ${styles.handCardDraft}`}
+                        style={{ borderColor: color }}
                         onClick={async () => {
                           if (!roomId || !user) return
                           const { chooseDraft } = await import('../utils/rtdb')
                           await chooseDraft(roomId, room.currentRound, user.uid, card.id)
                         }}
                       >
-                        {CARD_LABEL[card.type]}
-                      </button>
+                        <div className={styles.handCardName} style={{ color }}>{CARD_LABEL[card.type]}</div>
+                        <div className={styles.handCardDesc}>{CARD_DESC[card.type]}</div>
+                      </div>
                     )
                   })}
                 </div>
@@ -418,6 +522,36 @@ export default function GamePlay() {
         </button>
         <span className={styles.readyCount}>{readyCount} / {totalCount} 준비</span>
       </div>
+
+      {/* 정보 카드 대상 선택 모달 */}
+      {pendingInfoCard && (
+        <div className={styles.modalOverlay} onClick={() => setPendingInfoCard(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 style={{ color: CARD_COLOR[pendingInfoCard.type] ?? '#2196f3' }}>
+              {CARD_LABEL[pendingInfoCard.type]}
+            </h3>
+            <p className={styles.modalDesc}>{CARD_DESC[pendingInfoCard.type]}</p>
+            {infoTargetType === 'company' ? (
+              <div className={styles.modalCompanies}>
+                {companies.map(c => (
+                  <button key={c.id} className={styles.modalCompanyBtn} onClick={() => confirmInfoCardTarget(c.id)}>
+                    {c.emoji} {c.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.modalCompanies}>
+                {Object.values(room.players).filter(p => p.uid !== user.uid).map(p => (
+                  <button key={p.uid} className={styles.modalCompanyBtn} onClick={() => confirmInfoCardTarget(p.uid)}>
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button className={styles.modalCancel} onClick={() => setPendingInfoCard(null)}>취소</button>
+          </div>
+        </div>
+      )}
 
       {/* 정보 카드 결과 모달 */}
       {infoResult && (

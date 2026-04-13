@@ -345,7 +345,12 @@ export function unsubscribeRoom(roomRef: DatabaseReference) {
 }
 
 /** 정보 카드 사용 — 카드 used 처리 + usedInfoThisRound 증가 */
-export async function useInfoCard(roomId: string, uid: string, cardId: string) {
+export async function useInfoCard(
+  roomId: string,
+  uid: string,
+  cardId: string,
+  extraUpdates: Record<string, unknown> = {},
+) {
   const playerSnap = await get(ref(db(), `rooms/${roomId}/players/${uid}`))
   const player = playerSnap.val() as Player
   const cardsRaw = player.cards
@@ -356,6 +361,17 @@ export async function useInfoCard(roomId: string, uid: string, cardId: string) {
   await update(ref(db(), `rooms/${roomId}/players/${uid}`), {
     cards: updatedCards,
     usedInfoThisRound: (player.usedInfoThisRound ?? 0) + 1,
+    ...extraUpdates,
+  })
+}
+
+/** 특급 카드 — 이번 라운드 특수/정보 카드 한도 각 +1 */
+export async function usePremiumCard(roomId: string, uid: string, cardId: string) {
+  const playerSnap = await get(ref(db(), `rooms/${roomId}/players/${uid}`))
+  const player = playerSnap.val() as Player
+  await useInfoCard(roomId, uid, cardId, {
+    maxSpecialThisRound: (player.maxSpecialThisRound ?? 2) + 1,
+    maxInfoThisRound: (player.maxInfoThisRound ?? 1) + 1,
   })
 }
 

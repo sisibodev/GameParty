@@ -376,6 +376,57 @@
 .cardBtn:hover:not(:disabled) { filter: brightness(1.2); }
 .cardBtn:disabled { opacity: 0.35; cursor: not-allowed; }
 
+/* ── 핸드 카드 (특수/정보/드래프트 공통) ────────────── */
+
+.handCardGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.handCard {
+  width: 84px;
+  min-height: 96px;
+  background: var(--color-surface-2);
+  border: 1.5px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.45rem 0.4rem 0.5rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  transition: transform 0.15s, filter 0.15s;
+  user-select: none;
+}
+
+.handCard:hover:not(.handCardDisabled) {
+  transform: translateY(-3px);
+  filter: brightness(1.15);
+}
+
+.handCardName {
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.handCardDesc {
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  line-height: 1.35;
+  flex: 1;
+}
+
+.handCardDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.handCardDraft {
+  background: rgba(255, 193, 7, 0.06);
+  border-color: rgba(255, 193, 7, 0.5) !important;
+}
+
 .draftArea {
   background: rgba(255, 193, 7, 0.05);
   border: 1px solid rgba(255, 193, 7, 0.4);
