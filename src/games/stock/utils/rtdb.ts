@@ -1,5 +1,5 @@
 import {
-  ref, set, get, update, onValue, off, serverTimestamp,
+  ref, set, get, update, remove, onValue, off, serverTimestamp,
 } from 'firebase/database'
 import type { DatabaseReference } from 'firebase/database'
 import { rtdb } from '../../../firebase/config'
@@ -378,6 +378,11 @@ export async function usePremiumCard(roomId: string, uid: string, cardId: string
 /** 라운드 레디 설정 */
 export async function setRoundReady(roomId: string, uid: string, ready: boolean) {
   await update(ref(db(), `rooms/${roomId}/roundReady`), { [uid]: ready })
+}
+
+/** 방 강제 해산 (방장만) — 방 데이터 전체 삭제 → 모든 구독자가 로비로 이동 */
+export async function dissolveRoom(roomId: string) {
+  await remove(ref(db(), `rooms/${roomId}`))
 }
 
 /** 방장이 라운드 종료 처리 (결과 계산 후 상태 업데이트) */

@@ -648,3 +648,25 @@
 }
 
 .endBtn:hover { background: rgba(244, 67, 54, 0.25); }
+
+/* ── 방 해산 버튼 (상단 바, 방장 전용) ──────────────── */
+
+.dissolveBtn {
+  padding: 0.3rem 0.75rem;
+  background: rgba(244, 67, 54, 0.12);
+  border: 1px solid rgba(244, 67, 54, 0.5);
+  color: #ef9a9a;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.dissolveBtn:hover {
+  background: rgba(244, 67, 54, 0.28);
+  border-color: #f44336;
+  color: #ff8a80;
+}

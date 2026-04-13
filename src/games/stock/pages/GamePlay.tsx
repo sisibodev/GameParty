@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
-import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady, useInfoCard, usePremiumCard } from '../utils/rtdb'
+import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady, useInfoCard, usePremiumCard, dissolveRoom } from '../utils/rtdb'
 import { formatKRW, formatRate } from '../utils/scenario'
 import { CARD_LABEL, CARD_COLOR, CARD_DESC, ROUND_CARD_META } from '../utils/cards'
 import type { Room, Company, Card } from '../types'
@@ -287,6 +287,18 @@ export default function GamePlay() {
           </span>
         </div>
         <span className={styles.cashLabel}>{formatKRW(me?.cash ?? 0)}</span>
+        {user.uid === room.host && (
+          <button
+            className={styles.dissolveBtn}
+            onClick={async () => {
+              if (window.confirm('방을 해산하면 모든 플레이어가 로비로 돌아갑니다. 해산하시겠습니까?')) {
+                await dissolveRoom(roomId!)
+              }
+            }}
+          >
+            방 해산
+          </button>
+        )}
       </div>
 
       <div className={styles.main}>
