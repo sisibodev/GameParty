@@ -30,22 +30,22 @@ function applySpecialCard(
 
 // ── 스파크라인 차트 ───────────────────────────────────────────────────────────
 
-function SparklineChart({ prices }: { prices: number[] }) {
-  if (prices.length < 2) return <svg width={52} height={30} />
+function SparklineChart({ prices, width = 72, height = 40 }: { prices: number[]; width?: number; height?: number }) {
+  if (prices.length < 2) return <svg width={width} height={height} />
   const min = Math.min(...prices)
   const max = Math.max(...prices)
   const range = max - min || 1
-  const W = 52, H = 30, pad = 3
+  const pad = 3
   const pts = prices.map((p, i) => {
-    const x = pad + (i / (prices.length - 1)) * (W - pad * 2)
-    const y = pad + (1 - (p - min) / range) * (H - pad * 2)
+    const x = pad + (i / (prices.length - 1)) * (width - pad * 2)
+    const y = pad + (1 - (p - min) / range) * (height - pad * 2)
     return `${x.toFixed(1)},${y.toFixed(1)}`
   })
   const isUp = prices[prices.length - 1] >= prices[0]
   const color = isUp ? '#4caf50' : '#f44336'
-  const fillPts = `${pts[0].split(',')[0]},${H - pad} ${pts.join(' ')} ${pts[pts.length - 1].split(',')[0]},${H - pad}`
+  const fillPts = `${pts[0].split(',')[0]},${height - pad} ${pts.join(' ')} ${pts[pts.length - 1].split(',')[0]},${height - pad}`
   return (
-    <svg width={W} height={H} className={styles.sparkline}>
+    <svg width={width} height={height} className={styles.sparkline}>
       <polygon points={fillPts} fill={color} opacity={0.12} />
       <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="1.5"
         strokeLinejoin="round" strokeLinecap="round" />
@@ -329,170 +329,171 @@ export default function RoundResult() {
         </span>
       </div>
 
-      <div className={styles.body}>
-        {/* 주가 변동 패널 */}
-        <div className={styles.card}>
-          <h3 className={styles.sectionTitle}>주가 변동</h3>
-          <div className={styles.priceList}>
-            {companies.map(c => {
-              const rate = displayRates[c.id] ?? 0
-              const prevPrice = c.priceHistory[room.currentRound - 1] ?? c.priceHistory[0]
-              const displayPrice = Math.max(100, Math.round(prevPrice * (1 + rate)))
-              const holding = me?.portfolio?.[c.id] ?? 0
-              const finalPrice = c.priceHistory[room.currentRound] ?? prevPrice
-              const pnl = phase === 'done' ? holding * (finalPrice - prevPrice) : null
+      <div className={styles.threeCol}>
 
-              // priceHistory 배열 정규화 (Firebase RTDB 객체 변환 대응)
-              const priceArr: number[] = Array.isArray(c.priceHistory)
-                ? c.priceHistory
-                : Object.values(c.priceHistory as Record<string, number>)
-              const sparkPrices = priceArr.slice(0, room.currentRound + 1)
-
-              return (
-                <div key={c.id} className={styles.priceRow}>
-                  <SparklineChart prices={sparkPrices} />
-                  <span className={styles.companyEmoji}>{c.emoji}</span>
-                  <span className={styles.companyName}>{c.name}</span>
-                  <div className={styles.priceChange}>
-                    <span className={styles.priceVal}>{displayPrice.toLocaleString()}원</span>
+        {/* ── 왼쪽: 회사별 차트 ─────────────────────────── */}
+        <div className={styles.colLeft}>
+          <div className={styles.card}>
+            <h3 className={styles.sectionTitle}>주가 변동</h3>
+            <div className={styles.priceList}>
+              {companies.map(c => {
+                const rate = displayRates[c.id] ?? 0
+                const prevPrice = c.priceHistory[room.currentRound - 1] ?? c.priceHistory[0]
+                const displayPrice = Math.max(100, Math.round(prevPrice * (1 + rate)))
+                const priceArr: number[] = Array.isArray(c.priceHistory)
+                  ? c.priceHistory
+                  : Object.values(c.priceHistory as Record<string, number>)
+                const sparkPrices = priceArr.slice(0, room.currentRound + 1)
+                return (
+                  <div key={c.id} className={styles.priceRow}>
+                    <SparklineChart prices={sparkPrices} width={72} height={40} />
+                    <div className={styles.priceRowInfo}>
+                      <span className={styles.companyLabel}>{c.emoji} {c.name}</span>
+                      <span className={styles.priceVal}>{displayPrice.toLocaleString()}원</span>
+                    </div>
                     <span className={styles.rateVal}
                       style={{ color: rate >= 0 ? '#4caf50' : '#f44336' }}>
                       {formatRate(rate)}
                     </span>
-                    {pnl !== null && holding > 0 && (
-                      <span className={styles.pnl}
-                        style={{ color: pnl >= 0 ? '#4caf50' : '#f44336' }}>
-                        {pnl >= 0 ? '+' : ''}{pnl.toLocaleString()}원
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* 내 포트폴리오 수익 (완료 후) */}
-        {phase === 'done' && (
-          <div className={`${styles.card} ${styles.rankCard}`}>
-            <h3 className={styles.sectionTitle}>내 수익</h3>
-            {myPortfolio.length > 0 ? (
-              <table className={styles.portfolioTable}>
-                <thead>
-                  <tr>
-                    <th>종목</th>
-                    <th>보유</th>
-                    <th>등락</th>
-                    <th>이번 수익</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {myPortfolio.map(({ company, holding, rate, roundPnl }) => (
-                    <tr key={company.id}>
-                      <td>{company.emoji} {company.name}</td>
-                      <td>{holding}주</td>
-                      <td style={{ color: rate >= 0 ? '#4caf50' : '#f44336', fontWeight: 700 }}>
-                        {formatRate(rate)}
-                      </td>
-                      <td style={{ color: roundPnl >= 0 ? '#4caf50' : '#f44336', fontWeight: 700 }}>
-                        {roundPnl >= 0 ? '+' : ''}{roundPnl.toLocaleString()}원
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className={styles.portfolioTotalRow}>
-                    <td colSpan={3}>라운드 총 수익</td>
-                    <td style={{ color: totalRoundPnl >= 0 ? '#4caf50' : '#f44336' }}>
-                      {totalRoundPnl >= 0 ? '+' : ''}{totalRoundPnl.toLocaleString()}원
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            ) : (
-              <p className={styles.noHolding}>보유 종목 없음</p>
-            )}
-            <div className={styles.assetSummary}>
-              <div className={styles.assetRow}>
-                <span>현금</span>
-                <span>{(me?.cash ?? 0).toLocaleString()}원</span>
-              </div>
-              <div className={styles.assetRow}>
-                <span>주식 평가액</span>
-                <span>{portfolioValue.toLocaleString()}원</span>
-              </div>
-              <div className={`${styles.assetRow} ${styles.assetTotal}`}>
-                <span>총 자산</span>
-                <span>{totalAssets.toLocaleString()}원</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 특수카드 공개 영역 */}
-        {cardPlays.length > 0 && (
-          <div className={styles.card}>
-            <h3 className={styles.sectionTitle}>특수 카드 효과</h3>
-            <div className={styles.specialCardsRow}>
-              {cardPlays.map((play, i) => (
-                <SpecialCardItem
-                  key={play.playId}
-                  play={play}
-                  company={room.companies[play.companyId]}
-                  flipped={flippedSpecials.has(i)}
-                  highlight={highlightCard === i}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 라운드 카드 공개 */}
-        {phase !== 'calculating' && phase !== 'base' && (
-          <div className={styles.card}>
-            <h3 className={styles.sectionTitle}>라운드 이벤트</h3>
-            <RoundCardItem cardType={result.roundCardType} flipped={roundCardFlipped} />
-          </div>
-        )}
-
-        {/* 순위 (완료 후) */}
-        {phase === 'done' && (
-          <div className={`${styles.card} ${styles.rankCard}`}>
-            <h3 className={styles.sectionTitle}>현재 순위</h3>
-            <div className={styles.rankList}>
-              {playersSorted.map(({ uid, rank }) => {
-                const player = room.players[uid]
-                const isMe = uid === user.uid
-                return (
-                  <div key={uid} className={`${styles.rankRow} ${isMe ? styles.rankRowMe : ''}`}>
-                    <span className={styles.rankNum}>
-                      {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}위`}
-                    </span>
-                    <span className={styles.rankName}>{player?.name ?? uid}</span>
-                    {isMe && (
-                      <span className={styles.rankMyAssets}>{totalAssets.toLocaleString()}원</span>
-                    )}
                   </div>
                 )
               })}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* 버튼 */}
-        {phase === 'done' && isHost && (
-          <button className={styles.nextBtn} onClick={handleNext}>
-            {isLastRound ? '최종 결과 보기 →' : `${room.currentRound + 1}라운드 시작 →`}
-          </button>
-        )}
-        {phase === 'done' && !isHost && (
-          <div className={styles.waitHint}>방장이 다음 라운드를 시작할 때까지 기다려 주세요</div>
-        )}
-        {phase !== 'done' && (
-          <div className={styles.revealingHint}>
-            {phase === 'base' && '기본 주가 변동을 확인하세요...'}
-            {phase === 'special_cards' && cardIndex < cardPlays.length && '특수 카드 효과 공개 중...'}
-            {phase === 'round_card' && '라운드 이벤트 공개 중...'}
-          </div>
-        )}
+        {/* ── 가운데: 카드 연출 + 순위 + 버튼 ────────────── */}
+        <div className={styles.colCenter}>
+          {/* 특수카드 공개 */}
+          {cardPlays.length > 0 && (
+            <div className={styles.card}>
+              <h3 className={styles.sectionTitle}>특수 카드 효과</h3>
+              <div className={styles.specialCardsRow}>
+                {cardPlays.map((play, i) => (
+                  <SpecialCardItem
+                    key={play.playId}
+                    play={play}
+                    company={room.companies[play.companyId]}
+                    flipped={flippedSpecials.has(i)}
+                    highlight={highlightCard === i}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 라운드 카드 */}
+          {phase !== 'calculating' && phase !== 'base' && (
+            <div className={styles.card}>
+              <h3 className={styles.sectionTitle}>라운드 이벤트</h3>
+              <RoundCardItem cardType={result.roundCardType} flipped={roundCardFlipped} />
+            </div>
+          )}
+
+          {/* 순위 */}
+          {phase === 'done' && (
+            <div className={`${styles.card} ${styles.rankCard}`}>
+              <h3 className={styles.sectionTitle}>현재 순위</h3>
+              <div className={styles.rankList}>
+                {playersSorted.map(({ uid, rank }) => {
+                  const player = room.players[uid]
+                  const isMe = uid === user.uid
+                  return (
+                    <div key={uid} className={`${styles.rankRow} ${isMe ? styles.rankRowMe : ''}`}>
+                      <span className={styles.rankNum}>
+                        {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}위`}
+                      </span>
+                      <span className={styles.rankName}>{player?.name ?? uid}</span>
+                      {isMe && (
+                        <span className={styles.rankMyAssets}>{totalAssets.toLocaleString()}원</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 버튼 / 힌트 */}
+          {phase === 'done' && isHost && (
+            <button className={styles.nextBtn} onClick={handleNext}>
+              {isLastRound ? '최종 결과 보기 →' : `${room.currentRound + 1}라운드 시작 →`}
+            </button>
+          )}
+          {phase === 'done' && !isHost && (
+            <div className={styles.waitHint}>방장이 다음 라운드를 시작할 때까지 기다려 주세요</div>
+          )}
+          {phase !== 'done' && (
+            <div className={styles.revealingHint}>
+              {phase === 'base' && '기본 주가 변동을 확인하세요...'}
+              {phase === 'special_cards' && cardIndex < cardPlays.length && '특수 카드 효과 공개 중...'}
+              {phase === 'round_card' && '라운드 이벤트 공개 중...'}
+            </div>
+          )}
+        </div>
+
+        {/* ── 오른쪽: 내 수익표 ──────────────────────────── */}
+        <div className={styles.colRight}>
+          {phase === 'done' ? (
+            <div className={`${styles.card} ${styles.rankCard}`}>
+              <h3 className={styles.sectionTitle}>내 수익</h3>
+              {myPortfolio.length > 0 ? (
+                <table className={styles.portfolioTable}>
+                  <thead>
+                    <tr>
+                      <th>종목</th>
+                      <th>보유</th>
+                      <th>등락</th>
+                      <th>수익</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {myPortfolio.map(({ company, holding, rate, roundPnl }) => (
+                      <tr key={company.id}>
+                        <td>{company.emoji} {company.name}</td>
+                        <td>{holding}주</td>
+                        <td style={{ color: rate >= 0 ? '#4caf50' : '#f44336', fontWeight: 700 }}>
+                          {formatRate(rate)}
+                        </td>
+                        <td style={{ color: roundPnl >= 0 ? '#4caf50' : '#f44336', fontWeight: 700 }}>
+                          {roundPnl >= 0 ? '+' : ''}{roundPnl.toLocaleString()}원
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className={styles.portfolioTotalRow}>
+                      <td colSpan={3}>라운드 수익</td>
+                      <td style={{ color: totalRoundPnl >= 0 ? '#4caf50' : '#f44336' }}>
+                        {totalRoundPnl >= 0 ? '+' : ''}{totalRoundPnl.toLocaleString()}원
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              ) : (
+                <p className={styles.noHolding}>보유 종목 없음</p>
+              )}
+              <div className={styles.assetSummary}>
+                <div className={styles.assetRow}>
+                  <span>현금</span>
+                  <span>{(me?.cash ?? 0).toLocaleString()}원</span>
+                </div>
+                <div className={styles.assetRow}>
+                  <span>주식 평가액</span>
+                  <span>{portfolioValue.toLocaleString()}원</span>
+                </div>
+                <div className={`${styles.assetRow} ${styles.assetTotal}`}>
+                  <span>총 자산</span>
+                  <span>{totalAssets.toLocaleString()}원</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.card}>
+              <h3 className={styles.sectionTitle}>내 수익</h3>
+              <p className={styles.noHolding}>결과 공개 후 표시됩니다</p>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   )

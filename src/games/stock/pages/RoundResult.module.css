@@ -34,17 +34,40 @@
   border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
-/* ── 바디 ─────────────────────────────────────────── */
+/* ── 3컬럼 레이아웃 ───────────────────────────────── */
 
-.body {
+.threeCol {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  padding: 1.25rem;
+  align-items: flex-start;
+  min-height: 0;
+}
+
+.colLeft {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.colCenter {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1.25rem;
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
+  min-width: 0;
+}
+
+.colRight {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 /* ── 계산 중 스피너 ──────────────────────────────── */
@@ -121,6 +144,22 @@
 }
 
 .priceRow:last-child { border-bottom: none; }
+
+.priceRowInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.companyLabel {
+  font-size: 0.78rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .companyEmoji { font-size: 1.1rem; flex-shrink: 0; }
 .companyName  { flex: 1; font-size: 0.88rem; font-weight: 500; }
