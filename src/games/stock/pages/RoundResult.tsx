@@ -30,24 +30,33 @@ function applySpecialCard(
 
 // ── 스파크라인 차트 ───────────────────────────────────────────────────────────
 
-function SparklineChart({ prices, width = 72, height = 40 }: { prices: number[]; width?: number; height?: number }) {
-  if (prices.length < 2) return <svg width={width} height={height} />
+function SparklineChart({ prices, width, height = 40 }: { prices: number[]; width?: number; height?: number }) {
+  const VW = 100  // internal viewBox width
+  const H  = height
+  const pad = 3
+  if (prices.length < 2) {
+    return width
+      ? <svg width={width} height={H} />
+      : <svg viewBox={`0 0 ${VW} ${H}`} width="100%" height={H} />
+  }
   const min = Math.min(...prices)
   const max = Math.max(...prices)
   const range = max - min || 1
-  const pad = 3
   const pts = prices.map((p, i) => {
-    const x = pad + (i / (prices.length - 1)) * (width - pad * 2)
-    const y = pad + (1 - (p - min) / range) * (height - pad * 2)
+    const x = pad + (i / (prices.length - 1)) * (VW - pad * 2)
+    const y = pad + (1 - (p - min) / range) * (H - pad * 2)
     return `${x.toFixed(1)},${y.toFixed(1)}`
   })
   const isUp = prices[prices.length - 1] >= prices[0]
   const color = isUp ? '#4caf50' : '#f44336'
-  const fillPts = `${pts[0].split(',')[0]},${height - pad} ${pts.join(' ')} ${pts[pts.length - 1].split(',')[0]},${height - pad}`
+  const fillPts = `${pts[0].split(',')[0]},${H - pad} ${pts.join(' ')} ${pts[pts.length - 1].split(',')[0]},${H - pad}`
+  const svgProps = width
+    ? { width, height: H }
+    : { viewBox: `0 0 ${VW} ${H}`, width: '100%' as const, height: H }
   return (
-    <svg width={width} height={height} className={styles.sparkline}>
-      <polygon points={fillPts} fill={color} opacity={0.12} />
-      <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="1.5"
+    <svg {...svgProps} className={styles.sparkline}>
+      <polygon points={fillPts} fill={color} opacity={0.15} />
+      <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="1.8"
         strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   )
@@ -331,30 +340,20 @@ export default function RoundResult() {
 
       <div className={styles.threeCol}>
 
-        {/* ── 왼쪽: 회사별 차트 ─────────────────────────── */}
+        {/* ── 왼쪽: 회사별 가격 추이 그래프 ───────────────── */}
         <div className={styles.colLeft}>
           <div className={styles.card}>
-            <h3 className={styles.sectionTitle}>주가 변동</h3>
-            <div className={styles.priceList}>
+            <h3 className={styles.sectionTitle}>가격 추이</h3>
+            <div className={styles.sparklineList}>
               {companies.map(c => {
-                const rate = displayRates[c.id] ?? 0
-                const prevPrice = c.priceHistory[room.currentRound - 1] ?? c.priceHistory[0]
-                const displayPrice = Math.max(100, Math.round(prevPrice * (1 + rate)))
                 const priceArr: number[] = Array.isArray(c.priceHistory)
                   ? c.priceHistory
                   : Object.values(c.priceHistory as Record<string, number>)
                 const sparkPrices = priceArr.slice(0, room.currentRound + 1)
                 return (
-                  <div key={c.id} className={styles.priceRow}>
-                    <SparklineChart prices={sparkPrices} width={72} height={40} />
-                    <div className={styles.priceRowInfo}>
-                      <span className={styles.companyLabel}>{c.emoji} {c.name}</span>
-                      <span className={styles.priceVal}>{displayPrice.toLocaleString()}원</span>
-                    </div>
-                    <span className={styles.rateVal}
-                      style={{ color: rate >= 0 ? '#4caf50' : '#f44336' }}>
-                      {formatRate(rate)}
-                    </span>
+                  <div key={c.id} className={styles.sparklineItem}>
+                    <span className={styles.sparklineName}>{c.emoji} {c.name}</span>
+                    <SparklineChart prices={sparkPrices} height={44} />
                   </div>
                 )
               })}
@@ -362,8 +361,29 @@ export default function RoundResult() {
           </div>
         </div>
 
-        {/* ── 가운데: 카드 연출 + 순위 + 버튼 ────────────── */}
+        {/* ── 가운데: 주가 변동 + 카드 연출 + 순위 + 버튼 ─── */}
         <div className={styles.colCenter}>
+          {/* 주가 변동 (회사명 · 수익률 · 최종가격) */}
+          <div className={styles.card}>
+            <h3 className={styles.sectionTitle}>주가 변동</h3>
+            <div className={styles.priceInfoList}>
+              {companies.map(c => {
+                const rate = displayRates[c.id] ?? 0
+                const prevPrice = c.priceHistory[room.currentRound - 1] ?? c.priceHistory[0]
+                const displayPrice = Math.max(100, Math.round(prevPrice * (1 + rate)))
+                return (
+                  <div key={c.id} className={styles.priceInfoRow}>
+                    <span className={styles.priceInfoName}>{c.emoji} {c.name}</span>
+                    <span className={styles.priceInfoRate}
+                      style={{ color: rate >= 0 ? '#4caf50' : '#f44336' }}>
+                      {formatRate(rate)}
+                    </span>
+                    <span className={styles.priceInfoPrice}>{displayPrice.toLocaleString()}원</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
           {/* 특수카드 공개 */}
           {cardPlays.length > 0 && (
             <div className={styles.card}>
