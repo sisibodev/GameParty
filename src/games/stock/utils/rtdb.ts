@@ -5,7 +5,7 @@ import type { DatabaseReference } from 'firebase/database'
 import { rtdb } from '../../../firebase/config'
 import type { Room, RoomSettings, Player, Trade, RoundResult, RoundCardType } from '../types'
 import { generateCompanies, autoCompanyCount, getTaxRate } from './scenario'
-import { createStarterCards, drawDraftOptions, drawRoundCard, drawBonusCards } from './cards'
+import { createStarterCards, drawDraftPool, drawRoundCard, drawBonusCards, drawNullifierCard } from './cards'
 
 function db() {
   if (!rtdb) throw new Error('Realtime Database가 초기화되지 않았습니다.')
@@ -36,6 +36,7 @@ export async function createRoom(
     ...host,
     ready: false,
     cash: settings.startCash,
+    refillTotal: 0,
     portfolio: {},
     cards: createStarterCards(),
     rank: 0,
@@ -44,7 +45,6 @@ export async function createRoom(
     maxSpecialThisRound: 2,
     maxInfoThisRound: 1,
     draftChosen: null,
-    draftOptions: [],
   }
 
   const room: Room = {
@@ -80,6 +80,7 @@ export async function joinRoom(roomId: string, player: Player): Promise<void> {
     ...player,
     ready: false,
     cash: room.settings.startCash,
+    refillTotal: 0,
     portfolio: {},
     cards: createStarterCards(),
     rank: 0,
@@ -88,7 +89,6 @@ export async function joinRoom(roomId: string, player: Player): Promise<void> {
     maxSpecialThisRound: 2,
     maxInfoThisRound: 1,
     draftChosen: null,
-    draftOptions: [],
   }
 
   await update(ref(db(), `rooms/${roomId}/players`), { [player.uid]: newPlayer })
@@ -179,19 +179,24 @@ export async function calculateRoundResult(roomId: string, round: number) {
   // 각 회사별 유효 등락률 계산
   const effectiveRates: Record<string, number> = { ...baseRates }
   for (const company of companies) {
+    if (company.delisted) continue  // 이미 상장폐지된 회사 스킵
     let rate = effectiveRates[company.id]
 
     // 특수 카드 적용
     const playsOnThis = Object.values(cardPlaysThisRound).filter(p => p.companyId === company.id)
-    for (const play of playsOnThis) {
-      switch (play.cardType) {
-        case 'surge': rate += 0.20; break
-        case 'drop': rate -= 0.20; break
-        case 'small_surge': rate += 0.10; break
-        case 'small_drop': rate -= 0.10; break
-        case 'boom': rate = rate * 2; break
-        case 'crash': rate = rate * 0.5; break
-        case 'reversal': rate = -rate; break
+    // card_nullifier가 있으면 다른 특수 카드 무효
+    const hasNullifier = playsOnThis.some(p => p.cardType === 'card_nullifier')
+    if (!hasNullifier) {
+      for (const play of playsOnThis) {
+        switch (play.cardType) {
+          case 'surge': rate += 0.20; break
+          case 'drop': rate -= 0.20; break
+          case 'small_surge': rate += 0.10; break
+          case 'small_drop': rate -= 0.10; break
+          case 'boom': rate = rate * 2; break
+          case 'crash': rate = rate * 0.5; break
+          case 'reversal': rate = -rate; break
+        }
       }
     }
     effectiveRates[company.id] = rate
@@ -222,11 +227,20 @@ export async function calculateRoundResult(roomId: string, round: number) {
     }
   }
 
-  // 실제 가격 계산
+  // 실제 가격 계산 + 상장폐지 판별
   const newPrices: Record<string, number> = {}
+  const delistedCompanies: string[] = []
   for (const company of companies) {
+    if (company.delisted) continue
     const prevPrice = company.priceHistory[round - 1] ?? company.priceHistory[0]
-    newPrices[company.id] = Math.max(100, Math.round(prevPrice * (1 + effectiveRates[company.id])))
+    const rawPrice = Math.round(prevPrice * (1 + effectiveRates[company.id]))
+    if (rawPrice < 100) {
+      // 상장폐지
+      delistedCompanies.push(company.id)
+      newPrices[company.id] = 0
+    } else {
+      newPrices[company.id] = rawPrice
+    }
   }
 
   // 플레이어 자산 총액 계산 → 순위 산정
@@ -248,6 +262,21 @@ export async function calculateRoundResult(roomId: string, round: number) {
     taxApplied[player.uid] = Math.floor(player.cash * taxRate)
   }
 
+  // 파산 구제: 세후 현금으로 아무 주식도 못 사면 100만원 리필
+  const minPrice = Math.min(...Object.values(newPrices).filter(p => p > 0))
+  const refillApplied: Record<string, number> = {}
+  const cashAfterTax: Record<string, number> = {}
+  for (const player of Object.values(room.players)) {
+    const afterTax = Math.max(0, player.cash - taxApplied[player.uid])
+    if (afterTax < (isFinite(minPrice) ? minPrice : Infinity)) {
+      refillApplied[player.uid] = 1000000
+      cashAfterTax[player.uid] = afterTax + 1000000
+    } else {
+      refillApplied[player.uid] = 0
+      cashAfterTax[player.uid] = afterTax
+    }
+  }
+
   const roundResult: RoundResult = {
     round,
     baseRates,
@@ -256,6 +285,8 @@ export async function calculateRoundResult(roomId: string, round: number) {
     rankSnapshot,
     taxRate,
     taxApplied,
+    delistedCompanies,
+    refillApplied,
   }
 
   // RTDB 일괄 업데이트
@@ -263,16 +294,30 @@ export async function calculateRoundResult(roomId: string, round: number) {
     [`rooms/${roomId}/roundCard/${round}`]: roundCard,
     [`rooms/${roomId}/roundResults/${round}`]: roundResult,
   }
+  // 가격 업데이트 (상장폐지 회사는 0원으로, delisted 플래그 설정)
   for (const company of companies) {
+    if (company.delisted) continue
     allUpdates[`rooms/${roomId}/companies/${company.id}/priceHistory/${round}`] = newPrices[company.id]
+    if (delistedCompanies.includes(company.id)) {
+      allUpdates[`rooms/${roomId}/companies/${company.id}/delisted`] = true
+      // 상장폐지된 회사 보유 주식 강제 0
+      for (const player of Object.values(room.players)) {
+        if ((player.portfolio?.[company.id] ?? 0) > 0) {
+          allUpdates[`rooms/${roomId}/players/${player.uid}/portfolio/${company.id}`] = 0
+        }
+      }
+    }
   }
   for (const { uid, rank } of rankSnapshot) {
     allUpdates[`rooms/${roomId}/players/${uid}/rank`] = rank
   }
-  // 세금 차감
+  // 세후 현금 + 파산 구제 반영
   for (const player of Object.values(room.players)) {
-    allUpdates[`rooms/${roomId}/players/${player.uid}/cash`] =
-      Math.max(0, player.cash - taxApplied[player.uid])
+    allUpdates[`rooms/${roomId}/players/${player.uid}/cash`] = cashAfterTax[player.uid]
+    if (refillApplied[player.uid] > 0) {
+      allUpdates[`rooms/${roomId}/players/${player.uid}/refillTotal`] =
+        (player.refillTotal ?? 0) + refillApplied[player.uid]
+    }
   }
 
   await update(ref(db()), allUpdates)
@@ -313,38 +358,6 @@ export async function playSpecialCard(
   })
 }
 
-/** 드래프트 선택 */
-export async function chooseDraft(
-  roomId: string,
-  _round: number,
-  uid: string,
-  chosenCardId: string,
-) {
-  const playerSnap = await get(ref(db(), `rooms/${roomId}/players/${uid}`))
-  const player = playerSnap.val() as Player
-  if (!player) return
-
-  // Firebase RTDB may return arrays as objects — normalize both
-  const optionsRaw = player.draftOptions
-  const options: Player['cards'] = Array.isArray(optionsRaw)
-    ? optionsRaw
-    : Object.values(optionsRaw ?? {})
-  if (!options.length) return
-
-  const chosenCard = options.find(c => c.id === chosenCardId)
-  if (!chosenCard) return
-
-  const cardsRaw = player.cards
-  const cardsArr: Player['cards'] = Array.isArray(cardsRaw)
-    ? cardsRaw
-    : Object.values(cardsRaw ?? {})
-  const updatedCards = [...cardsArr, { ...chosenCard, used: false }]
-
-  await update(ref(db(), `rooms/${roomId}/players/${uid}`), {
-    draftChosen: chosenCardId,
-    cards: updatedCards,
-  })
-}
 
 /** 방 실시간 구독 */
 export function subscribeRoom(roomId: string, cb: (room: Room | null) => void): DatabaseReference {
@@ -411,42 +424,75 @@ export async function nextRound(roomId: string, nextRound: number, totalRounds: 
     return
   }
 
-  // 각 플레이어 카운터 초기화 + 드래프트 옵션 배분
-  const snap = await get(ref(db(), `rooms/${roomId}/players`))
-  const players = snap.val() as Room['players']
+  const snap = await get(ref(db(), `rooms/${roomId}`))
+  const room = snap.val() as Room
+  const players = room.players
+
   const updates: Record<string, unknown> = {
     [`rooms/${roomId}/status`]: 'playing',
     [`rooms/${roomId}/currentRound`]: nextRound,
     [`rooms/${roomId}/roundStartAt`]: serverTimestamp(),
     [`rooms/${roomId}/roundReady`]: {},
-    [`rooms/${roomId}/roundCard/${nextRound}`]: drawRoundCard(),  // 다음 라운드 카드 미리 추첨
+    [`rooms/${roomId}/roundCard/${nextRound}`]: drawRoundCard(),
   }
 
-  // 3라운드마다 보너스 카드 지급 (라운드 4, 7, 10... = 3, 6, 9라운드 결과 직후)
-  const isBonusRound = nextRound > 1 && nextRound % 3 === 1
+  // 상장폐지 회사 → 신규 회사로 교체
+  const companies = Object.values(room.companies)
+  for (const company of companies) {
+    if (!company.delisted) continue
+    const futureRounds = Math.max(1, totalRounds - nextRound)
+    const [fresh] = generateCompanies(1, futureRounds)
+    const ipoPrice = fresh.priceHistory[0]
+    // 과거 라운드 이력은 ipoPrice로 채우고, 이후 라운드는 새 가격 사용
+    const newHistory: number[] = Array(nextRound).fill(ipoPrice)
+    for (let i = 0; i < fresh.priceHistory.length; i++) {
+      newHistory.push(fresh.priceHistory[i])
+    }
+    updates[`rooms/${roomId}/companies/${company.id}`] = {
+      id: company.id,
+      name: fresh.name,
+      type: fresh.type,
+      emoji: fresh.emoji,
+      priceHistory: newHistory,
+      delisted: false,
+    }
+  }
 
-  // 등수별 보너스 장수 계산: 상위 2명 1장, 중위 2명 2장, 최하위 나머지 3장
+  // 3라운드마다 보너스 카드 지급
+  const isBonusRound = nextRound > 1 && nextRound % 3 === 1
   const bonusCountByUid: Record<string, number> = {}
+  let lastPlaceUid: string | null = null
   if (isBonusRound) {
     const sorted = Object.values(players).sort((a, b) => a.rank - b.rank)
     sorted.forEach((p, i) => {
-      if (i < 2) bonusCountByUid[p.uid] = 1       // 상위 2명
-      else if (i < 4) bonusCountByUid[p.uid] = 2  // 중위 2명
-      else bonusCountByUid[p.uid] = 3              // 최하위 나머지
+      if (i < 2) bonusCountByUid[p.uid] = 1
+      else if (i < 4) bonusCountByUid[p.uid] = 2
+      else bonusCountByUid[p.uid] = 3
     })
+    lastPlaceUid = sorted[sorted.length - 1]?.uid ?? null
   }
 
+  // 공유 드래프트 풀 설정 (2라운드부터)
+  if (nextRound >= 2) {
+    const playerCount = Object.keys(players).length
+    const pool = drawDraftPool(playerCount + 1)
+    // 꼴지부터 선택 (rank 높은 순)
+    const draftOrder = Object.values(players)
+      .sort((a, b) => b.rank - a.rank)
+      .map(p => p.uid)
+    updates[`rooms/${roomId}/draftPool`] = pool
+    updates[`rooms/${roomId}/draftOrder`] = draftOrder
+    updates[`rooms/${roomId}/draftPickIndex`] = 0
+    updates[`rooms/${roomId}/draftPickers`] = {}
+  }
+
+  // 플레이어별 초기화
   for (const uid of Object.keys(players)) {
     updates[`rooms/${roomId}/players/${uid}/usedSpecialThisRound`] = 0
     updates[`rooms/${roomId}/players/${uid}/usedInfoThisRound`] = 0
     updates[`rooms/${roomId}/players/${uid}/maxSpecialThisRound`] = 2
     updates[`rooms/${roomId}/players/${uid}/maxInfoThisRound`] = 1
     updates[`rooms/${roomId}/players/${uid}/draftChosen`] = null
-
-    if (nextRound >= 2) {
-      const [cardA, cardB] = drawDraftOptions()
-      updates[`rooms/${roomId}/players/${uid}/draftOptions`] = [cardA, cardB]
-    }
 
     if (isBonusRound) {
       const player = players[uid]
@@ -456,9 +502,46 @@ export async function nextRound(roomId: string, nextRound: number, totalRounds: 
         : Object.values(cardsRaw ?? {})
       const count = bonusCountByUid[uid] ?? 1
       const bonusCards = drawBonusCards(count)
-      updates[`rooms/${roomId}/players/${uid}/cards`] = [...cardsArr, ...bonusCards]
+      // 최하위에게 특수카드 무효 추가 지급
+      const extras = uid === lastPlaceUid ? [drawNullifierCard()] : []
+      updates[`rooms/${roomId}/players/${uid}/cards`] = [...cardsArr, ...bonusCards, ...extras]
     }
   }
 
   await update(ref(db()), updates)
+}
+
+/** 드래프트 카드 선택 (공유 풀 방식) */
+export async function pickDraft(roomId: string, uid: string, cardId: string) {
+  const snap = await get(ref(db(), `rooms/${roomId}`))
+  const room = snap.val() as Room
+
+  const pickIndex = room.draftPickIndex ?? 0
+  const draftOrderRaw = room.draftOrder
+  const draftOrder: string[] = Array.isArray(draftOrderRaw)
+    ? draftOrderRaw
+    : Object.values(draftOrderRaw ?? {})
+
+  // 자기 차례인지 확인
+  if (draftOrder[pickIndex] !== uid) return
+
+  const draftPoolRaw = room.draftPool
+  const draftPool: Player['cards'] = Array.isArray(draftPoolRaw)
+    ? draftPoolRaw
+    : Object.values(draftPoolRaw ?? {})
+  const pickedCard = draftPool.find(c => c.id === cardId)
+  if (!pickedCard) return
+
+  const player = room.players[uid]
+  const cardsRaw = player.cards
+  const cardsArr: Player['cards'] = Array.isArray(cardsRaw)
+    ? cardsRaw
+    : Object.values(cardsRaw ?? {})
+
+  await update(ref(db()), {
+    [`rooms/${roomId}/players/${uid}/cards`]: [...cardsArr, { ...pickedCard, used: false }],
+    [`rooms/${roomId}/players/${uid}/draftChosen`]: cardId,
+    [`rooms/${roomId}/draftPickers/${uid}`]: cardId,
+    [`rooms/${roomId}/draftPickIndex`]: pickIndex + 1,
+  })
 }

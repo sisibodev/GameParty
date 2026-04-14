@@ -167,6 +167,24 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.priceInfoRowDelisted {
+  background: rgba(244, 67, 54, 0.06);
+  opacity: 0.75;
+}
+
+.delistedBadge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #ef5350;
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.4);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  white-space: nowrap;
+  min-width: 4.5rem;
+  text-align: right;
+}
+
 .priceInfoName {
   flex: 1;
   font-size: 0.86rem;

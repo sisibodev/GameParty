@@ -39,7 +39,7 @@ export default function RoomEnter() {
     maxSpecialThisRound: 2,
     maxInfoThisRound: 1,
     draftChosen: null,
-    draftOptions: [],
+    refillTotal: 0,
   }
 
   async function handleCreate() {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
-import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady, useInfoCard, usePremiumCard, dissolveRoom } from '../utils/rtdb'
+import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady, useInfoCard, usePremiumCard, dissolveRoom, pickDraft } from '../utils/rtdb'
 import { formatKRW, formatRate, getTaxRate } from '../utils/scenario'
 import { CARD_LABEL, CARD_COLOR, CARD_DESC, ROUND_CARD_META } from '../utils/cards'
 import type { Room, Company, Card } from '../types'
@@ -271,9 +271,17 @@ export default function GamePlay() {
   const readyCount = Object.values(roundReady).filter(Boolean).length
   const totalCount = Object.keys(room.players).length
 
-  // 드래프트 카드 (2라운드부터)
-  const myDraftOptions = me?.draftOptions ?? []
-  const draftChosen = me?.draftChosen
+  // 공유 드래프트 (2라운드부터)
+  const draftPool: Card[] =
+    Array.isArray(room.draftPool) ? room.draftPool : Object.values(room.draftPool ?? {})
+  const draftOrder: string[] =
+    Array.isArray(room.draftOrder) ? room.draftOrder : Object.values(room.draftOrder ?? {})
+  const draftPickIndex = room.draftPickIndex ?? 0
+  const draftPickers = room.draftPickers ?? {}
+  const currentPickerUid = draftOrder[draftPickIndex]
+  const isMyDraftTurn = currentPickerUid === user.uid
+  const isDraftDone = draftPickIndex >= draftOrder.length
+  const myDraftChosen = me?.draftChosen
 
   return (
     <div className={styles.page}>
@@ -475,27 +483,43 @@ export default function GamePlay() {
               </div>
             )}
 
-            {/* 드래프트 (2라운드부터) */}
-            {room.currentRound >= 2 && myDraftOptions.length > 0 && !draftChosen && (
+            {/* 공유 드래프트 (2라운드부터) */}
+            {room.currentRound >= 2 && (draftPool as Card[]).length > 0 && (
               <div className={styles.draftArea}>
-                <span className={styles.cardGroupLabel}>드래프트 — 1장을 보관하세요</span>
+                <span className={styles.cardGroupLabel}>
+                  드래프트 —{' '}
+                  {isDraftDone
+                    ? '선택 완료'
+                    : isMyDraftTurn
+                    ? '내 차례! 1장을 선택하세요'
+                    : `${room.players[currentPickerUid]?.name ?? ''} 선택 중...`}
+                </span>
                 <div className={styles.handCardGrid}>
-                  {myDraftOptions.map((opt: unknown) => {
-                    const card = opt as Card
+                  {(draftPool as Card[]).map(card => {
+                    const pickerUid = Object.entries(draftPickers).find(([, cid]) => cid === card.id)?.[0]
+                    const isPicked = pickerUid !== undefined
+                    const isMyPick = pickerUid === user.uid
+                    const canPick = isMyDraftTurn && !isPicked && !isDraftDone && !myDraftChosen
                     const color = CARD_COLOR[card.type] ?? (card.category === 'info' ? '#2196f3' : '#666')
                     return (
                       <div
                         key={card.id}
-                        className={`${styles.handCard} ${styles.handCardDraft}`}
-                        style={{ borderColor: color }}
-                        onClick={async () => {
-                          if (!roomId || !user) return
-                          const { chooseDraft } = await import('../utils/rtdb')
-                          await chooseDraft(roomId, room.currentRound, user.uid, card.id)
+                        className={`${styles.handCard} ${styles.handCardDraft} ${!canPick ? styles.handCardDisabled : ''}`}
+                        style={{
+                          borderColor: isPicked ? (isMyPick ? color : 'rgba(255,255,255,0.15)') : color,
+                          opacity: isPicked && !isMyPick ? 0.45 : 1,
                         }}
+                        onClick={() => canPick && pickDraft(roomId!, user.uid, card.id)}
                       >
-                        <div className={styles.handCardName} style={{ color }}>{CARD_LABEL[card.type]}</div>
-                        <div className={styles.handCardDesc}>{CARD_DESC[card.type]}</div>
+                        <div className={styles.handCardName}
+                          style={{ color: isPicked && !isMyPick ? 'rgba(255,255,255,0.4)' : color }}>
+                          {CARD_LABEL[card.type]}
+                        </div>
+                        <div className={styles.handCardDesc}>
+                          {isPicked
+                            ? (isMyPick ? '✓ 내가 선택' : `${room.players[pickerUid!]?.name ?? ''} 선택`)
+                            : CARD_DESC[card.type]}
+                        </div>
                       </div>
                     )
                   })}

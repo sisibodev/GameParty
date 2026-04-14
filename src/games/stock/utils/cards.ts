@@ -32,6 +32,7 @@ const DRAFT_SPECIAL_POOL: SpecialCardType[] = [
   'boom',
   'crash',
   'reversal',
+  'card_nullifier',
 ]
 
 const DRAFT_INFO_POOL: InfoCardType[] = [
@@ -45,17 +46,19 @@ const DRAFT_INFO_POOL: InfoCardType[] = [
   'round_forecast',
 ]
 
-export function drawDraftOptions(): [Card, Card] {
+/** 드래프트 카드 풀 생성 (플레이어 수 + 1장) */
+export function drawDraftPool(count: number): Card[] {
   const pool = [...DRAFT_SPECIAL_POOL, ...DRAFT_INFO_POOL]
-  const shuffled = pool.sort(() => Math.random() - 0.5)
-  const a = shuffled[0] as SpecialCardType | InfoCardType
-  const b = shuffled[1] as SpecialCardType | InfoCardType
-  const catA = DRAFT_SPECIAL_POOL.includes(a as SpecialCardType) ? 'special' : 'info'
-  const catB = DRAFT_SPECIAL_POOL.includes(b as SpecialCardType) ? 'special' : 'info'
-  return [
-    { id: newCardId(), type: a, category: catA as 'special' | 'info', used: false },
-    { id: newCardId(), type: b, category: catB as 'special' | 'info', used: false },
-  ]
+  const shuffled = [...pool].sort(() => Math.random() - 0.5)
+  return shuffled.slice(0, count).map(type => {
+    const cat: 'special' | 'info' = DRAFT_SPECIAL_POOL.includes(type as SpecialCardType) ? 'special' : 'info'
+    return { id: newCardId(), type: type as SpecialCardType | InfoCardType, category: cat, used: false }
+  })
+}
+
+/** 특수카드 무효 카드 1장 생성 (보너스용) */
+export function drawNullifierCard(): Card {
+  return { id: newCardId(), type: 'card_nullifier', category: 'special', used: false }
 }
 
 export function drawBonusCards(count: number): Card[] {
@@ -93,6 +96,7 @@ export const CARD_LABEL: Record<string, string> = {
   boom: '폭등',
   crash: '폭락',
   reversal: '반전',
+  card_nullifier: '특수카드 무효',
   trend: '등락 예보',
   detect: '카드 탐지',
   shadow: '미행',
@@ -125,6 +129,7 @@ export const CARD_DESC: Record<string, string> = {
   boom: '이번 라운드 수익률 ×2',
   crash: '이번 라운드 수익률 ×0.5',
   reversal: '이번 라운드 수익률 부호 반전',
+  card_nullifier: '이 회사에 쌓인 모든 특수 카드 효과 무효화',
   trend: '선택한 회사의 순수 등락 방향 공개 (▲/▼)',
   detect: '선택한 회사에 사용된 특수 카드 총 장수 공개',
   shadow: '선택한 플레이어가 투자한 회사 목록 공개',
@@ -157,6 +162,7 @@ export const CARD_COLOR: Record<string, string> = {
   drop: '#c62828',
   crash: '#7f0000',
   reversal: '#9c27b0',
+  card_nullifier: '#607d8b',
   trend: '#2196f3',
   detect: '#2196f3',
   shadow: '#2196f3',

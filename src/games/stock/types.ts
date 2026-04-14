@@ -8,18 +8,20 @@ export interface Company {
   type: CompanyType
   emoji: string
   priceHistory: number[]   // 인덱스 = 라운드 (0 = 시작가)
+  delisted?: boolean       // 상장폐지 여부
 }
 
 // ─── 카드 ────────────────────────────────────────────────────────────────────
 
 export type SpecialCardType =
-  | 'small_surge'   // 소급등 +10%p
-  | 'small_drop'    // 소급락 -10%p
-  | 'surge'         // 급등 +20%p
-  | 'drop'          // 급락 -20%p
-  | 'boom'          // 폭등 ×2
-  | 'crash'         // 폭락 ×0.5
-  | 'reversal'      // 반전 부호 반전
+  | 'small_surge'     // 소급등 +10%p
+  | 'small_drop'      // 소급락 -10%p
+  | 'surge'           // 급등 +20%p
+  | 'drop'            // 급락 -20%p
+  | 'boom'            // 폭등 ×2
+  | 'crash'           // 폭락 ×0.5
+  | 'reversal'        // 반전 부호 반전
+  | 'card_nullifier'  // 특수카드 무효 — 대상 회사에 쌓인 특수 카드 모두 무효화
 
 export type InfoCardType =
   | 'trend'           // 등락 예보
@@ -68,15 +70,15 @@ export interface Player {
   photoURL: string
   ready: boolean
   cash: number
+  refillTotal: number             // 파산 구제 누적 리필 금액 (최종 결산 시 차감)
   portfolio: Portfolio
   cards: Card[]
   rank: number
-  usedSpecialThisRound: number    // 이번 라운드 사용한 특수 카드 수
-  usedInfoThisRound: number       // 이번 라운드 사용한 정보 카드 수
-  maxSpecialThisRound: number     // 이번 라운드 사용 가능한 특수 카드 한도
-  maxInfoThisRound: number        // 이번 라운드 사용 가능한 정보 카드 한도
-  draftChosen: string | null      // 이번 라운드 드래프트 선택
-  draftOptions: Card[]            // 이번 라운드 드래프트 선택지
+  usedSpecialThisRound: number
+  usedInfoThisRound: number
+  maxSpecialThisRound: number
+  maxInfoThisRound: number
+  draftChosen: string | null      // 이번 라운드 드래프트에서 선택한 카드 ID
 }
 
 // ─── 거래 / 카드 사용 ──────────────────────────────────────────────────────────
@@ -108,12 +110,14 @@ export interface RoomSettings {
 
 export interface RoundResult {
   round: number
-  baseRates: { [companyId: string]: number }   // 카드 적용 전 등락률
-  finalRates: { [companyId: string]: number }  // 최종 등락률 (카드 모두 적용 후)
+  baseRates: { [companyId: string]: number }
+  finalRates: { [companyId: string]: number }
   roundCardType: RoundCardType
   rankSnapshot: { uid: string; rank: number }[]
-  taxRate: number                              // 이번 라운드 현금 보유세율
-  taxApplied: { [uid: string]: number }        // 플레이어별 차감된 세금
+  taxRate: number
+  taxApplied: { [uid: string]: number }
+  delistedCompanies: string[]                  // 이번 라운드 상장폐지된 회사 ID 목록
+  refillApplied: { [uid: string]: number }     // 파산 구제 적용된 플레이어별 리필 금액
 }
 
 // ─── 방 상태 ──────────────────────────────────────────────────────────────────
@@ -128,7 +132,7 @@ export interface Room {
   players: { [uid: string]: Player }
   companies: { [id: string]: Company }
   currentRound: number
-  roundStartAt: number | null   // 서버 타임스탬프
+  roundStartAt: number | null
   trades: {
     [round: number]: {
       [uid: string]: {
@@ -144,4 +148,9 @@ export interface Room {
   roundCard: { [round: number]: RoundCardType }
   roundResults: { [round: number]: RoundResult }
   roundReady?: { [uid: string]: boolean }
+  // 공유 드래프트 (2라운드부터)
+  draftPool?: Card[]                       // 이번 라운드 드래프트 카드 풀 (플레이어수 +1장)
+  draftOrder?: string[]                    // 선택 순서 (꼴지부터)
+  draftPickIndex?: number                  // 현재 선택 차례 인덱스
+  draftPickers?: { [uid: string]: string } // uid → 선택한 cardId
 }

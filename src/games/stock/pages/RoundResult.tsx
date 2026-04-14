@@ -368,17 +368,24 @@ export default function RoundResult() {
             <h3 className={styles.sectionTitle}>주가 변동</h3>
             <div className={styles.priceInfoList}>
               {companies.map(c => {
-                const rate = displayRates[c.id] ?? 0
+                const isDelisted = result.delistedCompanies?.includes(c.id)
+                const rate = isDelisted ? -1 : (displayRates[c.id] ?? 0)
                 const prevPrice = c.priceHistory[room.currentRound - 1] ?? c.priceHistory[0]
-                const displayPrice = Math.max(100, Math.round(prevPrice * (1 + rate)))
+                const displayPrice = isDelisted ? 0 : Math.max(100, Math.round(prevPrice * (1 + rate)))
                 return (
-                  <div key={c.id} className={styles.priceInfoRow}>
+                  <div key={c.id} className={`${styles.priceInfoRow} ${isDelisted ? styles.priceInfoRowDelisted : ''}`}>
                     <span className={styles.priceInfoName}>{c.emoji} {c.name}</span>
-                    <span className={styles.priceInfoRate}
-                      style={{ color: rate >= 0 ? '#4caf50' : '#f44336' }}>
-                      {formatRate(rate)}
+                    {isDelisted ? (
+                      <span className={styles.delistedBadge}>상장폐지</span>
+                    ) : (
+                      <span className={styles.priceInfoRate}
+                        style={{ color: rate >= 0 ? '#4caf50' : '#f44336' }}>
+                        {formatRate(rate)}
+                      </span>
+                    )}
+                    <span className={styles.priceInfoPrice}>
+                      {isDelisted ? '전액 손실' : `${displayPrice.toLocaleString()}원`}
                     </span>
-                    <span className={styles.priceInfoPrice}>{displayPrice.toLocaleString()}원</span>
                   </div>
                 )
               })}
@@ -497,6 +504,14 @@ export default function RoundResult() {
                     <span>현금 보유세 ({((result.taxRate ?? 0) * 100).toFixed(0)}%)</span>
                     <span style={{ color: '#f44336' }}>
                       -{result.taxApplied[user.uid].toLocaleString()}원
+                    </span>
+                  </div>
+                )}
+                {(result.refillApplied?.[user.uid] ?? 0) > 0 && (
+                  <div className={styles.assetRow}>
+                    <span>파산 구제 리필</span>
+                    <span style={{ color: '#ff9800' }}>
+                      +{result.refillApplied![user.uid].toLocaleString()}원
                     </span>
                   </div>
                 )}
