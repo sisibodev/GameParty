@@ -23,9 +23,21 @@ export default function GamePlay() {
   const [infoTargetType, setInfoTargetType] = useState<'company' | 'player'>('company')
   const [infoResult, setInfoResult] = useState<{ title: string; body: string; color?: string } | null>(null)
   const [pendingRoundCardChoice, setPendingRoundCardChoice] = useState<Card | null>(null) // 라운드 카드 선택권
+  const [draftTimeLeft, setDraftTimeLeft] = useState(0)  // 드래프트 선택 남은 시간
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const draftTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const roomRef = useRef<ReturnType<typeof subscribeRoom> | null>(null)
   const endingRef = useRef(false)  // 중복 endRound 방지
+
+  // ── 드래프트 순서 계산 (hooks 실행 전 null-safe로 미리 계산) ──────────────────
+  const _draftPickIndex = room?.draftPickIndex ?? 0
+  const _draftOrderArr: string[] = room?.draftOrder
+    ? (Array.isArray(room.draftOrder) ? room.draftOrder : Object.values(room.draftOrder))
+    : []
+  const _currentPickerUid = _draftOrderArr[_draftPickIndex]
+  const _isMyDraftTurn = !!(user && _currentPickerUid === user.uid)
+  const _isDraftDone = _draftPickIndex >= _draftOrderArr.length
+  const _myDraftChosen = user ? (room?.players[user.uid]?.draftChosen ?? null) : null
 
   useEffect(() => {
     if (!roomId) return
@@ -92,6 +104,31 @@ export default function GamePlay() {
     window.addEventListener('keyup', up)
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
   }, [])
+
+  // 드래프트 내 차례 → 20초 카운트다운 시작/중지
+  useEffect(() => {
+    if (!_isMyDraftTurn || _myDraftChosen || _isDraftDone) {
+      if (draftTimerRef.current) { clearInterval(draftTimerRef.current); draftTimerRef.current = null }
+      setDraftTimeLeft(0)
+      return
+    }
+    setDraftTimeLeft(20)
+    draftTimerRef.current = setInterval(() => setDraftTimeLeft(t => Math.max(0, t - 1)), 1000)
+    return () => { if (draftTimerRef.current) { clearInterval(draftTimerRef.current); draftTimerRef.current = null } }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_isMyDraftTurn, !!_myDraftChosen, _isDraftDone, _draftPickIndex])
+
+  // 드래프트 타이머 0 → 랜덤 자동 선택
+  useEffect(() => {
+    if (draftTimeLeft > 0 || !_isMyDraftTurn || _myDraftChosen || _isDraftDone || !room || !user || !roomId) return
+    const pool: Card[] = Array.isArray(room.draftPool) ? room.draftPool : Object.values(room.draftPool ?? {})
+    const pickedIds = Object.values(room.draftPickers ?? {}) as string[]
+    const unpicked = pool.filter(c => !pickedIds.includes(c.id))
+    if (unpicked.length > 0) {
+      pickDraft(roomId, user.uid, unpicked[Math.floor(Math.random() * unpicked.length)].id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftTimeLeft])
 
   const handleTrade = useCallback(async (action: 'buy' | 'sell') => {
     if (!room || !user || !selectedCompany || !roomId) return
@@ -277,16 +314,13 @@ export default function GamePlay() {
   const readyCount = Object.values(roundReady).filter(Boolean).length
   const totalCount = Object.keys(room.players).length
 
-  // 공유 드래프트 (2라운드부터)
+  // 공유 드래프트 (2라운드부터) — 상단에서 미리 계산한 값 재사용
   const draftPool: Card[] =
     Array.isArray(room.draftPool) ? room.draftPool : Object.values(room.draftPool ?? {})
-  const draftOrder: string[] =
-    Array.isArray(room.draftOrder) ? room.draftOrder : Object.values(room.draftOrder ?? {})
-  const draftPickIndex = room.draftPickIndex ?? 0
   const draftPickers = room.draftPickers ?? {}
-  const currentPickerUid = draftOrder[draftPickIndex]
-  const isMyDraftTurn = currentPickerUid === user.uid
-  const isDraftDone = draftPickIndex >= draftOrder.length
+  const currentPickerUid = _currentPickerUid
+  const isMyDraftTurn = _isMyDraftTurn
+  const isDraftDone = _isDraftDone
   const myDraftChosen = me?.draftChosen
 
   return (
@@ -497,7 +531,9 @@ export default function GamePlay() {
                   {isDraftDone
                     ? '선택 완료'
                     : isMyDraftTurn
-                    ? '내 차례! 1장을 선택하세요'
+                    ? <span style={{ color: draftTimeLeft <= 5 ? '#f44336' : '#ffc107' }}>
+                        내 차례! {draftTimeLeft}초 남음
+                      </span>
                     : `${room.players[currentPickerUid]?.name ?? ''} 선택 중...`}
                 </span>
                 <div className={styles.handCardGrid}>
@@ -560,13 +596,68 @@ export default function GamePlay() {
       {/* 순위표 오버레이 (Tab 홀드) */}
       {showRank && (
         <div className={styles.rankOverlay}>
-          <h3>📊 현재 순위</h3>
-          {playersSorted.map((p, i) => (
-            <div key={p.uid} className={`${styles.rankRow} ${p.uid === user.uid ? styles.rankRowMe : ''}`}>
-              <span className={styles.rankNum}>{i + 1}위</span>
-              <span className={styles.rankName}>{p.name}</span>
+          {/* 현재 순위 */}
+          <div className={styles.rankOverlaySection}>
+            <div className={styles.rankOverlayTitle}>📊 현재 순위</div>
+            {playersSorted.map((p, i) => (
+              <div key={p.uid} className={`${styles.rankRow} ${p.uid === user.uid ? styles.rankRowMe : ''}`}>
+                <span className={styles.rankNum}>{i + 1}위</span>
+                <span className={styles.rankName}>{p.name}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* 회사별 미니 차트 */}
+          <div className={styles.rankOverlaySection}>
+            <div className={styles.rankOverlayTitle}>📈 가격 추이</div>
+            <div className={styles.miniChartGrid}>
+              {companies.map(c => {
+                const history = c.priceHistory.slice(0, room.currentRound)
+                const min = Math.min(...history)
+                const max = Math.max(...history)
+                const range = max - min || 1
+                const w = 80, h = 30
+                const pts = history.map((p, i) => {
+                  const x = (i / Math.max(history.length - 1, 1)) * w
+                  const y = h - ((p - min) / range) * h
+                  return `${x},${y}`
+                }).join(' ')
+                const lastChange = history.length >= 2
+                  ? (history[history.length - 1] - history[history.length - 2]) / history[history.length - 2]
+                  : 0
+                const lineColor = lastChange >= 0 ? '#4caf50' : '#f44336'
+                return (
+                  <div key={c.id} className={styles.miniChartItem}>
+                    <div className={styles.miniChartLabel}>{c.emoji} {c.name}</div>
+                    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+                      <polyline points={pts} fill="none" stroke={lineColor} strokeWidth="1.5" strokeLinejoin="round" />
+                    </svg>
+                    <span className={styles.miniChartRate} style={{ color: lineColor }}>
+                      {lastChange >= 0 ? '+' : ''}{(lastChange * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                )
+              })}
             </div>
-          ))}
+          </div>
+
+          {/* 세율 구간 */}
+          <div className={styles.rankOverlaySection}>
+            <div className={styles.rankOverlayTitle}>💰 현금 보유세</div>
+            <div className={styles.taxScheduleRow}>
+              {Array.from({ length: room.settings.rounds }, (_, i) => {
+                const r = i + 1
+                const rate = getTaxRate(r) * 100
+                const isCurrent = r === room.currentRound
+                return (
+                  <span key={r} className={`${styles.taxBadge} ${isCurrent ? styles.taxBadgeCurrent : ''}`}>
+                    {r}R {rate}%
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+
           <p className={styles.rankHint}>Tab 키에서 손을 떼면 사라집니다</p>
         </div>
       )}

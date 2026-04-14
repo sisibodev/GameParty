@@ -7,6 +7,81 @@ import { rtdb } from '../../../firebase/config'
 import type { Room, Player } from '../types'
 import styles from './FinalResult.module.css'
 
+// ── 순위 추이 그래프 ──────────────────────────────────────────────────────────
+const RANK_COLORS = ['#6366f1','#22c55e','#f59e0b','#ef4444','#3b82f6','#a855f7','#14b8a6','#f97316']
+
+function RankTrendChart({ room, playerCount }: { room: Room; playerCount: number }) {
+  const totalRounds = room.settings.rounds
+  const W = 480, H = 200
+  const PAD = { top: 16, right: 16, bottom: 28, left: 28 }
+  const innerW = W - PAD.left - PAD.right
+  const innerH = H - PAD.top - PAD.bottom
+
+  const rounds = Array.from({ length: totalRounds }, (_, i) => i + 1)
+  const players = Object.values(room.players)
+
+  // 각 라운드별 rankSnapshot 수집
+  const rankByRoundUid: Record<number, Record<string, number>> = {}
+  for (const r of rounds) {
+    const result = room.roundResults?.[r]
+    if (!result) continue
+    const snap: { uid: string; rank: number }[] = Array.isArray(result.rankSnapshot)
+      ? result.rankSnapshot
+      : Object.values(result.rankSnapshot ?? {})
+    for (const s of snap) rankByRoundUid[r] = { ...(rankByRoundUid[r] ?? {}), [s.uid]: s.rank }
+  }
+
+  // 라운드 → X좌표, 순위 → Y좌표
+  const xOf = (r: number) => PAD.left + ((r - 1) / Math.max(totalRounds - 1, 1)) * innerW
+  const yOf = (rank: number) => PAD.top + ((rank - 1) / Math.max(playerCount - 1, 1)) * innerH
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
+      {/* 격자 */}
+      {rounds.map(r => (
+        <line key={r} x1={xOf(r)} y1={PAD.top} x2={xOf(r)} y2={PAD.top + innerH}
+          stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+      ))}
+      {Array.from({ length: playerCount }, (_, i) => i + 1).map(rank => (
+        <line key={rank} x1={PAD.left} y1={yOf(rank)} x2={PAD.left + innerW} y2={yOf(rank)}
+          stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+      ))}
+
+      {/* 축 라벨 */}
+      {rounds.map(r => (
+        <text key={r} x={xOf(r)} y={H - 6} textAnchor="middle"
+          fontSize="9" fill="rgba(255,255,255,0.35)">{r}R</text>
+      ))}
+      {Array.from({ length: playerCount }, (_, i) => i + 1).map(rank => (
+        <text key={rank} x={PAD.left - 4} y={yOf(rank) + 4} textAnchor="end"
+          fontSize="9" fill="rgba(255,255,255,0.35)">{rank}위</text>
+      ))}
+
+      {/* 플레이어 선 */}
+      {players.map((p, pi) => {
+        const color = RANK_COLORS[pi % RANK_COLORS.length]
+        const validRounds = rounds.filter(r => rankByRoundUid[r]?.[p.uid] !== undefined)
+        if (validRounds.length < 2) return null
+        const pts = validRounds.map(r => `${xOf(r)},${yOf(rankByRoundUid[r][p.uid])}`).join(' ')
+        const lastR = validRounds[validRounds.length - 1]
+        const lastRank = rankByRoundUid[lastR]?.[p.uid] ?? 0
+        return (
+          <g key={p.uid}>
+            <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round"
+              opacity="0.85" />
+            {validRounds.map(r => (
+              <circle key={r} cx={xOf(r)} cy={yOf(rankByRoundUid[r][p.uid])} r="3"
+                fill={color} opacity="0.9" />
+            ))}
+            <text x={xOf(lastR) + 5} y={yOf(lastRank) + 4}
+              fontSize="9" fill={color} fontWeight="700">{p.name}</text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
 interface PlayerResult {
   player: Player
   totalAssets: number
@@ -21,6 +96,7 @@ export default function FinalResult() {
 
   const [room, setRoom] = useState<Room | null>(null)
   const [revealed, setRevealed] = useState(false)
+  const [showRankTrend, setShowRankTrend] = useState(false)
 
   useEffect(() => {
     if (!roomId) return
@@ -142,6 +218,18 @@ export default function FinalResult() {
               )
             })}
           </div>
+        </div>
+
+        {/* 순위 추이 그래프 */}
+        <div className={styles.card}>
+          <button className={styles.trendToggle} onClick={() => setShowRankTrend(v => !v)}>
+            {showRankTrend ? '▲ 순위 추이 닫기' : '📊 순위 추이 보기'}
+          </button>
+          {showRankTrend && (
+            <div className={styles.trendChart}>
+              <RankTrendChart room={room} playerCount={results.length} />
+            </div>
+          )}
         </div>
 
         {/* 주가 변동 히스토리 */}
