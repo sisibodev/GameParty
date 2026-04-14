@@ -61,6 +61,14 @@ export function drawNullifierCard(): Card {
   return { id: newCardId(), type: 'card_nullifier', category: 'special', used: false }
 }
 
+/** 라운드 카드 선택권 1장 생성 (9라운드 꼴등 전용) */
+export function drawRoundCardChoiceCard(): Card {
+  return { id: newCardId(), type: 'round_card_choice', category: 'info', used: false }
+}
+
+/** 라운드 카드 전체 풀 (선택 모달용) */
+export { ROUND_CARD_POOL }
+
 export function drawBonusCards(count: number): Card[] {
   const pool = [...DRAFT_SPECIAL_POOL, ...DRAFT_INFO_POOL]
   const shuffled = pool.sort(() => Math.random() - 0.5)
@@ -105,6 +113,7 @@ export const CARD_LABEL: Record<string, string> = {
   portfolio_scan: '포트폴리오 스캔',
   premium: '특급 카드',
   round_forecast: '이벤트 예보',
+  round_card_choice: '라운드 카드 선택권',
   market_boom: '시장 활황',
   market_crash: '시장 폭락',
   big_boom: '대호재',
@@ -138,6 +147,7 @@ export const CARD_DESC: Record<string, string> = {
   portfolio_scan: '선택한 플레이어의 보유 종목 목록 공개',
   premium: '이번 라운드 특수 카드 +1장, 정보 카드 +1장',
   round_forecast: '이번 라운드 이벤트 카드를 미리 확인',
+  round_card_choice: '다음 라운드 이벤트 카드를 목록에서 직접 선택 (9라운드 꼴등 전용)',
   market_boom: '전 종목 수익률 +10%p',
   market_crash: '전 종목 수익률 -10%p',
   big_boom: '전 종목 수익률 +25%p',
@@ -171,6 +181,7 @@ export const CARD_COLOR: Record<string, string> = {
   portfolio_scan: '#2196f3',
   premium: '#ff9800',
   round_forecast: '#ff9800',
+  round_card_choice: '#e91e63',
 }
 
 // ─── 라운드 카드 메타 (공유) ─────────────────────────────────────────────────

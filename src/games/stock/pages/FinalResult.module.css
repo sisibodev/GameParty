@@ -260,6 +260,20 @@
   margin-bottom: 0.3rem;
 }
 
+.mySummaryRefill {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ff9800;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.2rem;
+}
+
+.refillNote {
+  font-size: 0.7rem;
+  color: #ff9800;
+  font-variant-numeric: tabular-nums;
+}
+
 .mySummaryChange {
   font-size: 0.95rem;
   font-weight: 700;

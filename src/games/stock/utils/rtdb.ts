@@ -3,9 +3,9 @@ import {
 } from 'firebase/database'
 import type { DatabaseReference } from 'firebase/database'
 import { rtdb } from '../../../firebase/config'
-import type { Room, RoomSettings, Player, Trade, RoundResult, RoundCardType } from '../types'
+import type { Room, RoomSettings, Player, Card, Trade, RoundResult, RoundCardType } from '../types'
 import { generateCompanies, autoCompanyCount, getTaxRate } from './scenario'
-import { createStarterCards, drawDraftPool, drawRoundCard, drawBonusCards, drawNullifierCard } from './cards'
+import { createStarterCards, drawDraftPool, drawRoundCard, drawBonusCards, drawNullifierCard, drawRoundCardChoiceCard } from './cards'
 
 function db() {
   if (!rtdb) throw new Error('Realtime Database가 초기화되지 않았습니다.')
@@ -412,6 +412,20 @@ export async function dissolveRoom(roomId: string) {
   await remove(ref(db(), `rooms/${roomId}`))
 }
 
+/** 라운드 카드 선택권 사용 — 10라운드 이벤트 카드를 직접 선택 */
+export async function useRoundCardChoice(roomId: string, uid: string, cardId: string, chosenRoundCard: RoundCardType) {
+  const snap = await get(ref(db(), `rooms/${roomId}/players/${uid}`))
+  const player = snap.val() as Player
+  const cardsArr: Card[] = Array.isArray(player.cards) ? player.cards : Object.values(player.cards ?? {})
+  const updatedCards = cardsArr.map(c => c.id === cardId ? { ...c, used: true } : c)
+
+  await update(ref(db()), {
+    [`rooms/${roomId}/players/${uid}/cards`]: updatedCards,
+    [`rooms/${roomId}/players/${uid}/usedInfoThisRound`]: (player.usedInfoThisRound ?? 0) + 1,
+    [`rooms/${roomId}/roundCard/10`]: chosenRoundCard,
+  })
+}
+
 /** 방장이 라운드 종료 처리 (결과 계산 후 상태 업데이트) */
 export async function endRound(roomId: string) {
   await update(ref(db(), `rooms/${roomId}`), { status: 'round_result' })
@@ -503,7 +517,11 @@ export async function nextRound(roomId: string, nextRound: number, totalRounds: 
       const count = bonusCountByUid[uid] ?? 1
       const bonusCards = drawBonusCards(count)
       // 최하위에게 특수카드 무효 추가 지급
-      const extras = uid === lastPlaceUid ? [drawNullifierCard()] : []
+      const extras: Card[] = uid === lastPlaceUid ? [drawNullifierCard()] : []
+      // 9라운드 꼴등에게 라운드 카드 선택권 추가 지급
+      if (uid === lastPlaceUid && nextRound === 10) {
+        extras.push(drawRoundCardChoiceCard())
+      }
       updates[`rooms/${roomId}/players/${uid}/cards`] = [...cardsArr, ...bonusCards, ...extras]
     }
   }

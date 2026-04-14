@@ -50,7 +50,9 @@ export default function FinalResult() {
       const portfolioValue = Object.entries(p.portfolio ?? {}).reduce((sum, [cid, qty]) => {
         return sum + (lastRoundPrices[cid] ?? 0) * (qty as number)
       }, 0)
-      const totalAssets = p.cash + portfolioValue
+      const rawAssets = p.cash + portfolioValue
+      const refillDeduction = p.refillTotal ?? 0
+      const totalAssets = rawAssets - refillDeduction   // 파산구제 차감 후 최종 자산
       const cashChange = totalAssets - room.settings.startCash
       return { player: p, totalAssets, rank: p.rank || 0, cashChange }
     })
@@ -126,6 +128,9 @@ export default function FinalResult() {
                   </div>
                   <div className={styles.assetInfo}>
                     <span className={styles.totalAssets}>{totalAssets.toLocaleString()}원</span>
+                    {(player.refillTotal ?? 0) > 0 && (
+                      <span className={styles.refillNote}>구제 −{player.refillTotal.toLocaleString()}</span>
+                    )}
                     <span
                       className={styles.cashChange}
                       style={{ color: cashChange >= 0 ? '#4caf50' : '#f44336' }}
@@ -172,6 +177,11 @@ export default function FinalResult() {
             <div className={styles.mySummaryTitle}>내 최종 성적</div>
             <div className={styles.mySummaryRank}>{rankEmoji(me.rank)}</div>
             <div className={styles.mySummaryAssets}>{me.totalAssets.toLocaleString()}원</div>
+            {(me.player.refillTotal ?? 0) > 0 && (
+              <div className={styles.mySummaryRefill}>
+                파산구제 차감: −{(me.player.refillTotal).toLocaleString()}원
+              </div>
+            )}
             <div
               className={styles.mySummaryChange}
               style={{ color: me.cashChange >= 0 ? '#4caf50' : '#f44336' }}

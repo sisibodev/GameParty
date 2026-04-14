@@ -30,8 +30,9 @@ export type InfoCardType =
   | 'whistleblower'   // 내부고발
   | 'market_scan'     // 시장 스캔
   | 'portfolio_scan'  // 포트폴리오 스캔
-  | 'premium'         // 특급 카드
-  | 'round_forecast'  // 라운드 이벤트 예보
+  | 'premium'              // 특급 카드
+  | 'round_forecast'       // 라운드 이벤트 예보
+  | 'round_card_choice'    // 라운드 카드 선택권 (9라운드 꼴등 전용)
 
 export type RoundCardType =
   | 'market_boom'       // 시장 활황 +10%p

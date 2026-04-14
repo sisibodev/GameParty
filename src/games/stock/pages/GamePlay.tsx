@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
-import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady, useInfoCard, usePremiumCard, dissolveRoom, pickDraft } from '../utils/rtdb'
+import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady, useInfoCard, usePremiumCard, dissolveRoom, pickDraft, useRoundCardChoice } from '../utils/rtdb'
 import { formatKRW, formatRate, getTaxRate } from '../utils/scenario'
-import { CARD_LABEL, CARD_COLOR, CARD_DESC, ROUND_CARD_META } from '../utils/cards'
+import { CARD_LABEL, CARD_COLOR, CARD_DESC, ROUND_CARD_META, ROUND_CARD_POOL } from '../utils/cards'
+import type { RoundCardType } from '../types'
 import type { Room, Company, Card } from '../types'
 import styles from './GamePlay.module.css'
 
@@ -21,6 +22,7 @@ export default function GamePlay() {
   const [pendingInfoCard, setPendingInfoCard] = useState<Card | null>(null) // 정보 카드 대상 선택
   const [infoTargetType, setInfoTargetType] = useState<'company' | 'player'>('company')
   const [infoResult, setInfoResult] = useState<{ title: string; body: string; color?: string } | null>(null)
+  const [pendingRoundCardChoice, setPendingRoundCardChoice] = useState<Card | null>(null) // 라운드 카드 선택권
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const roomRef = useRef<ReturnType<typeof subscribeRoom> | null>(null)
   const endingRef = useRef(false)  // 중복 endRound 방지
@@ -200,6 +202,10 @@ export default function GamePlay() {
         setInfoResult({ title: '특급 카드', body: '이번 라운드\n특수 카드 +1장\n정보 카드 +1장', color: '#ff9800' })
         break
       }
+      // ── 라운드 카드 선택권 — 선택 모달 열기 ──
+      case 'round_card_choice':
+        setPendingRoundCardChoice(card)
+        return
     }
   }, [room, user, roomId])
 
@@ -629,6 +635,38 @@ export default function GamePlay() {
               </div>
             )}
             <button className={styles.modalCancel} onClick={() => setPendingInfoCard(null)}>취소</button>
+          </div>
+        </div>
+      )}
+
+      {/* 라운드 카드 선택권 모달 */}
+      {pendingRoundCardChoice && (
+        <div className={styles.modalOverlay} onClick={() => setPendingRoundCardChoice(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 style={{ color: '#e91e63' }}>라운드 카드 선택권</h3>
+            <p className={styles.modalDesc}>다음 라운드 이벤트 카드를 직접 선택하세요.</p>
+            <div className={styles.modalCompanies}>
+              {(ROUND_CARD_POOL as RoundCardType[]).map(type => {
+                const meta = ROUND_CARD_META[type]
+                return (
+                  <button
+                    key={type}
+                    className={styles.modalCompanyBtn}
+                    style={{ borderColor: meta?.color ?? '#aaa', color: meta?.color ?? 'inherit' }}
+                    onClick={async () => {
+                      if (!roomId || !user) return
+                      await useRoundCardChoice(roomId, user.uid, pendingRoundCardChoice.id, type)
+                      setInfoResult({ title: '라운드 카드 선택', body: `${meta?.label ?? type}\n${meta?.desc ?? ''}`, color: meta?.color })
+                      setPendingRoundCardChoice(null)
+                    }}
+                  >
+                    <span style={{ fontWeight: 700 }}>{meta?.label ?? type}</span>
+                    <span style={{ fontSize: '0.8em', color: 'var(--color-text-muted)', marginLeft: '0.5rem' }}>{meta?.desc}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <button className={styles.modalCancel} onClick={() => setPendingRoundCardChoice(null)}>취소</button>
           </div>
         </div>
       )}
