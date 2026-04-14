@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
 import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady, useInfoCard, usePremiumCard, dissolveRoom } from '../utils/rtdb'
-import { formatKRW, formatRate } from '../utils/scenario'
+import { formatKRW, formatRate, getTaxRate } from '../utils/scenario'
 import { CARD_LABEL, CARD_COLOR, CARD_DESC, ROUND_CARD_META } from '../utils/cards'
 import type { Room, Company, Card } from '../types'
 import styles from './GamePlay.module.css'
@@ -286,6 +286,9 @@ export default function GamePlay() {
             {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
           </span>
         </div>
+        <span className={styles.taxLabel}>
+          보유세 {(getTaxRate(room.currentRound) * 100).toFixed(0)}%
+        </span>
         <span className={styles.cashLabel}>{formatKRW(me?.cash ?? 0)}</span>
         {user.uid === room.host && (
           <button
@@ -381,6 +384,26 @@ export default function GamePlay() {
                   >
                     전부 매도
                   </button>
+                </div>
+                <div className={styles.pctBtnRow}>
+                  <span className={styles.pctLabel}>매수</span>
+                  {[25, 50, 75].map(pct => (
+                    <button
+                      key={`buy${pct}`}
+                      className={styles.pctBtn}
+                      onClick={() => setTradeQty(Math.max(1, Math.floor((me?.cash ?? 0) * pct / 100 / selPrice)))}
+                      disabled={selPrice === 0 || (me?.cash ?? 0) < selPrice}
+                    >{pct}%</button>
+                  ))}
+                  <span className={styles.pctLabel}>매도</span>
+                  {[25, 50, 75].map(pct => (
+                    <button
+                      key={`sell${pct}`}
+                      className={styles.pctBtn}
+                      onClick={() => setTradeQty(Math.max(1, Math.round(myHolding * pct / 100)))}
+                      disabled={myHolding === 0}
+                    >{pct}%</button>
+                  ))}
                 </div>
                 <div className={styles.tradeBtns}>
                   <button className={styles.buyBtn} onClick={() => handleTrade('buy')}
@@ -479,6 +502,27 @@ export default function GamePlay() {
                 </div>
               </div>
             )}
+            {/* 사용 카드 현황 패널 */}
+            {(() => {
+              const myPlays = Object.values(room.cardPlays?.[room.currentRound] ?? {})
+                .filter(p => p.userId === user.uid)
+              if (myPlays.length === 0) return null
+              return (
+                <div className={styles.usedCardsPanel}>
+                  <span className={styles.usedCardsPanelLabel}>이번 라운드 사용</span>
+                  <div className={styles.usedCardTags}>
+                    {myPlays.map(p => {
+                      const c = room.companies[p.companyId]
+                      return (
+                        <span key={p.playId} className={styles.usedCardTag}>
+                          {CARD_LABEL[p.cardType]} → {c?.emoji}{c?.name}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </div>
       </div>

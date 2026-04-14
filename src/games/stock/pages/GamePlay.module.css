@@ -58,6 +58,18 @@
   line-height: 1;
 }
 
+.taxLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .cashLabel {
   font-size: 0.9rem;
   font-weight: 700;
@@ -293,6 +305,43 @@
 
 .qtyShortBtn:disabled { opacity: 0.3; cursor: default; }
 
+/* ── % 단위 매수/매도 버튼 ─────────────────────────── */
+
+.pctBtnRow {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.pctLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  padding: 0 0.15rem;
+}
+
+.pctBtn {
+  flex: 1;
+  height: 26px;
+  background: var(--color-surface-2);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--color-text-muted);
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.pctBtn:hover:not(:disabled) {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.pctBtn:disabled { opacity: 0.3; cursor: default; }
+
 .tradeBtns {
   display: flex;
   gap: 0.5rem;
@@ -438,6 +487,43 @@
 .draftBtn {
   border-color: #ffc107 !important;
   background: rgba(255, 193, 7, 0.1);
+}
+
+/* ── 사용 카드 현황 패널 ─────────────────────────────── */
+
+.usedCardsPanel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.usedCardsPanelLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.usedCardTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.usedCardTag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  padding: 0.2rem 0.5rem;
+  white-space: nowrap;
 }
 
 /* ── 순위 오버레이 ────────────────────────────────── */

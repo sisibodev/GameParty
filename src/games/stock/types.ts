@@ -112,6 +112,8 @@ export interface RoundResult {
   finalRates: { [companyId: string]: number }  // 최종 등락률 (카드 모두 적용 후)
   roundCardType: RoundCardType
   rankSnapshot: { uid: string; rank: number }[]
+  taxRate: number                              // 이번 라운드 현금 보유세율
+  taxApplied: { [uid: string]: number }        // 플레이어별 차감된 세금
 }
 
 // ─── 방 상태 ──────────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import {
 import type { DatabaseReference } from 'firebase/database'
 import { rtdb } from '../../../firebase/config'
 import type { Room, RoomSettings, Player, Trade, RoundResult, RoundCardType } from '../types'
-import { generateCompanies, autoCompanyCount } from './scenario'
+import { generateCompanies, autoCompanyCount, getTaxRate } from './scenario'
 import { createStarterCards, drawDraftOptions, drawRoundCard, drawBonusCards } from './cards'
 
 function db() {
@@ -241,12 +241,21 @@ export async function calculateRoundResult(roomId: string, round: number) {
 
   const rankSnapshot = playerRankings.map((p, i) => ({ uid: p.uid, rank: i + 1 }))
 
+  // 현금 보유세 계산
+  const taxRate = getTaxRate(round)
+  const taxApplied: Record<string, number> = {}
+  for (const player of Object.values(room.players)) {
+    taxApplied[player.uid] = Math.floor(player.cash * taxRate)
+  }
+
   const roundResult: RoundResult = {
     round,
     baseRates,
     finalRates: effectiveRates,
     roundCardType: roundCard,
     rankSnapshot,
+    taxRate,
+    taxApplied,
   }
 
   // RTDB 일괄 업데이트
@@ -259,6 +268,11 @@ export async function calculateRoundResult(roomId: string, round: number) {
   }
   for (const { uid, rank } of rankSnapshot) {
     allUpdates[`rooms/${roomId}/players/${uid}/rank`] = rank
+  }
+  // 세금 차감
+  for (const player of Object.values(room.players)) {
+    allUpdates[`rooms/${roomId}/players/${player.uid}/cash`] =
+      Math.max(0, player.cash - taxApplied[player.uid])
   }
 
   await update(ref(db()), allUpdates)

@@ -118,3 +118,12 @@ export function formatRate(rate: number): string {
   const pct = (rate * 100).toFixed(1)
   return rate >= 0 ? `+${pct}%` : `${pct}%`
 }
+
+/** 라운드별 현금 보유세율 */
+export function getTaxRate(round: number): number {
+  if (round <= 2) return 0.01
+  if (round <= 4) return 0.02
+  if (round <= 6) return 0.03
+  if (round <= 8) return 0.04
+  return 0.05
+}

@@ -492,8 +492,16 @@ export default function RoundResult() {
                 <p className={styles.noHolding}>보유 종목 없음</p>
               )}
               <div className={styles.assetSummary}>
+                {result.taxApplied?.[user.uid] !== undefined && (
+                  <div className={styles.assetRow}>
+                    <span>현금 보유세 ({((result.taxRate ?? 0) * 100).toFixed(0)}%)</span>
+                    <span style={{ color: '#f44336' }}>
+                      -{result.taxApplied[user.uid].toLocaleString()}원
+                    </span>
+                  </div>
+                )}
                 <div className={styles.assetRow}>
-                  <span>현금</span>
+                  <span>현금 잔액</span>
                   <span>{(me?.cash ?? 0).toLocaleString()}원</span>
                 </div>
                 <div className={styles.assetRow}>
