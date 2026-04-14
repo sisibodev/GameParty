@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
-import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, endRound, setRoundReady, useInfoCard, usePremiumCard, dissolveRoom, pickDraft, useRoundCardChoice } from '../utils/rtdb'
+import { subscribeRoom, unsubscribeRoom, recordTrade, playSpecialCard, applyHandSwap, endRound, setRoundReady, useInfoCard, usePremiumCard, dissolveRoom, pickDraft, useRoundCardChoice } from '../utils/rtdb'
 import { formatKRW, formatRate, getTaxRate } from '../utils/scenario'
 import { CARD_LABEL, CARD_COLOR, CARD_DESC, ROUND_CARD_META, ROUND_CARD_POOL } from '../utils/cards'
 import type { RoundCardType } from '../types'
@@ -23,6 +23,9 @@ export default function GamePlay() {
   const [infoTargetType, setInfoTargetType] = useState<'company' | 'player'>('company')
   const [infoResult, setInfoResult] = useState<{ title: string; body: string; color?: string } | null>(null)
   const [pendingRoundCardChoice, setPendingRoundCardChoice] = useState<Card | null>(null) // 라운드 카드 선택권
+  // 플레이어 대상 특수 카드: 1단계(플레이어 선택) → 2단계(회사 선택, focused_snipe/trade_freeze만)
+  const [pendingPlayerCard, setPendingPlayerCard] = useState<Card | null>(null)
+  const [pendingPlayerCardWithTarget, setPendingPlayerCardWithTarget] = useState<{ card: Card; targetUid: string } | null>(null)
   const [draftTimeLeft, setDraftTimeLeft] = useState(0)  // 드래프트 선택 남은 시간
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const draftTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -148,13 +151,19 @@ export default function GamePlay() {
     setTradeQty(1)
   }, [room, user, selectedCompany, tradeQty, roomId])
 
+  const PLAYER_TARGETED_CARDS = ['cash_burn','portfolio_snipe','profit_steal','focused_snipe','forced_invest','trade_freeze','hand_swap']
+
   const handleUseSpecialCard = useCallback(async (card: Card) => {
     if (!room || !user || !roomId) return
     const me = room.players[user.uid]
     if (me.usedSpecialThisRound >= me.maxSpecialThisRound) return
 
-    // 첫 번째 카드 이후 두 번째는 다른 회사에만 사용 가능 → 회사 선택 모달
-    setPendingCard(card)
+    if (PLAYER_TARGETED_CARDS.includes(card.type)) {
+      setPendingPlayerCard(card)   // 플레이어 선택 모달 열기
+    } else {
+      setPendingCard(card)         // 회사 선택 모달 열기 (기존)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room, user, roomId])
 
   const confirmCardTarget = useCallback(async (companyId: string) => {
@@ -175,6 +184,33 @@ export default function GamePlay() {
     await playSpecialCard(roomId, room.currentRound, user.uid, companyId, pendingCard.id, pendingCard.type as string)
     setPendingCard(null)
   }, [pendingCard, room, user, roomId])
+
+  // 플레이어 대상 특수 카드: 플레이어 선택 완료
+  const confirmPlayerTarget = useCallback(async (targetUid: string) => {
+    const card = pendingPlayerCard!
+    setPendingPlayerCard(null)
+    if (!room || !user || !roomId) return
+
+    // 2단계(회사 선택)가 필요한 카드
+    if (card.type === 'focused_snipe' || card.type === 'trade_freeze') {
+      setPendingPlayerCardWithTarget({ card, targetUid })
+      return
+    }
+    // 즉시 실행 카드
+    if (card.type === 'hand_swap') {
+      await applyHandSwap(roomId, user.uid, card.id, targetUid)
+    } else {
+      await playSpecialCard(roomId, room.currentRound, user.uid, '', card.id, card.type, targetUid)
+    }
+  }, [pendingPlayerCard, room, user, roomId])
+
+  // 플레이어 대상 특수 카드: 회사 선택 완료 (focused_snipe / trade_freeze)
+  const confirmPlayerCardCompany = useCallback(async (companyId: string) => {
+    const { card, targetUid } = pendingPlayerCardWithTarget!
+    setPendingPlayerCardWithTarget(null)
+    if (!room || !user || !roomId) return
+    await playSpecialCard(roomId, room.currentRound, user.uid, companyId, card.id, card.type, targetUid)
+  }, [pendingPlayerCardWithTarget, room, user, roomId])
 
   const handleUseInfoCard = useCallback(async (card: Card) => {
     if (!room || !user || !roomId) return
@@ -360,16 +396,18 @@ export default function GamePlay() {
             const prevPrice = c.priceHistory[room.currentRound - 2] ?? c.priceHistory[0]
             const change = prevPrice > 0 ? (curPrice - prevPrice) / prevPrice : 0
             const holding = me?.portfolio?.[c.id] ?? 0
+            const isFrozen = me?.activeEffects?.tradeFreezeCompanyId === c.id
             return (
               <div
                 key={c.id}
-                className={`${styles.companyRow} ${selectedCompany === c.id ? styles.companyRowSelected : ''}`}
+                className={`${styles.companyRow} ${selectedCompany === c.id ? styles.companyRowSelected : ''} ${isFrozen ? styles.companyRowFrozen : ''}`}
                 onClick={() => setSelectedCompany(c.id)}
               >
                 <span className={styles.companyEmoji}>{c.emoji}</span>
                 <div className={styles.companyInfo}>
                   <span className={styles.companyName}>{c.name}</span>
                   {holding > 0 && <span className={styles.holdingBadge}>{holding}주</span>}
+                  {isFrozen && <span className={styles.frozenBadge}>거래정지</span>}
                 </div>
                 <div className={styles.priceInfo}>
                   <span className={styles.price}>{curPrice.toLocaleString()}</span>
@@ -726,6 +764,56 @@ export default function GamePlay() {
               </div>
             )}
             <button className={styles.modalCancel} onClick={() => setPendingInfoCard(null)}>취소</button>
+          </div>
+        </div>
+      )}
+
+      {/* 집중 투자 강제 알림 배너 */}
+      {me?.activeEffects?.forcedInvest && (
+        <div className={styles.forcedInvestBanner}>
+          ⚠️ 집중 투자 강제 적용 중 — 현금의 75% 이상을 한 종목에 투자해야 합니다. 미이행 시 라운드 결산 때 자동 집행됩니다.
+        </div>
+      )}
+
+      {/* 플레이어 대상 특수 카드: 플레이어 선택 모달 */}
+      {pendingPlayerCard && (
+        <div className={styles.modalOverlay} onClick={() => setPendingPlayerCard(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 style={{ color: CARD_COLOR[pendingPlayerCard.type] ?? '#e91e63' }}>
+              {CARD_LABEL[pendingPlayerCard.type]} — 대상 플레이어 선택
+            </h3>
+            <p className={styles.modalDesc}>{CARD_DESC[pendingPlayerCard.type]}</p>
+            <div className={styles.modalCompanies}>
+              {Object.values(room.players).filter(p => p.uid !== user.uid).map(p => (
+                <button key={p.uid} className={styles.modalCompanyBtn} onClick={() => confirmPlayerTarget(p.uid)}>
+                  {p.name}
+                  {p.rank > 0 && <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginLeft: '0.4rem' }}>{p.rank}위</span>}
+                </button>
+              ))}
+            </div>
+            <button className={styles.modalCancel} onClick={() => setPendingPlayerCard(null)}>취소</button>
+          </div>
+        </div>
+      )}
+
+      {/* 플레이어 대상 특수 카드: 회사 선택 모달 (focused_snipe / trade_freeze) */}
+      {pendingPlayerCardWithTarget && (
+        <div className={styles.modalOverlay} onClick={() => setPendingPlayerCardWithTarget(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 style={{ color: CARD_COLOR[pendingPlayerCardWithTarget.card.type] ?? '#e91e63' }}>
+              {CARD_LABEL[pendingPlayerCardWithTarget.card.type]} — 종목 선택
+            </h3>
+            <p className={styles.modalDesc}>
+              대상: {room.players[pendingPlayerCardWithTarget.targetUid]?.name}
+            </p>
+            <div className={styles.modalCompanies}>
+              {companies.map(c => (
+                <button key={c.id} className={styles.modalCompanyBtn} onClick={() => confirmPlayerCardCompany(c.id)}>
+                  {c.emoji} {c.name}
+                </button>
+              ))}
+            </div>
+            <button className={styles.modalCancel} onClick={() => setPendingPlayerCardWithTarget(null)}>취소</button>
           </div>
         </div>
       )}

@@ -112,6 +112,34 @@
   border-left-color: var(--color-primary);
 }
 
+.companyRowFrozen {
+  opacity: 0.65;
+  border-left-color: #795548;
+}
+
+.frozenBadge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #795548;
+  background: rgba(121, 85, 72, 0.15);
+  border: 1px solid rgba(121, 85, 72, 0.4);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+}
+
+.forcedInvestBanner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 152, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 152, 0, 0.4);
+  color: #ff9800;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.55rem 1rem;
+  text-align: center;
+}
+
 .companyEmoji { font-size: 1.2rem; flex-shrink: 0; }
 
 .companyInfo {

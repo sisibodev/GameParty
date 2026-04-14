@@ -22,6 +22,14 @@ export type SpecialCardType =
   | 'crash'           // 폭락 ×0.5
   | 'reversal'        // 반전 부호 반전
   | 'card_nullifier'  // 특수카드 무효 — 대상 회사에 쌓인 특수 카드 모두 무효화
+  // ── 플레이어 대상 ──
+  | 'cash_burn'       // 현금 소각 — 대상 플레이어 현금 50% 소멸 (라운드 결산 시)
+  | 'portfolio_snipe' // 포트폴리오 저격 — 대상의 비중 1위 종목에 -20%p 적용
+  | 'profit_steal'    // 수익 강탈 — 대상의 이번 라운드 수익 30%를 흡수
+  | 'focused_snipe'   // 집중 저격 — 대상 플레이어의 지정 종목에 -35%p 적용
+  | 'forced_invest'   // 집중 투자 강제 — 대상이 현금 75%+ 한 종목에 투자해야 함
+  | 'trade_freeze'    // 거래 정지 — 대상이 지정 종목 이번 라운드 매매 불가
+  | 'hand_swap'       // 손바꿈 — 대상과 보유 현금 전액 즉시 교환
 
 export type InfoCardType =
   | 'trend'           // 등락 예보
@@ -80,6 +88,10 @@ export interface Player {
   maxSpecialThisRound: number
   maxInfoThisRound: number
   draftChosen: string | null      // 이번 라운드 드래프트에서 선택한 카드 ID
+  activeEffects?: {
+    tradeFreezeCompanyId?: string  // 이번 라운드 거래 정지된 종목 ID
+    forcedInvest?: boolean          // 이번 라운드 집중 투자 강제 대상
+  }
 }
 
 // ─── 거래 / 카드 사용 ──────────────────────────────────────────────────────────
@@ -92,7 +104,8 @@ export interface Trade {
 export interface CardPlay {
   playId: string
   userId: string
-  companyId: string
+  companyId: string        // 회사 대상 카드는 companyId, 플레이어 대상만 카드는 ''
+  targetUserId?: string    // 플레이어 대상 카드
   cardType: SpecialCardType
   cardId: string
 }

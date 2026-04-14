@@ -141,6 +141,11 @@ export async function recordTrade(
   const priceHistory = priceSnap.val() as number[]
   const price = priceHistory[round - 1] ?? priceHistory[0]
 
+  // 거래 정지 체크
+  if (player.activeEffects?.tradeFreezeCompanyId === companyId) {
+    throw new Error('거래 정지: 이번 라운드 이 종목은 거래할 수 없습니다.')
+  }
+
   const holding = (player.portfolio?.[companyId] ?? 0)
   const newHolding = trade.action === 'buy'
     ? holding + trade.quantity
@@ -168,12 +173,90 @@ export async function calculateRoundResult(roomId: string, round: number) {
   const companies = Object.values(room.companies)
   const cardPlaysThisRound = room.cardPlays?.[round] ?? {}
 
+  // ── forced_invest 자동 집행 (라운드 결산 전에 포트폴리오 강제 조정) ────────────
+  const forcedInvestPlays = Object.values(cardPlaysThisRound).filter(p => p.cardType === 'forced_invest')
+  const forcedInvestUpdates: Record<string, unknown> = {}
+  for (const play of forcedInvestPlays) {
+    const targetUid = play.targetUserId
+    if (!targetUid || !room.players[targetUid]) continue
+    const tp = room.players[targetUid]
+    const prevPrices: Record<string, number> = {}
+    for (const c of companies) {
+      prevPrices[c.id] = c.priceHistory[round - 1] ?? c.priceHistory[0]
+    }
+    const portfolioValue = Object.entries(tp.portfolio ?? {}).reduce((s, [cid, qty]) =>
+      s + (prevPrices[cid] ?? 0) * (qty as number), 0)
+    const totalAssets = tp.cash + portfolioValue
+    const target75 = totalAssets * 0.75
+
+    // 비중 1위 종목 찾기
+    const topEntry = Object.entries(tp.portfolio ?? {})
+      .filter(([, qty]) => (qty as number) > 0)
+      .sort(([aId, aQty], [bId, bQty]) =>
+        (prevPrices[bId] ?? 0) * (bQty as number) - (prevPrices[aId] ?? 0) * (aQty as number)
+      )[0]
+    const topCompanyId = topEntry?.[0]
+    const topQty = topEntry ? (topEntry[1] as number) : 0
+    const topValue = topCompanyId ? (prevPrices[topCompanyId] ?? 0) * topQty : 0
+
+    if (topValue >= target75) continue  // 이미 75% 충족
+
+    // 자동 집행: 비중 1위 외 전부 매도
+    let newCash = tp.cash
+    const newPortfolio = { ...tp.portfolio }
+    for (const [cid, qty] of Object.entries(newPortfolio)) {
+      if (cid === topCompanyId || (qty as number) <= 0) continue
+      newCash += (prevPrices[cid] ?? 0) * (qty as number)
+      newPortfolio[cid] = 0
+    }
+    // 1위 종목 추가 매수
+    if (topCompanyId && prevPrices[topCompanyId] > 0) {
+      let curTopValue = (prevPrices[topCompanyId] ?? 0) * (newPortfolio[topCompanyId] as number ?? 0)
+      while (newCash >= prevPrices[topCompanyId] && curTopValue < target75) {
+        newCash -= prevPrices[topCompanyId]
+        newPortfolio[topCompanyId] = ((newPortfolio[topCompanyId] as number) ?? 0) + 1
+        curTopValue += prevPrices[topCompanyId]
+      }
+    }
+    // RTDB에 적용 (room 로컬 상태도 업데이트)
+    forcedInvestUpdates[`rooms/${roomId}/players/${targetUid}/cash`] = newCash
+    forcedInvestUpdates[`rooms/${roomId}/players/${targetUid}/portfolio`] = newPortfolio
+    forcedInvestUpdates[`rooms/${roomId}/players/${targetUid}/activeEffects/forcedInvest`] = false
+    room.players[targetUid].cash = newCash
+    room.players[targetUid].portfolio = newPortfolio
+  }
+  if (Object.keys(forcedInvestUpdates).length > 0) {
+    await update(ref(db()), forcedInvestUpdates)
+  }
+
   // 기본 등락률 (카드 적용 전) 저장
   const baseRates: Record<string, number> = {}
   for (const company of companies) {
     const prevPrice = company.priceHistory[round - 1] ?? company.priceHistory[0]
     const seededPrice = company.priceHistory[round] ?? prevPrice
     baseRates[company.id] = prevPrice > 0 ? (seededPrice - prevPrice) / prevPrice : 0
+  }
+
+  // ── 플레이어 대상 카드 → 회사 등락률에 영향 ──────────────────────────────────
+  const extraRates: Record<string, number> = {}
+
+  // portfolio_snipe: 대상의 prevPrice 기준 비중 1위 종목에 -20%p
+  for (const play of Object.values(cardPlaysThisRound).filter(p => p.cardType === 'portfolio_snipe')) {
+    const tp = room.players[play.targetUserId ?? '']
+    if (!tp) continue
+    const topCid = Object.entries(tp.portfolio ?? {})
+      .filter(([, qty]) => (qty as number) > 0)
+      .sort(([aId, aQty], [bId, bQty]) => {
+        const prevA = companies.find(c => c.id === aId)?.priceHistory[round - 1] ?? 0
+        const prevB = companies.find(c => c.id === bId)?.priceHistory[round - 1] ?? 0
+        return prevB * (bQty as number) - prevA * (aQty as number)
+      })[0]?.[0]
+    if (topCid) extraRates[topCid] = (extraRates[topCid] ?? 0) - 0.20
+  }
+
+  // focused_snipe: 대상 플레이어의 지정 종목에 -35%p
+  for (const play of Object.values(cardPlaysThisRound).filter(p => p.cardType === 'focused_snipe')) {
+    if (play.companyId) extraRates[play.companyId] = (extraRates[play.companyId] ?? 0) - 0.35
   }
 
   // 각 회사별 유효 등락률 계산
@@ -198,6 +281,8 @@ export async function calculateRoundResult(roomId: string, round: number) {
           case 'reversal': rate = -rate; break
         }
       }
+      // 플레이어 대상 카드에서 온 추가 조정
+      rate += extraRates[company.id] ?? 0
     }
     effectiveRates[company.id] = rate
   }
@@ -262,12 +347,41 @@ export async function calculateRoundResult(roomId: string, round: number) {
     taxApplied[player.uid] = Math.floor(player.cash * taxRate)
   }
 
+  // ── profit_steal: 대상의 이번 라운드 수익 30% 흡수 ──────────────────────────
+  // 수익 = Σ(보유량 × (새가격 - 이전가격))
+  const roundProfit: Record<string, number> = {}
+  for (const player of Object.values(room.players)) {
+    let profit = 0
+    for (const [cid, qty] of Object.entries(player.portfolio ?? {})) {
+      const prev = companies.find(c => c.id === cid)?.priceHistory[round - 1] ?? 0
+      const next = newPrices[cid] ?? prev
+      profit += (next - prev) * (qty as number)
+    }
+    roundProfit[player.uid] = profit
+  }
+  const profitStealCashDelta: Record<string, number> = {}  // uid → 현금 증감
+  for (const play of Object.values(cardPlaysThisRound).filter(p => p.cardType === 'profit_steal')) {
+    const targetUid = play.targetUserId ?? ''
+    const targetProfit = roundProfit[targetUid] ?? 0
+    if (targetProfit <= 0) continue  // 손실이면 훔칠 것 없음
+    const stolen = Math.floor(targetProfit * 0.3)
+    profitStealCashDelta[play.userId] = (profitStealCashDelta[play.userId] ?? 0) + stolen
+    profitStealCashDelta[targetUid] = (profitStealCashDelta[targetUid] ?? 0) - stolen
+  }
+
   // 파산 구제: 세후 현금으로 아무 주식도 못 사면 100만원 리필
   const minPrice = Math.min(...Object.values(newPrices).filter(p => p > 0))
   const refillApplied: Record<string, number> = {}
   const cashAfterTax: Record<string, number> = {}
   for (const player of Object.values(room.players)) {
-    const afterTax = Math.max(0, player.cash - taxApplied[player.uid])
+    let afterTax = Math.max(0, player.cash - taxApplied[player.uid])
+    // cash_burn: 현금 50% 소각
+    const hasCashBurn = Object.values(cardPlaysThisRound)
+      .some(p => p.cardType === 'cash_burn' && p.targetUserId === player.uid)
+    if (hasCashBurn) afterTax = Math.floor(afterTax * 0.5)
+    // profit_steal 반영
+    afterTax = Math.max(0, afterTax + (profitStealCashDelta[player.uid] ?? 0))
+    // 파산 구제
     if (afterTax < (isFinite(minPrice) ? minPrice : Infinity)) {
       refillApplied[player.uid] = 1000000
       cashAfterTax[player.uid] = afterTax + 1000000
@@ -323,7 +437,7 @@ export async function calculateRoundResult(roomId: string, round: number) {
   await update(ref(db()), allUpdates)
 }
 
-/** 특수 카드 사용 기록 */
+/** 특수 카드 사용 기록 (플레이어 대상 카드는 targetUserId 전달) */
 export async function playSpecialCard(
   roomId: string,
   round: number,
@@ -331,30 +445,68 @@ export async function playSpecialCard(
   companyId: string,
   cardId: string,
   cardType: string,
+  targetUserId?: string,
 ) {
   const playId = `${uid}-${cardId}`
+  const cardPlay: Record<string, unknown> = { playId, userId: uid, companyId, cardType, cardId }
+  if (targetUserId) cardPlay.targetUserId = targetUserId
+
   const [, playerSnap] = await Promise.all([
-    set(ref(db(), `rooms/${roomId}/cardPlays/${round}/${playId}`), {
-      playId,
-      userId: uid,
-      companyId,
-      cardType,
-      cardId,
-    }),
+    set(ref(db(), `rooms/${roomId}/cardPlays/${round}/${playId}`), cardPlay),
     get(ref(db(), `rooms/${roomId}/players/${uid}`)),
   ])
 
   const player = playerSnap.val() as Player
-  // Firebase RTDB may return arrays as {0:{...}, 1:{...}} objects
-  const cardsRaw = player.cards
-  const cardsArr: Player['cards'] = Array.isArray(cardsRaw)
-    ? cardsRaw
-    : Object.values(cardsRaw)
+  const cardsArr: Player['cards'] = Array.isArray(player.cards)
+    ? player.cards
+    : Object.values(player.cards)
   const updatedCards = cardsArr.map(c => c.id === cardId ? { ...c, used: true } : c)
 
-  await update(ref(db(), `rooms/${roomId}/players/${uid}`), {
+  const extraUpdates: Record<string, unknown> = {
     cards: updatedCards,
     usedSpecialThisRound: (player.usedSpecialThisRound ?? 0) + 1,
+  }
+
+  // trade_freeze: 대상 플레이어 activeEffects에 즉시 기록
+  // forced_invest: 대상 플레이어에게 즉시 표시
+  if (targetUserId) {
+    if (cardType === 'trade_freeze' && companyId) {
+      await update(ref(db(), `rooms/${roomId}/players/${targetUserId}`), {
+        'activeEffects/tradeFreezeCompanyId': companyId,
+      })
+    }
+    if (cardType === 'forced_invest') {
+      await update(ref(db(), `rooms/${roomId}/players/${targetUserId}`), {
+        'activeEffects/forcedInvest': true,
+      })
+    }
+  }
+
+  await update(ref(db(), `rooms/${roomId}/players/${uid}`), extraUpdates)
+}
+
+/** 손바꿈 — 두 플레이어의 현금 즉시 교환 */
+export async function applyHandSwap(
+  roomId: string,
+  uid: string,
+  cardId: string,
+  targetUserId: string,
+) {
+  const [mySnap, targetSnap] = await Promise.all([
+    get(ref(db(), `rooms/${roomId}/players/${uid}`)),
+    get(ref(db(), `rooms/${roomId}/players/${targetUserId}`)),
+  ])
+  const me = mySnap.val() as Player
+  const target = targetSnap.val() as Player
+
+  const myCardsArr: Card[] = Array.isArray(me.cards) ? me.cards : Object.values(me.cards ?? {})
+  const updatedMyCards = myCardsArr.map(c => c.id === cardId ? { ...c, used: true } : c)
+
+  await update(ref(db()), {
+    [`rooms/${roomId}/players/${uid}/cash`]: target.cash,
+    [`rooms/${roomId}/players/${uid}/cards`]: updatedMyCards,
+    [`rooms/${roomId}/players/${uid}/usedSpecialThisRound`]: (me.usedSpecialThisRound ?? 0) + 1,
+    [`rooms/${roomId}/players/${targetUserId}/cash`]: me.cash,
   })
 }
 
@@ -507,6 +659,7 @@ export async function nextRound(roomId: string, nextRound: number, totalRounds: 
     updates[`rooms/${roomId}/players/${uid}/maxSpecialThisRound`] = 2
     updates[`rooms/${roomId}/players/${uid}/maxInfoThisRound`] = 1
     updates[`rooms/${roomId}/players/${uid}/draftChosen`] = null
+    updates[`rooms/${roomId}/players/${uid}/activeEffects`] = {}  // 라운드 효과 초기화
 
     if (isBonusRound) {
       const player = players[uid]
