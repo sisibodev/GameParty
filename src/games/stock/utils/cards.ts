@@ -52,6 +52,8 @@ const DRAFT_INFO_POOL: InfoCardType[] = [
   'portfolio_scan',
   'premium',
   'round_forecast',
+  'rate_insight',   // 낮은 확률
+  'card_appraise',  // 낮은 확률
 ]
 
 /** 드래프트 카드 풀 생성 (플레이어 수 + 1장) */
@@ -129,6 +131,8 @@ export const CARD_LABEL: Record<string, string> = {
   premium: '특급 카드',
   round_forecast: '이벤트 예보',
   round_card_choice: '라운드 카드 선택권',
+  rate_insight: '수익률 투시',
+  card_appraise: '카드 감정',
   market_boom: '시장 활황',
   market_crash: '시장 폭락',
   big_boom: '대호재',
@@ -170,6 +174,8 @@ export const CARD_DESC: Record<string, string> = {
   premium: '이번 라운드 특수 카드 +1장, 정보 카드 +1장',
   round_forecast: '이번 라운드 이벤트 카드를 미리 확인',
   round_card_choice: '다음 라운드 이벤트 카드를 목록에서 직접 선택 (9라운드 꼴등 전용)',
+  rate_insight: '선택한 회사의 이번 라운드 순수 등락률 % 수치까지 공개 (실시간 유지)',
+  card_appraise: '선택한 회사에 적용된 특수 카드 종류 목록 공개 (실시간 유지)',
   market_boom: '전 종목 수익률 +10%p',
   market_crash: '전 종목 수익률 -10%p',
   big_boom: '전 종목 수익률 +25%p',
@@ -211,6 +217,8 @@ export const CARD_COLOR: Record<string, string> = {
   premium: '#ff9800',
   round_forecast: '#ff9800',
   round_card_choice: '#e91e63',
+  rate_insight: '#00bcd4',
+  card_appraise: '#8bc34a',
 }
 
 // ─── 라운드 카드 메타 (공유) ─────────────────────────────────────────────────

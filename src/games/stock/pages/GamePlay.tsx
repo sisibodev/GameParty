@@ -26,6 +26,8 @@ export default function GamePlay() {
   // 플레이어 대상 특수 카드: 1단계(플레이어 선택) → 2단계(회사 선택, focused_snipe/trade_freeze만)
   const [pendingPlayerCard, setPendingPlayerCard] = useState<Card | null>(null)
   const [pendingPlayerCardWithTarget, setPendingPlayerCardWithTarget] = useState<{ card: Card; targetUid: string } | null>(null)
+  // 스캔 정보 패널: 라운드 내내 유지되는 실시간 정보 항목
+  const [scanPanel, setScanPanel] = useState<Array<{ cardId: string; type: string; targetId: string; title: string }>>([])
   const [draftTimeLeft, setDraftTimeLeft] = useState(0)  // 드래프트 선택 남은 시간
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const draftTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -107,6 +109,9 @@ export default function GamePlay() {
     window.addEventListener('keyup', up)
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
   }, [])
+
+  // 라운드 변경 시 스캔 패널 초기화
+  useEffect(() => { setScanPanel([]) }, [room?.currentRound])
 
   // 드래프트 내 차례 → 20초 카운트다운 시작/중지
   useEffect(() => {
@@ -218,24 +223,39 @@ export default function GamePlay() {
     if (me.usedInfoThisRound >= me.maxInfoThisRound) return
 
     const round = room.currentRound
-    const companies = Object.values(room.companies)
 
     switch (card.type) {
-      // ── 대상 선택 필요 (회사) ──
+      // ── 스캔 패널 (회사 선택 후 패널에 추가) ──
       case 'trend':
       case 'detect':
+      case 'rate_insight':
+      case 'card_appraise':
         setPendingInfoCard(card)
         setInfoTargetType('company')
         return
 
-      // ── 대상 선택 필요 (플레이어) ──
+      // ── 스캔 패널 (플레이어 선택 후 패널에 추가) ──
       case 'shadow':
+        setPendingInfoCard(card)
+        setInfoTargetType('player')
+        return
+
+      // ── 스캔 패널 (즉시, 대상 없음) ──
+      case 'market_scan': {
+        await useInfoCard(roomId, user.uid, card.id)
+        setScanPanel(prev => {
+          if (prev.some(e => e.type === 'market_scan')) return prev
+          return [...prev, { cardId: card.id, type: 'market_scan', targetId: '', title: '시장 스캔' }]
+        })
+        break
+      }
+
+      // ── 모달 (일회성 정보) ──
       case 'portfolio_scan':
         setPendingInfoCard(card)
         setInfoTargetType('player')
         return
 
-      // ── 즉시 발동 ──
       case 'round_forecast': {
         const roundCard = room.roundCard?.[round]
         if (!roundCard) return
@@ -258,18 +278,6 @@ export default function GamePlay() {
         })
         break
       }
-      case 'market_scan': {
-        const sorted = [...companies].sort((a, b) => {
-          const rA = a.priceHistory[round - 1] > 0 ? (a.priceHistory[round] - a.priceHistory[round - 1]) / a.priceHistory[round - 1] : 0
-          const rB = b.priceHistory[round - 1] > 0 ? (b.priceHistory[round] - b.priceHistory[round - 1]) / b.priceHistory[round - 1] : 0
-          return rB - rA
-        })
-        const top2 = sorted.slice(0, 2).map(c => `${c.emoji} ${c.name}`).join('  ')
-        const bot2 = sorted.slice(-2).map(c => `${c.emoji} ${c.name}`).join('  ')
-        await useInfoCard(roomId, user.uid, card.id)
-        setInfoResult({ title: '시장 스캔', body: `▲ 상위  ${top2}\n▼ 하위  ${bot2}`, color: '#2196f3' })
-        break
-      }
       case 'premium': {
         await usePremiumCard(roomId, user.uid, card.id)
         setInfoResult({ title: '특급 카드', body: '이번 라운드\n특수 카드 +1장\n정보 카드 +1장', color: '#ff9800' })
@@ -284,36 +292,40 @@ export default function GamePlay() {
 
   const confirmInfoCardTarget = useCallback(async (targetId: string) => {
     if (!pendingInfoCard || !room || !user || !roomId) return
-    const round = room.currentRound
 
     switch (pendingInfoCard.type) {
+      // ── 스캔 패널에 추가 (실시간 유지) ──
       case 'trend': {
         const c = room.companies[targetId]
-        const prev = c.priceHistory[round - 1] ?? c.priceHistory[0]
-        const next = c.priceHistory[round] ?? prev
-        const dir = next >= prev ? '▲ 상승' : '▼ 하락'
         await useInfoCard(roomId, user.uid, pendingInfoCard.id)
-        setInfoResult({ title: '등락 예보', body: `${c.emoji} ${c.name}\n${dir}`, color: '#2196f3' })
+        setScanPanel(prev => [...prev, { cardId: pendingInfoCard.id, type: 'trend', targetId, title: `등락 예보 — ${c?.emoji} ${c?.name}` }])
         break
       }
       case 'detect': {
         const c = room.companies[targetId]
-        const count = Object.values(room.cardPlays?.[round] ?? {}).filter(p => p.companyId === targetId).length
         await useInfoCard(roomId, user.uid, pendingInfoCard.id)
-        setInfoResult({ title: '카드 탐지', body: `${c.emoji} ${c.name}\n특수 카드 ${count}장 사용됨`, color: '#2196f3' })
+        setScanPanel(prev => [...prev, { cardId: pendingInfoCard.id, type: 'detect', targetId, title: `카드 탐지 — ${c?.emoji} ${c?.name}` }])
+        break
+      }
+      case 'rate_insight': {
+        const c = room.companies[targetId]
+        await useInfoCard(roomId, user.uid, pendingInfoCard.id)
+        setScanPanel(prev => [...prev, { cardId: pendingInfoCard.id, type: 'rate_insight', targetId, title: `수익률 투시 — ${c?.emoji} ${c?.name}` }])
+        break
+      }
+      case 'card_appraise': {
+        const c = room.companies[targetId]
+        await useInfoCard(roomId, user.uid, pendingInfoCard.id)
+        setScanPanel(prev => [...prev, { cardId: pendingInfoCard.id, type: 'card_appraise', targetId, title: `카드 감정 — ${c?.emoji} ${c?.name}` }])
         break
       }
       case 'shadow': {
         const player = room.players[targetId]
-        const tradesRaw = room.trades?.[round]?.[targetId] ?? {}
-        const companyIds = Object.keys(tradesRaw)
-        const body = companyIds.length > 0
-          ? companyIds.map(cid => { const c = room.companies[cid]; return c ? `${c.emoji} ${c.name}` : cid }).join('\n')
-          : '아직 거래 없음'
         await useInfoCard(roomId, user.uid, pendingInfoCard.id)
-        setInfoResult({ title: `미행 — ${player?.name ?? targetId}`, body, color: '#2196f3' })
+        setScanPanel(prev => [...prev, { cardId: pendingInfoCard.id, type: 'shadow', targetId, title: `미행 — ${player?.name ?? targetId}` }])
         break
       }
+      // ── 모달 (일회성) ──
       case 'portfolio_scan': {
         const player = room.players[targetId]
         const port = player?.portfolio ?? {}
@@ -617,9 +629,11 @@ export default function GamePlay() {
                   <div className={styles.usedCardTags}>
                     {myPlays.map(p => {
                       const c = room.companies[p.companyId]
+                      const targetP = p.targetUserId ? room.players[p.targetUserId] : null
                       return (
                         <span key={p.playId} className={styles.usedCardTag}>
-                          {CARD_LABEL[p.cardType]} → {c?.emoji}{c?.name}
+                          {CARD_LABEL[p.cardType]}
+                          {targetP ? ` → ${targetP.name}` : c ? ` → ${c.emoji}${c.name}` : ''}
                         </span>
                       )
                     })}
@@ -627,6 +641,81 @@ export default function GamePlay() {
                 </div>
               )
             })()}
+
+            {/* 📡 스캔 정보 패널 (실시간) */}
+            {scanPanel.length > 0 && (
+              <div className={styles.scanPanel}>
+                <div className={styles.scanPanelHeader}>
+                  <span>📡 스캔 정보 (실시간)</span>
+                  <button className={styles.scanPanelClose} onClick={() => setScanPanel([])}>✕</button>
+                </div>
+                {scanPanel.map(entry => {
+                  const round = room.currentRound
+                  let body = ''
+                  let color = '#2196f3'
+
+                  if (entry.type === 'trend') {
+                    const c = room.companies[entry.targetId]
+                    if (c) {
+                      const prev = c.priceHistory[round - 1] ?? c.priceHistory[0]
+                      const next = c.priceHistory[round] ?? prev
+                      const up = next >= prev
+                      body = up ? '▲ 상승' : '▼ 하락'
+                      color = up ? '#4caf50' : '#f44336'
+                    }
+                  } else if (entry.type === 'rate_insight') {
+                    const c = room.companies[entry.targetId]
+                    if (c) {
+                      const prev = c.priceHistory[round - 1] ?? c.priceHistory[0]
+                      const next = c.priceHistory[round] ?? prev
+                      const rate = prev > 0 ? (next - prev) / prev : 0
+                      body = `${rate >= 0 ? '+' : ''}${(rate * 100).toFixed(1)}%`
+                      color = rate >= 0 ? '#4caf50' : '#f44336'
+                    }
+                  } else if (entry.type === 'detect') {
+                    const count = Object.values(room.cardPlays?.[round] ?? {})
+                      .filter(p => p.companyId === entry.targetId && !['portfolio_snipe','profit_steal','cash_burn','forced_invest','trade_freeze','hand_swap'].includes(p.cardType)).length
+                    body = count > 0 ? `특수 카드 ${count}장` : '카드 없음'
+                  } else if (entry.type === 'card_appraise') {
+                    const COMPANY_SPECIAL_TYPES = ['small_surge','small_drop','surge','drop','boom','crash','reversal','card_nullifier']
+                    const plays = Object.values(room.cardPlays?.[round] ?? {})
+                      .filter(p => p.companyId === entry.targetId && COMPANY_SPECIAL_TYPES.includes(p.cardType))
+                    if (plays.length > 0) {
+                      const cardCounts: Record<string, number> = {}
+                      for (const p of plays) cardCounts[p.cardType] = (cardCounts[p.cardType] ?? 0) + 1
+                      body = Object.entries(cardCounts).map(([t, n]) => `${CARD_LABEL[t] ?? t}${n > 1 ? `×${n}` : ''}`).join(', ')
+                    } else {
+                      body = '카드 없음'
+                    }
+                  } else if (entry.type === 'market_scan') {
+                    const comps = Object.values(room.companies)
+                    const sorted = [...comps].sort((a, b) => {
+                      const rA = (a.priceHistory[round - 1] ?? 0) > 0
+                        ? ((a.priceHistory[round] ?? 0) - (a.priceHistory[round - 1] ?? 0)) / (a.priceHistory[round - 1] ?? 1) : 0
+                      const rB = (b.priceHistory[round - 1] ?? 0) > 0
+                        ? ((b.priceHistory[round] ?? 0) - (b.priceHistory[round - 1] ?? 0)) / (b.priceHistory[round - 1] ?? 1) : 0
+                      return rB - rA
+                    })
+                    const top = sorted.slice(0, 2).map(c => `${c.emoji}${c.name}`).join(', ')
+                    const bot = sorted.slice(-2).map(c => `${c.emoji}${c.name}`).join(', ')
+                    body = `▲ ${top}  /  ▼ ${bot}`
+                  } else if (entry.type === 'shadow') {
+                    const tradesRaw = room.trades?.[round]?.[entry.targetId] ?? {}
+                    const cids = Object.keys(tradesRaw)
+                    body = cids.length > 0
+                      ? cids.map(cid => { const c = room.companies[cid]; return c ? `${c.emoji}${c.name}` : cid }).join(', ')
+                      : '아직 거래 없음'
+                  }
+
+                  return (
+                    <div key={entry.cardId} className={styles.scanEntry}>
+                      <span className={styles.scanEntryTitle}>{entry.title}</span>
+                      <span className={styles.scanEntryBody} style={{ color }}>{body}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -41,6 +41,8 @@ export type InfoCardType =
   | 'premium'              // 특급 카드
   | 'round_forecast'       // 라운드 이벤트 예보
   | 'round_card_choice'    // 라운드 카드 선택권 (9라운드 꼴등 전용)
+  | 'rate_insight'         // 수익률 투시 — 선택 회사 순수 등락 % 수치까지 공개 (드래프트 낮은 확률)
+  | 'card_appraise'        // 카드 감정 — 선택 회사에 적용된 특수 카드 종류 목록 공개 (드래프트 낮은 확률)
 
 export type RoundCardType =
   | 'market_boom'       // 시장 활황 +10%p
