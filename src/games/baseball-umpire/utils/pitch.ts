@@ -19,6 +19,14 @@ const RELEASE_HEIGHT: Record<PitcherForm, number> = {
   underhand:      0.90,
 }
 
+// ── 변화구 풀 (직구 제외 전체 9종) ───────────────────────────────────────────
+// 게임 시작 시 난이도별 breakingBallCount만큼 시드 RNG로 랜덤 선택
+export const BREAKING_BALL_POOL: PitchType[] = [
+  'two_seam', 'sinker', 'cutter',
+  'changeup', 'slider', 'sweeper',
+  'curve', 'splitter', 'forkball',
+]
+
 // ── 구종별 구속 배율 (직구 기준 상대 속도) ────────────────────────────────────
 // 직구 = config.speedMin~speedMax, 다른 구종은 이 범위에 배율 적용
 const PITCH_SPEED_RATIO: Record<PitchType, [number, number]> = {
@@ -88,8 +96,9 @@ export function generatePitch(
   config: DifficultyConfig,
   pitchIndex: number,
   pitcherForm: PitcherForm,
+  activePitchTypes: PitchType[],
 ): PitchParams {
-  const pitchType = rng.pick(config.pitchTypes)
+  const pitchType = rng.pick(activePitchTypes)
 
   // 구종별 구속 계산: 직구 기준 속도 × 구종 배율
   const baseSpeed = rng.float(config.speedMin, config.speedMax)

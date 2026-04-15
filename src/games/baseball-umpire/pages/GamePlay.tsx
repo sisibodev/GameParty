@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   BatterProfile, Difficulty, GameMode, JudgmentFeedback,
-  PitchParams, PitchPhase, PitcherForm, DIFFICULTY_CONFIG,
+  PitchParams, PitchPhase, PitcherForm, PitchType, DIFFICULTY_CONFIG,
 } from '../types'
 import { SeededRng, randomSeed } from '../utils/rng'
 import { generateBatters } from '../utils/batter'
-import { generatePitch, calcScore } from '../utils/pitch'
+import { generatePitch, calcScore, BREAKING_BALL_POOL } from '../utils/pitch'
 import BaseballScene from '../components/BaseballScene'
 import HUD from '../components/HUD'
 import LeftPanel from '../components/LeftPanel'
@@ -77,6 +77,7 @@ export default function GamePlay({
   const rngRef            = useRef<SeededRng>(new SeededRng(initialSeed ?? randomSeed()))
   const battersRef        = useRef<BatterProfile[]>([])
   const pitcherFormsRef   = useRef<PitcherForm[]>([])   // 3 forms for 10-pitch segments
+  const activePitchTypesRef = useRef<PitchType[]>(['fastball'])  // 이번 게임 사용 구종
   const judgeTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownRef      = useRef<ReturnType<typeof setInterval> | null>(null)
   const advanceTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)  // 판정 후 2s 진행 타이머
@@ -119,6 +120,15 @@ export default function GamePlay({
       rng.pick(PITCHER_FORMS),
       rng.pick(PITCHER_FORMS),
     ]
+    // 변화구 풀에서 breakingBallCount개 랜덤 선택 (부분 Fisher-Yates)
+    // 멀티플레이: 동일 시드 → 모든 플레이어가 같은 구종 조합
+    const pool = [...BREAKING_BALL_POOL]
+    const n = config.breakingBallCount
+    for (let i = 0; i < n; i++) {
+      const j = rng.int(i, pool.length)
+      ;[pool[i], pool[j]] = [pool[j], pool[i]]
+    }
+    activePitchTypesRef.current = ['fastball' as PitchType, ...pool.slice(0, n)]
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -151,7 +161,8 @@ export default function GamePlay({
       const form = pitcherFormsRef.current[segment] ?? 'overhand'
 
       const pitch = generatePitch(
-        rngRef.current, bidx, batter, boostedConfig, pitchIndexRef.current++, form
+        rngRef.current, bidx, batter, boostedConfig, pitchIndexRef.current++, form,
+        activePitchTypesRef.current,
       )
       currentPitchRef.current = pitch
       setCurrentPitch(pitch)

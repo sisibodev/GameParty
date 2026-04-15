@@ -1,18 +1,5 @@
 import { useState } from 'react'
-import { GameMode, Difficulty, PitchType, DIFFICULTY_CONFIG } from '../types'
-
-const PITCH_NAMES: Record<PitchType, string> = {
-  fastball:  '직구',
-  two_seam:  '투심',
-  sinker:    '싱커',
-  cutter:    '커터',
-  changeup:  '체인지업',
-  slider:    '슬라이더',
-  sweeper:   '스위퍼',
-  curve:     '커브',
-  splitter:  '스플리터',
-  forkball:  '포크볼',
-}
+import { GameMode, Difficulty, DIFFICULTY_CONFIG } from '../types'
 
 interface Props {
   onStart: (mode: GameMode, difficulty: Difficulty) => void
@@ -95,7 +82,7 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
                     <tr key={id}>
                       <td style={td}>{emoji} {c.label}</td>
                       <td style={td}>{c.speedMin}~{c.speedMax}km/h</td>
-                      <td style={td}>{c.pitchTypes.length}종</td>
+                      <td style={td}>직구 + 변화구 {c.breakingBallCount}종</td>
                       <td style={td}>{(c.borderlineRatio * 100).toFixed(0)}%</td>
                     </tr>
                   )
@@ -124,12 +111,16 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
                   <div style={styles.diffEmoji}>{emoji}</div>
                   <div style={styles.diffLabel}>{c.label}</div>
                   <div style={styles.diffDetail}>{c.speedMin}~{c.speedMax} km/h</div>
-                  <div style={styles.diffDetail}>{c.pitchTypes.length}가지 구종</div>
+                  <div style={styles.diffDetail}>
+                    직구 + 변화구 {c.breakingBallCount}종
+                  </div>
                   <div style={styles.pitchChips}>
-                    {c.pitchTypes.map(pt => (
-                      <span key={pt} style={styles.pitchChip}>{PITCH_NAMES[pt]}</span>
+                    <span style={styles.pitchChipFixed}>직구</span>
+                    {Array.from({ length: c.breakingBallCount }, (_, i) => (
+                      <span key={i} style={styles.pitchChipRandom}>?</span>
                     ))}
                   </div>
+                  <div style={styles.randomNote}>매 게임 랜덤 선택</div>
                 </button>
               )
             })}
@@ -215,10 +206,20 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
     gap: 4, marginTop: 10,
   },
-  pitchChip: {
-    fontSize: 10, color: '#9ecaf8',
-    background: 'rgba(0,180,255,0.12)',
-    border: '1px solid rgba(0,180,255,0.25)',
-    borderRadius: 4, padding: '2px 6px',
+  pitchChipFixed: {
+    fontSize: 10, color: '#fff',
+    background: 'rgba(255,255,255,0.15)',
+    border: '1px solid rgba(255,255,255,0.3)',
+    borderRadius: 4, padding: '2px 6px', fontWeight: 700,
+  },
+  pitchChipRandom: {
+    fontSize: 10, color: '#ffcc00',
+    background: 'rgba(255,204,0,0.12)',
+    border: '1px solid rgba(255,204,0,0.35)',
+    borderRadius: 4, padding: '2px 8px', fontWeight: 700,
+  },
+  randomNote: {
+    fontSize: 10, color: 'rgba(255,204,0,0.7)',
+    marginTop: 5,
   },
 }
