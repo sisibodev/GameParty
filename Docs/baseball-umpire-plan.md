@@ -1,8 +1,8 @@
 # ⚾ 야구 주심 판정 게임 기획서
 
-> 버전: v0.4
+> 버전: v0.5
 > 작성일: 2026-04-15
-> 상태: 개발 진행 중
+> 상태: 싱글플레이 완성 / 멀티플레이 완성
 
 ---
 
@@ -358,33 +358,43 @@
 
 | 항목 | 파일 | 비고 |
 |------|------|------|
-| 기획 | Docs/baseball-umpire-plan.md | v0.4 |
+| 기획 | Docs/baseball-umpire-plan.md | v0.5 |
 | 게임 진입점 / 라우팅 | src/App.tsx, src/data/games.ts | `/game/baseball-umpire` |
 | 타입 정의 | types.ts | PitchType, PitcherForm, BatterProfile, DifficultyConfig, PitchParams, JudgmentFeedback 등 |
 | 난수 생성기 | utils/rng.ts | Mulberry32 Seeded RNG (멀티플레이 시드 공유 대비) |
 | 타자 생성 | utils/batter.ts | 9타자 랜덤 체형, 스트라이크존 자동 계산 |
 | 투구 생성 | utils/pitch.ts | 구종별 무브먼트, 보더라인 로직, 공 가장자리 기준 판정(MLB 규칙) |
+| 구속 단계 증가 | pages/GamePlay.tsx | 타자 3명마다 +10 km/h (3단계) |
 | 점수 계산 | utils/pitch.ts `calcScore()` | 콤보 배율, 보더라인 보너스, 거리 비례 감점 |
 | 미트 사운드 | utils/sound.ts | Web Audio API (노이즈 + 로우패스 + 오실레이터) |
-| 모드/난이도 선택 | pages/ModeSelect.tsx | 2단계 카드 UI (연습/일반 → 루키~메이저) |
-| 게임플레이 | pages/GamePlay.tsx | stale closure 방지(ref 패턴), 9타자 진행, 카운트/타자교체 |
-| 결과 화면 | pages/ResultScreen.tsx | 등급(S~D), 구종별 정확도 SVG 차트 |
-| Three.js 씬 | components/BaseballScene.tsx | 카메라(포수 뒤 주심 시점), 마운드, 홈플레이트(5각형 압출), 스트라이크존 박스, 공 애니메이션(베지어) |
+| 모드/난이도 선택 | pages/ModeSelect.tsx | 연습/일반/멀티 배틀 카드 UI + 난이도 2단계 선택 |
+| 게임플레이 | pages/GamePlay.tsx | stale closure 방지(ref 패턴), 9타자 진행, 카운트/타자교체, 공통 시드(`initialSeed`) 지원 |
+| 결과 화면 | pages/ResultScreen.tsx | 등급(S~D), 구종별 정확도 SVG 차트, Firestore 저장 상태 표시, TOP 10 랭킹 |
+| Three.js 씬 | components/BaseballScene.tsx | 카메라(포수 뒤 주심 시점), 마운드, 홈플레이트(5각형 압출), 스트라이크존 박스, 공 애니메이션(베지어), 리플레이 공(노란색) |
 | HUD | components/HUD.tsx | 타자 인덱스, B/S 카운트, 점수, 콤보, 카운트다운, 존 토글 |
-| 판정 피드백 | components/JudgmentFeedback.tsx | STRIKE!/BALL!, BORDERLINE!, 정오답, 점수변화 |
-| 2D 존 결과 뷰 | components/StrikeZoneResult2D.tsx | SVG, 공 위치, 판정 결과 요약, 보더라인 영역 |
+| 판정 피드백 | components/JudgmentFeedback.tsx | 구종/구속 표시, STRIKE!/BALL!, BORDERLINE!, 정오답, 점수변화 |
+| 2D 존 결과 뷰 | components/StrikeZoneResult2D.tsx | SVG, 공 위치, 판정 결과 요약, 보더라인 영역 (화면 우측 배치) |
 | 판정 입력 UI | components/PitchKey.tsx | S/B 버튼 (판정 단계에만 활성) |
-| 투구 히스토리 | components/PitchReplayList.tsx | 하단 투구별 아이콘 목록 |
+| 투구 히스토리 | components/PitchReplayList.tsx | 하단 투구별 아이콘, 선택 하이라이트 |
+| 투구 리플레이 | components/ReplayControls.tsx + BaseballScene.tsx | 0.25×/0.5×/1× 속도, 궤적 라인(노란), 통과 지점 마커(빨강/파랑) |
+| 타자 인트로 | components/BatterIntro.tsx | 타자 교체 시 체형/자세/존 정보 + 미니 SVG 오버레이 |
+| Firestore 기록 저장 | utils/firestore.ts | 일반 모드 종료 시 `umpire_records` 저장 |
+| TOP 10 랭킹 | utils/firestore.ts `fetchTopRankings()` | 결과 화면에서 점수 내림차순 조회 |
+| 멀티 배틀 RTDB | utils/umpire-rtdb.ts | 방 생성/참가/준비/시작/결과 제출, Firebase RTDB `umpire_rooms` |
+| 멀티 방 생성/참가 | pages/MultiRoomEnter.tsx | 난이도 선택 후 방 생성, 6자리 코드 입력 참가 |
+| 멀티 대기실 | pages/MultiLobby.tsx | 실시간 참가자 목록, 준비 버튼, 방장 시작 버튼 |
+| 멀티 결과 | pages/MultiResult.tsx | 실시간 순위표 (점수/정확도/등급), 완료 인원 집계 |
 
-### 11.2 미구현 / 진행 예정
+### 11.2 미구현 / 향후 예정
 
-| 항목 | 우선순위 | 비고 |
-|------|---------|------|
-| 투구 리플레이 | ⭐⭐⭐ | 히스토리 아이콘 클릭 → 3D 재생, 속도 조절(0.25×/0.5×/1×), 통과 지점 마커 |
-| Firestore 기록 저장 + 랭킹 | ⭐⭐⭐ | 일반 모드 종료 시 `umpire_records` 저장, 결과 화면 랭킹 표시 |
-| 타자 체형 존 표시 UI | ⭐⭐ | 타자 교체 시 잠깐 체형/존 정보 오버레이 |
-| 투수·타자 3D 캐릭터 활성화 | ⭐ | buildPitcher()/buildBatter() 코드 존재, 연결 필요 |
-| 멀티 배틀 | ⭐ | Firebase Realtime DB 동기화, 방 코드 입장 |
+| 항목 | 비고 |
+|------|------|
+| 투수·타자 3D 캐릭터 활성화 | `buildPitcher()` / `buildBatter()` export로 존재, 씬 연결 필요 |
+| 타자 스윙/헛스윙 판정 | 체크스윙 포함 |
+| 카메라 조작 모드 | C키 토글, 상하좌우 이동 |
+| 다양한 기상/조명 조건 | 야간 경기, 흐린 날 |
+| 멀티 배틀 관전 모드 | - |
+| 멀티 배틀 팀전 | 팀 평균 정확도 비교 |
 
 ---
 
