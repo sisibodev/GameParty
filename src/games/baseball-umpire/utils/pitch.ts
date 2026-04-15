@@ -204,7 +204,9 @@ export function buildPitchCurve(
   const bp = PITCH_BREAK[params.pitchType]
 
   const start = new THREE.Vector3(0, releaseH, MOUND_DISTANCE)
-  const end   = new THREE.Vector3(params.plateX, params.plateY, 0)
+  // 홈플레이트(z=0)를 지나 포수 미트 위치(z=-0.30)까지 연장
+  // → 리플레이에서 front(0.13) · mid(0) · end(-0.13) 판 3개를 모두 통과
+  const end   = new THREE.Vector3(params.plateX, params.plateY, -0.30)
 
   // 직선 경로 위 t 위치 보간 헬퍼
   const lerpOnLine = (t: number) => new THREE.Vector3(

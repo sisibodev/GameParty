@@ -49,28 +49,28 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
   rookie: {
     label: '루키',
     speedMin: 90, speedMax: 110,
-    breakingBallCount: 1,   // 직구 + 변화구 1종 = 총 2종
+    breakingBallCount: 2,   // 직구 + 변화구 2종 = 총 3종
     borderlineRatio: 0.1,
     zoneShowTime: 3000,
   },
   amateur: {
     label: '아마추어',
     speedMin: 110, speedMax: 130,
-    breakingBallCount: 2,   // 직구 + 변화구 2종 = 총 3종
+    breakingBallCount: 3,   // 직구 + 변화구 3종 = 총 4종
     borderlineRatio: 0.2,
     zoneShowTime: 2000,
   },
   pro: {
     label: '프로',
     speedMin: 130, speedMax: 150,
-    breakingBallCount: 3,   // 직구 + 변화구 3종 = 총 4종
+    breakingBallCount: 4,   // 직구 + 변화구 4종 = 총 5종
     borderlineRatio: 0.35,
     zoneShowTime: 1000,
   },
   major: {
     label: '메이저',
     speedMin: 150, speedMax: 160,
-    breakingBallCount: 4,   // 직구 + 변화구 4종 = 총 5종
+    breakingBallCount: 5,   // 직구 + 변화구 5종 = 총 6종
     borderlineRatio: 0.5,
     zoneShowTime: 500,
   },
