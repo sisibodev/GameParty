@@ -266,12 +266,14 @@ export default function GamePlay({
   // ── 키보드 입력 ──────────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 's' || e.key === 'S') judgeRef.current('strike')
-      if (e.key === 'b' || e.key === 'B') judgeRef.current('ball')
+      // 리플레이 열려 있으면 화살표 키는 단계 이동에 양보
+      if (replayPitch) return
+      if (e.key === 's' || e.key === 'S' || e.key === 'ArrowRight') judgeRef.current('strike')
+      if (e.key === 'b' || e.key === 'B' || e.key === 'ArrowLeft')  judgeRef.current('ball')
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [replayPitch])
 
   const currentBatter = battersRef.current[batterIndex] ?? null
 

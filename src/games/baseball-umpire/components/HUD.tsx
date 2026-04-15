@@ -34,6 +34,23 @@ export default function HUD({
         )}
       </div>
 
+      {/* 중앙: 판정 중 단축키 안내 */}
+      <div style={styles.center}>
+        {pitchPhase === 'judging' ? (
+          <div style={styles.keyHint}>
+            <span style={styles.keyItem}><span style={styles.keyBadge}>←</span><span style={styles.keyBadge}>B</span> 볼</span>
+            <span style={styles.keySep}>|</span>
+            <span style={styles.keyItem}>스트라이크 <span style={styles.keyBadge}>S</span><span style={styles.keyBadge}>→</span></span>
+          </div>
+        ) : (
+          <div style={styles.keyHintDim}>
+            <span style={styles.keyBadgeDim}>←</span><span style={styles.keyBadgeDim}>B</span>
+            <span style={styles.dimSep}> 볼 · 스트라이크 </span>
+            <span style={styles.keyBadgeDim}>S</span><span style={styles.keyBadgeDim}>→</span>
+          </div>
+        )}
+      </div>
+
       {/* 판정 카운트다운 */}
       {pitchPhase === 'judging' && (
         <div style={styles.countdown}>
@@ -65,7 +82,37 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 10,
     gap: 12,
   },
-  left: { display: 'flex', alignItems: 'center' },
+  left:   { display: 'flex', alignItems: 'center' },
+  center: { flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' },
+  keyHint: {
+    display: 'flex', alignItems: 'center', gap: 8,
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.18)',
+    borderRadius: 8, padding: '4px 14px',
+    animation: 'pulse 1.2s infinite',
+  },
+  keyItem: {
+    display: 'flex', alignItems: 'center', gap: 4,
+    fontSize: 12, fontWeight: 700, color: '#fff',
+  },
+  keyBadge: {
+    background: 'rgba(255,255,255,0.2)',
+    borderRadius: 4, padding: '1px 6px',
+    fontSize: 11, fontWeight: 900,
+    border: '1px solid rgba(255,255,255,0.35)',
+  },
+  keySep: { color: 'rgba(255,255,255,0.3)', fontSize: 14 },
+  keyHintDim: {
+    display: 'flex', alignItems: 'center', gap: 3,
+    fontSize: 11, color: 'rgba(255,255,255,0.25)',
+  },
+  keyBadgeDim: {
+    background: 'rgba(255,255,255,0.07)',
+    borderRadius: 3, padding: '0px 4px',
+    fontSize: 10, fontWeight: 700,
+    border: '1px solid rgba(255,255,255,0.12)',
+  },
+  dimSep: { fontSize: 11, color: 'rgba(255,255,255,0.2)' },
   pitchLabel: { display: 'flex', alignItems: 'baseline', gap: 2 },
   pitchNum: { fontSize: 24, fontWeight: 900 },
   pitchSep: { fontSize: 14, color: '#888' },
