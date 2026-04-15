@@ -237,6 +237,7 @@ export default function GamePlay({
       playerCall: judgedCall,
       correct,
       scoreChange: sc,
+      batter,
     }
     pitchHistoryRef.current = [...pitchHistoryRef.current, updatedPitch]
     currentPitchRef.current = updatedPitch

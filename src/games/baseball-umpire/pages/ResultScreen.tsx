@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { User } from 'firebase/auth'
 import { Timestamp } from 'firebase/firestore'
-import { PitchParams, PitchType } from '../types'
+import { BatterProfile, PitchParams, PitchType } from '../types'
 import { saveUmpireRecord, fetchTopRankings, RankEntry } from '../utils/firestore'
+import BaseballScene from '../components/BaseballScene'
+import ReplayControls from '../components/ReplayControls'
 
 const PITCH_NAMES: Record<PitchType, string> = {
   fastball:  '직구',
@@ -63,6 +65,13 @@ export default function ResultScreen({
   const [rankings, setRankings] = useState<RankEntry[]>([])
   const [rankLoading, setRankLoading] = useState(false)
 
+  // 리플레이 모달
+  const [replayPitch, setReplayPitch]               = useState<PitchParams | null>(null)
+  const [replaySpeed, setReplaySpeed]               = useState(1)
+  const [replayPlaying, setReplayPlaying]           = useState(false)
+  const [replayStage, setReplayStage]               = useState(1)
+  const [replayStageOverride, setReplayStageOverride] = useState<number | undefined>(undefined)
+
   // 일반 모드 + 로그인 시 자동 저장
   useEffect(() => {
     if (mode !== 'normal' || !user) return
@@ -90,6 +99,34 @@ export default function ResultScreen({
       .then(r => setRankings(r))
       .catch(() => setRankings([]))
       .finally(() => setRankLoading(false))
+  }, [])
+
+  const openReplay = useCallback((pitch: PitchParams) => {
+    setReplayStage(1)
+    setReplayStageOverride(undefined)
+    setReplaySpeed(1)
+    setReplayPitch(pitch)
+    setReplayPlaying(true)
+  }, [])
+
+  const closeReplay = useCallback(() => {
+    setReplayPitch(null)
+    setReplayPlaying(false)
+    setReplayStage(1)
+    setReplayStageOverride(undefined)
+  }, [])
+
+  const handleReplayAgain = useCallback(() => {
+    if (!replayPitch) return
+    setReplayStage(1)
+    setReplayStageOverride(undefined)
+    setReplayPlaying(true)
+    setReplayPitch({ ...replayPitch })
+  }, [replayPitch])
+
+  const handleStageChange = useCallback((s: number) => {
+    setReplayStage(s)
+    setReplayStageOverride(s)
   }, [])
 
   return (
@@ -141,6 +178,26 @@ export default function ResultScreen({
           })}
         </div>
 
+        {/* 투구 기록 */}
+        {pitchHistory.length > 0 && (
+          <div style={styles.historySection}>
+            <div style={styles.sectionTitle}>투구 기록 — 클릭하여 리플레이</div>
+            <div style={styles.historyScroll}>
+              <div style={styles.historyHeader}>
+                <span style={styles.hCol0}>#</span>
+                <span style={styles.hCol1}>구종</span>
+                <span style={styles.hCol2}>구속</span>
+                <span style={styles.hCol3}>실제</span>
+                <span style={styles.hCol4}>판정</span>
+                <span style={styles.hCol5}></span>
+              </div>
+              {pitchHistory.map((p, i) => (
+                <PitchRow key={i} pitch={p} index={i} onReplay={openReplay} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 랭킹 */}
         <div style={styles.rankingSection}>
           <div style={styles.sectionTitle}>TOP 랭킹</div>
@@ -173,6 +230,89 @@ export default function ResultScreen({
           <button style={styles.lobbyBtn} onClick={onLobby}>로비로</button>
         </div>
       </div>
+
+      {/* 리플레이 모달 */}
+      {replayPitch && (
+        <div style={styles.replayOverlay}>
+          <BaseballScene
+            batter={(replayPitch.batter ?? null) as BatterProfile | null}
+            currentPitch={null}
+            pitchPhase="idle"
+            showZone
+            onPitchArrived={() => {}}
+            onSceneReady={() => {}}
+            replayPitch={replayPitch}
+            replaySpeed={replaySpeed}
+            replayStageOverride={replayStageOverride}
+            onReplayEnd={() => setReplayPlaying(false)}
+            onReplayStageChange={setReplayStage}
+          />
+          <ReplayControls
+            pitch={replayPitch}
+            speed={replaySpeed}
+            isPlaying={replayPlaying}
+            stage={replayStage}
+            onSpeedChange={setReplaySpeed}
+            onStageChange={handleStageChange}
+            onReplay={handleReplayAgain}
+            onClose={closeReplay}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── 투구 행 컴포넌트 ─────────────────────────────────────────────────────────
+function PitchRow({ pitch, index, onReplay }: {
+  pitch: PitchParams
+  index: number
+  onReplay: (p: PitchParams) => void
+}) {
+  const isStrikeActual = pitch.isStrike
+  const isStrikeCall   = pitch.playerCall === 'strike'
+  const correct        = pitch.correct
+  const borderline     = pitch.isBorderline
+
+  return (
+    <div
+      style={{
+        ...styles.historyRow,
+        background: correct === undefined
+          ? 'rgba(255,255,255,0.04)'
+          : correct
+            ? 'rgba(76,175,80,0.08)'
+            : 'rgba(244,67,54,0.08)',
+      }}
+    >
+      <span style={styles.hCol0}>
+        <span style={styles.pitchNumLabel}>{index + 1}</span>
+      </span>
+      <span style={styles.hCol1}>
+        {PITCH_NAMES[pitch.pitchType]}
+        {borderline && <span style={styles.borderlineDot}>●</span>}
+      </span>
+      <span style={styles.hCol2}>{pitch.speed}km/h</span>
+      <span style={{ ...styles.hCol3, color: isStrikeActual ? '#ff7043' : '#42a5f5' }}>
+        {isStrikeActual ? 'S' : 'B'}
+      </span>
+      <span style={{ ...styles.hCol4, color: isStrikeCall ? '#ff7043' : '#42a5f5' }}>
+        {pitch.playerCall ? (isStrikeCall ? 'S' : 'B') : '-'}
+      </span>
+      <span style={styles.hCol5}>
+        {correct !== undefined && (
+          <span style={{ color: correct ? '#4caf50' : '#f44336', fontWeight: 700 }}>
+            {correct ? '✓' : '✗'}
+          </span>
+        )}
+      </span>
+      <button
+        style={styles.replayBtn}
+        onClick={() => onReplay(pitch)}
+        title="리플레이 보기"
+      >
+        ▶
+      </button>
     </div>
   )
 }
@@ -224,6 +364,45 @@ const styles: Record<string, React.CSSProperties> = {
   barWrap: { flex: 1, height: 10, background: 'rgba(255,255,255,0.1)', borderRadius: 5, overflow: 'hidden' },
   bar: { height: '100%', background: 'linear-gradient(90deg, #4fc3f7, #0288d1)', borderRadius: 5, transition: 'width 0.5s' },
   pitchAcc: { width: 100, fontSize: 12, color: '#ccc', textAlign: 'right' },
+
+  // 투구 기록
+  historySection: { marginBottom: 24, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 },
+  historyScroll: { maxHeight: 260, overflowY: 'auto', borderRadius: 6 },
+  historyHeader: {
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '4px 8px',
+    fontSize: 10, color: 'rgba(255,255,255,0.35)',
+    fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5,
+    borderBottom: '1px solid rgba(255,255,255,0.07)',
+    marginBottom: 2,
+  },
+  historyRow: {
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '5px 8px', borderRadius: 5, fontSize: 12,
+    marginBottom: 2,
+    cursor: 'default',
+  },
+  hCol0: { width: 24, textAlign: 'right', flexShrink: 0 },
+  hCol1: { width: 70, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 },
+  hCol2: { width: 66, color: '#ffeb3b', fontWeight: 700, flexShrink: 0 },
+  hCol3: { width: 20, fontWeight: 900, textAlign: 'center', flexShrink: 0 },
+  hCol4: { width: 20, fontWeight: 900, textAlign: 'center', flexShrink: 0 },
+  hCol5: { width: 18, textAlign: 'center', flexShrink: 0 },
+  pitchNumLabel: { fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 700 },
+  borderlineDot: { fontSize: 7, color: '#ff9800', marginLeft: 2 },
+  replayBtn: {
+    marginLeft: 'auto',
+    padding: '2px 10px',
+    background: 'rgba(0,229,255,0.15)',
+    border: '1px solid rgba(0,229,255,0.4)',
+    borderRadius: 5,
+    color: '#00e5ff',
+    fontSize: 11,
+    fontWeight: 700,
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
+
   rankingSection: { marginBottom: 24, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 },
   rankList: { display: 'flex', flexDirection: 'column', gap: 4 },
   rankRow: {
@@ -245,5 +424,13 @@ const styles: Record<string, React.CSSProperties> = {
   lobbyBtn: {
     flex: 1, padding: '12px 0', borderRadius: 10, border: '1px solid rgba(255,255,255,0.3)',
     background: 'transparent', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer',
+  },
+
+  // 리플레이 모달
+  replayOverlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 100,
+    background: '#000',
   },
 }

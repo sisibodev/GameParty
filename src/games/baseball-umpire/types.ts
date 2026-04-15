@@ -95,6 +95,8 @@ export interface PitchParams {
   scoreChange?: number
   /** 보더라인 판정 여부 */
   isBorderline?: boolean
+  /** 해당 투구의 타자 정보 (결과 화면 리플레이용) */
+  batter?: BatterProfile
 }
 
 // ─── 게임 모드 ────────────────────────────────────────────────────────────────
