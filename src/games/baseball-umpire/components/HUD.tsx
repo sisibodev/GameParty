@@ -47,6 +47,9 @@ export default function HUD({
             <span style={styles.keyBadgeDim}>←</span><span style={styles.keyBadgeDim}>B</span>
             <span style={styles.dimSep}> 볼 · 스트라이크 </span>
             <span style={styles.keyBadgeDim}>S</span><span style={styles.keyBadgeDim}>→</span>
+            <span style={styles.dimSep}> · </span>
+            <span style={styles.keyBadgeDim}>↑</span>
+            <span style={styles.dimSep}> 리플레이</span>
           </div>
         )}
       </div>

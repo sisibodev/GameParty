@@ -42,7 +42,7 @@ export default function ReplayControls({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft')  onStageChange(Math.max(stage - 1, 1))
       if (e.key === 'ArrowRight') onStageChange(Math.min(stage + 1, 3))
-      if (e.key === 'Escape')     onClose()
+      if (e.key === 'Escape' || e.key === 'ArrowDown') onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -156,7 +156,7 @@ export default function ReplayControls({
         {isPlaying ? '재생 중...' : '▶ 처음부터 재생'}
       </button>
 
-      <div style={styles.keyHint}>← → 키로 단계 이동 · ESC 닫기</div>
+      <div style={styles.keyHint}>← → 단계 이동 · ↓ / ESC 닫기</div>
     </div>
   )
 }
