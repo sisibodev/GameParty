@@ -20,4 +20,14 @@ export const GAMES: GameMeta[] = [
     tags: ['전략', '보드게임', '멀티'],
     players: '2~8명',
   },
+  {
+    id: 'baseball-umpire',
+    name: 'Strike Zone',
+    description: '투수가 던진 공을 3D 시점으로 바라보며 스트라이크/볼을 판정하는 주심 체험 게임',
+    thumbnail: '⚾',
+    path: '/game/baseball-umpire',
+    enabled: true,
+    tags: ['스포츠', '싱글', '판단력'],
+    players: '1인',
+  },
 ]

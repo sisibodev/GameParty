@@ -4,6 +4,7 @@ import { ProtectedRoute } from './components/common/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import LobbyPage from './pages/LobbyPage'
 import StockGame from './games/stock/StockGame'
+import BaseballUmpireGame from './games/baseball-umpire/BaseballUmpireGame'
 
 export default function App() {
   return (
@@ -24,6 +25,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <StockGame />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/game/baseball-umpire/*"
+            element={
+              <ProtectedRoute>
+                <BaseballUmpireGame />
               </ProtectedRoute>
             }
           />
