@@ -3,6 +3,16 @@ import * as THREE from 'three'
 import { PitchParams, PitchPhase, BatterProfile, PitcherForm } from '../types'
 import { buildPitchCurve, speedToFlightMs, MOUND_DISTANCE } from '../utils/pitch'
 
+// 카메라 포지션 상수 (3단계 리플레이)
+const CAM_S1 = { pos: new THREE.Vector3(0, 1.5, -3.0),   look: new THREE.Vector3(0, 0.7, MOUND_DISTANCE * 0.35) }
+const CAM_S2 = { pos: new THREE.Vector3(3.8, 1.8, -2.0), look: new THREE.Vector3(0, 0.8, 0.3) }
+const CAM_S3 = { pos: new THREE.Vector3(5.5, 1.2, 0),    look: new THREE.Vector3(0, 0.75, 0) }
+
+// 리플레이 ABS 면 Z 위치
+const PLANE_Z = { front: 0.13, mid: 0, end: -0.13 }
+const STAGE_HOLD_MS = 2600   // 각 단계 유지 시간
+const CAM_LERP_DUR  = 1000   // 카메라 전환 시간(ms)
+
 interface Props {
   batter: BatterProfile | null
   currentPitch: PitchParams | null
@@ -12,8 +22,10 @@ interface Props {
   onSceneReady: () => void
   // 리플레이
   replayPitch?: PitchParams | null
-  replaySpeed?: number            // 0.25 / 0.5 / 1.0
+  replaySpeed?: number                      // 0.25 / 0.5 / 1.0
+  replayStageOverride?: number              // 1/2/3: 수동 단계 이동
   onReplayEnd?: () => void
+  onReplayStageChange?: (stage: number) => void
 }
 
 export default function BaseballScene({
@@ -25,7 +37,9 @@ export default function BaseballScene({
   onSceneReady,
   replayPitch = null,
   replaySpeed = 1,
+  replayStageOverride,
   onReplayEnd,
+  onReplayStageChange,
 }: Props) {
   const mountRef     = useRef<HTMLDivElement>(null)
   const rendererRef  = useRef<THREE.WebGLRenderer | null>(null)
@@ -36,11 +50,16 @@ export default function BaseballScene({
   const trailRef     = useRef<THREE.Line | null>(null)
   const replayTrailRef   = useRef<THREE.Line | null>(null)
   const replayMarkerRef  = useRef<THREE.Mesh | null>(null)
+  const replayDropLineRef = useRef<THREE.Line | null>(null)
+  const replayPlaneGroupRef = useRef<THREE.Group | null>(null)
   const animFrameRef = useRef<number>(0)
-  // 항상 최신 콜백을 가리키는 ref (stale closure 방지)
-  const onPitchArrivedRef = useRef(onPitchArrived)
-  const onSceneReadyRef   = useRef(onSceneReady)
-  const onReplayEndRef    = useRef(onReplayEnd)
+
+  // 콜백 ref (stale closure 방지)
+  const onPitchArrivedRef      = useRef(onPitchArrived)
+  const onSceneReadyRef        = useRef(onSceneReady)
+  const onReplayEndRef         = useRef(onReplayEnd)
+  const onReplayStageChangeRef = useRef(onReplayStageChange)
+
   const pitchAnimRef = useRef<{
     curve: THREE.QuadraticBezierCurve3
     startTime: number
@@ -52,14 +71,28 @@ export default function BaseballScene({
     duration: number
     done: boolean
   } | null>(null)
-  const arrivedRef    = useRef(false)
-  // 리플레이 공 (게임 공과 분리)
+  const arrivedRef = useRef(false)
   const replayBallRef = useRef<THREE.Mesh | null>(null)
 
-  // 콜백 ref 최신화 (매 렌더마다 동기화)
-  useEffect(() => { onPitchArrivedRef.current = onPitchArrived }, [onPitchArrived])
-  useEffect(() => { onSceneReadyRef.current   = onSceneReady   }, [onSceneReady])
-  useEffect(() => { onReplayEndRef.current    = onReplayEnd    }, [onReplayEnd])
+  // 리플레이 단계 관리
+  const replayStageRef = useRef(1)
+  const cameraTransRef = useRef<{
+    startTime: number
+    duration: number
+    fromPos: THREE.Vector3
+    toPos: THREE.Vector3
+    fromLook: THREE.Vector3
+    toLook: THREE.Vector3
+  } | null>(null)
+  const stageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // 단계 진행 함수 (render loop에서 호출, stale closure 방지를 위한 ref 패턴)
+  const advanceToStage2Ref = useRef<(() => void) | null>(null)
+
+  // 콜백 ref 최신화
+  useEffect(() => { onPitchArrivedRef.current      = onPitchArrived      }, [onPitchArrived])
+  useEffect(() => { onSceneReadyRef.current        = onSceneReady        }, [onSceneReady])
+  useEffect(() => { onReplayEndRef.current         = onReplayEnd         }, [onReplayEnd])
+  useEffect(() => { onReplayStageChangeRef.current = onReplayStageChange }, [onReplayStageChange])
 
   // ── 씬 초기화 ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -190,17 +223,16 @@ export default function BaseballScene({
     window.addEventListener('resize', onResize)
 
     // ── 렌더 루프 ────────────────────────────────────────────────────────────
+    const lookAtWork = new THREE.Vector3()
     const animate = () => {
       animFrameRef.current = requestAnimationFrame(animate)
+      const now = performance.now()
 
       // 투구 애니메이션
       if (pitchAnimRef.current && ballRef.current) {
         const { curve, startTime, duration } = pitchAnimRef.current
-        const elapsed = performance.now() - startTime
-        const t = Math.min(elapsed / duration, 1)
-        const pos = curve.getPoint(t)
-        ballRef.current.position.copy(pos)
-
+        const t = Math.min((now - startTime) / duration, 1)
+        ballRef.current.position.copy(curve.getPoint(t))
         if (t >= 1 && !arrivedRef.current) {
           arrivedRef.current = true
           pitchAnimRef.current = null
@@ -208,17 +240,27 @@ export default function BaseballScene({
         }
       }
 
-      // 리플레이 애니메이션
+      // 리플레이 1단계: 공 애니메이션
       if (replayAnimRef.current && replayBallRef.current && !replayAnimRef.current.done) {
         const { curve, startTime, duration } = replayAnimRef.current
-        const elapsed = performance.now() - startTime
-        const t = Math.min(elapsed / duration, 1)
+        const t = Math.min((now - startTime) / duration, 1)
         replayBallRef.current.position.copy(curve.getPoint(t))
-
         if (t >= 1) {
           replayAnimRef.current.done = true
-          onReplayEndRef.current?.()
+          // 단계 1 완료 → 단계 2로 진행
+          advanceToStage2Ref.current?.()
         }
+      }
+
+      // 카메라 전환 lerp
+      if (cameraTransRef.current) {
+        const { startTime, duration, fromPos, toPos, fromLook, toLook } = cameraTransRef.current
+        const raw = Math.min((now - startTime) / duration, 1)
+        const t   = 1 - Math.pow(1 - raw, 3) // ease-out cubic
+        camera.position.lerpVectors(fromPos, toPos, t)
+        lookAtWork.lerpVectors(fromLook, toLook, t)
+        camera.lookAt(lookAtWork)
+        if (raw >= 1) cameraTransRef.current = null
       }
 
       renderer.render(scene, camera)
@@ -315,79 +357,215 @@ export default function BaseballScene({
     }
   }, [pitchPhase])
 
-  // ── 리플레이 시작 ─────────────────────────────────────────────────────────
+  // ── 리플레이 시작 (3단계 시스템) ─────────────────────────────────────────
   useEffect(() => {
-    if (!replayPitch || !sceneRef.current) return
+    if (!replayPitch || !sceneRef.current || !cameraRef.current) return
 
-    const scene = sceneRef.current
-    const curve = buildPitchCurve(replayPitch, replayPitch.pitcherForm as PitcherForm)
-    const baseDuration = speedToFlightMs(replayPitch.speed)
-    const duration = baseDuration / replaySpeed
+    const scene  = sceneRef.current
+    const camera = cameraRef.current
 
-    // 리플레이 공 시작점 배치
+    // ── 이전 잔재 정리 ────────────────────────────────────────────────────
+    clearTimeout(stageTimerRef.current!)
+    ;[replayTrailRef, replayMarkerRef, replayDropLineRef].forEach(r => {
+      if (r.current) { scene.remove(r.current); r.current.geometry.dispose(); r.current = null }
+    })
+    if (replayPlaneGroupRef.current) {
+      scene.remove(replayPlaneGroupRef.current)
+      replayPlaneGroupRef.current = null
+    }
+    if (replayBallRef.current) replayBallRef.current.visible = false
+    replayAnimRef.current = null
+    cameraTransRef.current = null
+
+    // ── 카메라 1단계 위치로 리셋 ─────────────────────────────────────────
+    camera.position.copy(CAM_S1.pos)
+    camera.lookAt(CAM_S1.look)
+
+    // ── 공 애니메이션 시작 ────────────────────────────────────────────────
+    const curve    = buildPitchCurve(replayPitch, replayPitch.pitcherForm as PitcherForm)
+    const duration = speedToFlightMs(replayPitch.speed) / replaySpeed
+
     if (replayBallRef.current) {
       replayBallRef.current.position.copy(curve.getPoint(0))
       replayBallRef.current.visible = true
     }
-
     replayAnimRef.current = { curve, startTime: performance.now(), duration, done: false }
 
-    // 이전 리플레이 잔재 제거
-    if (replayTrailRef.current) {
-      scene.remove(replayTrailRef.current)
-      replayTrailRef.current.geometry.dispose()
-      replayTrailRef.current = null
-    }
-    if (replayMarkerRef.current) {
-      scene.remove(replayMarkerRef.current)
-      replayMarkerRef.current.geometry.dispose()
-      replayMarkerRef.current = null
-    }
-
-    // 궤적 라인
-    const points = curve.getPoints(60)
-    const geo    = new THREE.BufferGeometry().setFromPoints(points)
-    const mat    = new THREE.LineBasicMaterial({ color: 0xffee00, opacity: 0.5, transparent: true })
-    const trail  = new THREE.Line(geo, mat)
+    // ── 궤적 라인 ────────────────────────────────────────────────────────
+    const trailGeo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(60))
+    const trailMat = new THREE.LineBasicMaterial({ color: 0xffee00, opacity: 0.55, transparent: true })
+    const trail    = new THREE.Line(trailGeo, trailMat)
     scene.add(trail)
     replayTrailRef.current = trail
 
-    // 홈플레이트 통과 지점 마커 (빨강/파랑 링)
-    const markerColor = replayPitch.isStrike ? 0xff3333 : 0x3399ff
+    // ── 홈플레이트 통과 마커 링 (숨김 상태로 생성 → 2단계에서 표시) ──────
+    const markerColor = replayPitch.isStrike ? 0xff4444 : 0x4488ff
     const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.06, 0.10, 24),
-      new THREE.MeshBasicMaterial({ color: markerColor, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })
+      new THREE.RingGeometry(0.06, 0.11, 24),
+      new THREE.MeshBasicMaterial({ color: markerColor, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
     )
     ring.position.set(replayPitch.plateX, replayPitch.plateY, 0.005)
+    ring.visible = false
     scene.add(ring)
     replayMarkerRef.current = ring
 
-    // 리플레이 종료 시 공 숨기기 (별도 타이머)
-    const hideTimer = setTimeout(() => {
-      if (replayBallRef.current) replayBallRef.current.visible = false
-    }, duration + 300)
+    // ── ABS 3면 박스 생성 (숨김 상태, 2단계에서 표시) ─────────────────────
+    const planeGroup = new THREE.Group()
+    const zH = batter ? batter.zoneTop - batter.zoneBottom : 0.5
+    const zMidY = batter ? (batter.zoneTop + batter.zoneBottom) / 2 : 0.7
+    const hw   = batter ? batter.zoneHalfWidth : 0.215
+
+    const planes: { z: number; halfW: number; hit: boolean | undefined; label: string }[] = [
+      { z: PLANE_Z.front, halfW: hw + 0.02, hit: replayPitch.frontPlaneHit, label: '앞' },
+      { z: PLANE_Z.mid,   halfW: hw + 0.02, hit: replayPitch.midPlaneHit,   label: '중' },
+      { z: PLANE_Z.end,   halfW: hw,         hit: replayPitch.endPlaneHit,   label: '끝' },
+    ]
+
+    planes.forEach(({ z, halfW, hit }) => {
+      const col  = hit ? 0xff6633 : 0x888888
+      const opa  = hit ? 0.40     : 0.15
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(halfW * 2, zH, 0.012),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: opa, side: THREE.DoubleSide, depthWrite: false })
+      )
+      mesh.position.set(0, zMidY, z)
+      planeGroup.add(mesh)
+
+      // 테두리
+      const edgeMat = new THREE.LineBasicMaterial({ color: hit ? 0xff9966 : 0xaaaaaa })
+      const edges   = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), edgeMat)
+      mesh.add(edges)
+    })
+
+    planeGroup.visible = false
+    scene.add(planeGroup)
+    replayPlaneGroupRef.current = planeGroup
+
+    // ── 수직 드롭 라인 (3단계용, 숨김) ────────────────────────────────────
+    const dropPoints = [
+      new THREE.Vector3(replayPitch.plateX, replayPitch.plateY, 0),
+      new THREE.Vector3(replayPitch.plateX, 0, 0),
+    ]
+    const dropLine = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(dropPoints),
+      new THREE.LineBasicMaterial({ color: 0xff4444, opacity: 0.7, transparent: true })
+    )
+    dropLine.visible = false
+    scene.add(dropLine)
+    replayDropLineRef.current = dropLine
+
+    // ── 단계 1 설정 ──────────────────────────────────────────────────────
+    replayStageRef.current = 1
+    onReplayStageChangeRef.current?.(1)
+
+    // ── 단계 2 진행 함수 (공 애니메이션 완료 시 render loop에서 호출) ────────
+    advanceToStage2Ref.current = () => {
+      if (replayStageRef.current !== 1) return
+      replayStageRef.current = 2
+      onReplayStageChangeRef.current?.(2)
+
+      // 공 플레이트 위치에 고정
+      if (replayBallRef.current) {
+        replayBallRef.current.position.set(replayPitch.plateX, replayPitch.plateY, 0)
+      }
+      // 마커·플레인 표시
+      if (replayMarkerRef.current)    replayMarkerRef.current.visible = true
+      if (replayPlaneGroupRef.current) replayPlaneGroupRef.current.visible = true
+
+      // 카메라 2단계로 전환
+      cameraTransRef.current = {
+        startTime: performance.now(), duration: CAM_LERP_DUR,
+        fromPos: camera.position.clone(), toPos: CAM_S2.pos.clone(),
+        fromLook: CAM_S1.look.clone(),    toLook: CAM_S2.look.clone(),
+      }
+
+      // STAGE_HOLD_MS 후 → 단계 3
+      clearTimeout(stageTimerRef.current!)
+      stageTimerRef.current = setTimeout(() => {
+        replayStageRef.current = 3
+        onReplayStageChangeRef.current?.(3)
+
+        // 드롭 라인 표시
+        if (replayDropLineRef.current) replayDropLineRef.current.visible = true
+
+        // 카메라 3단계로 전환
+        cameraTransRef.current = {
+          startTime: performance.now(), duration: CAM_LERP_DUR,
+          fromPos: CAM_S2.pos.clone(), toPos: CAM_S3.pos.clone(),
+          fromLook: CAM_S2.look.clone(), toLook: CAM_S3.look.clone(),
+        }
+
+        // STAGE_HOLD_MS 후 → 리플레이 종료
+        stageTimerRef.current = setTimeout(() => {
+          onReplayEndRef.current?.()
+        }, STAGE_HOLD_MS)
+      }, STAGE_HOLD_MS)
+    }
 
     return () => {
-      clearTimeout(hideTimer)
+      clearTimeout(stageTimerRef.current!)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [replayPitch, replaySpeed])
 
-  // ── 리플레이 종료 시 정리 ─────────────────────────────────────────────────
+  // ── 수동 단계 이동 (← → 키) ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!replayStageOverride || !cameraRef.current || !replayPitch) return
+    const stage = replayStageOverride
+    const camera = cameraRef.current
+
+    clearTimeout(stageTimerRef.current!)
+    replayStageRef.current = stage
+    onReplayStageChangeRef.current?.(stage)
+
+    const targets = [CAM_S1, CAM_S2, CAM_S3]
+    const target  = targets[stage - 1]
+    const prev    = targets[Math.max(stage - 2, 0)]
+    cameraTransRef.current = {
+      startTime: performance.now(), duration: CAM_LERP_DUR,
+      fromPos: camera.position.clone(), toPos: target.pos.clone(),
+      fromLook: prev.look.clone(), toLook: target.look.clone(),
+    }
+
+    // 단계별 오브젝트 가시성 조정
+    if (replayPlaneGroupRef.current) replayPlaneGroupRef.current.visible = stage >= 2
+    if (replayMarkerRef.current)     replayMarkerRef.current.visible     = stage >= 2
+    if (replayDropLineRef.current)   replayDropLineRef.current.visible   = stage >= 3
+    if (replayBallRef.current) {
+      replayBallRef.current.visible = true
+      if (stage >= 2) {
+        replayBallRef.current.position.set(replayPitch.plateX, replayPitch.plateY, 0)
+      }
+    }
+
+    // 이 단계에서 auto-advance 없이 유지 (수동 조작이므로)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replayStageOverride])
+
+  // ── 리플레이 종료/null 시 정리 ────────────────────────────────────────────
   useEffect(() => {
     if (replayPitch !== null) return
-    // replayPitch가 null로 클리어되면 리플레이 잔재 제거
-    if (replayBallRef.current) replayBallRef.current.visible = false
+    clearTimeout(stageTimerRef.current!)
     replayAnimRef.current = null
-    if (replayTrailRef.current && sceneRef.current) {
-      sceneRef.current.remove(replayTrailRef.current)
-      replayTrailRef.current.geometry.dispose()
-      replayTrailRef.current = null
+    cameraTransRef.current = null
+    advanceToStage2Ref.current = null
+
+    if (!sceneRef.current) return
+    const scene = sceneRef.current
+
+    if (replayBallRef.current) replayBallRef.current.visible = false
+    ;[replayTrailRef, replayMarkerRef, replayDropLineRef].forEach(r => {
+      if (r.current) { scene.remove(r.current); r.current.geometry.dispose(); r.current = null }
+    })
+    if (replayPlaneGroupRef.current) {
+      scene.remove(replayPlaneGroupRef.current)
+      replayPlaneGroupRef.current = null
     }
-    if (replayMarkerRef.current && sceneRef.current) {
-      sceneRef.current.remove(replayMarkerRef.current)
-      replayMarkerRef.current.geometry.dispose()
-      replayMarkerRef.current = null
+
+    // 카메라 1단계 위치로 복귀
+    if (cameraRef.current) {
+      cameraRef.current.position.copy(CAM_S1.pos)
+      cameraRef.current.lookAt(CAM_S1.look)
     }
   }, [replayPitch])
 

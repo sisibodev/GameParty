@@ -7,19 +7,18 @@ interface Props {
 }
 
 // 2D 뷰 크기 (px)
-const VIEW_W = 220
-const VIEW_H = 300
-const PADDING = 36   // 존 바깥 여백
+const VIEW_W = 240
+const VIEW_H = 290
+const PADDING = 36
 
 export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
   if (!visible) return null
 
-  // ── 좌표 매핑 계산 ──────────────────────────────────────────────────────
-  const zoneW  = batter.zoneHalfWidth * 2
-  const zoneH  = batter.zoneTop - batter.zoneBottom
-
+  // ── 좌표 매핑 ───────────────────────────────────────────────────────────
+  const zoneW   = batter.zoneHalfWidth * 2
+  const zoneH   = batter.zoneTop - batter.zoneBottom
   const rangeX  = batter.zoneHalfWidth * 1.7
-  const rangeYb = -0.08                         // 홈플레이트(Y=0) 아래까지 포함
+  const rangeYb = -0.08
   const rangeYt = batter.zoneTop + zoneH * 0.45
   const rangeH  = rangeYt - rangeYb
 
@@ -29,22 +28,20 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
   const toSvgX = (x: number) => PADDING + (x + rangeX) / (rangeX * 2) * drawW
   const toSvgY = (y: number) => PADDING + (1 - (y - rangeYb) / rangeH) * drawH
 
-  // 존 박스 좌표
   const zoneX1 = toSvgX(-batter.zoneHalfWidth)
   const zoneX2 = toSvgX( batter.zoneHalfWidth)
   const zoneY1 = toSvgY(batter.zoneTop)
   const zoneY2 = toSvgY(batter.zoneBottom)
 
-  // 공 위치 — 카메라가 홈플레이트 뒤에서 마운드를 바라보므로 X 반전
+  // 공 위치 — 카메라가 뒤에서 보므로 X 반전
   const ballSvgX = toSvgX(-pitch.plateX)
   const ballSvgY = toSvgY(pitch.plateY)
 
-  // 색상
-  const isCorrect = pitch.correct ?? false
-  const ballColor = isCorrect ? '#4caf50' : '#f44336'
+  const isCorrect   = pitch.correct ?? false
   const isBorderline = pitch.isBorderline
+  const ballColor   = isCorrect ? '#4caf50' : '#f44336'
 
-  // 보더라인 영역 (존 ±5%)
+  // 보더라인 영역
   const blMarginX = zoneW * 0.05
   const blMarginY = zoneH * 0.05
   const blX1 = toSvgX(-batter.zoneHalfWidth - blMarginX)
@@ -52,40 +49,38 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
   const blY1 = toSvgY(batter.zoneTop    + blMarginY)
   const blY2 = toSvgY(batter.zoneBottom - blMarginY)
 
-  const callText  = pitch.playerCall === 'strike' ? 'S' : 'B'
-  const realText  = pitch.isStrike ? '스트라이크' : '볼'
+  const callText = pitch.playerCall === 'strike' ? 'S' : 'B'
+  const realText = pitch.isStrike ? '스트라이크' : '볼'
+
+  // KBO ABS 3면 데이터
+  const frontHit = pitch.frontPlaneHit
+  const midHit   = pitch.midPlaneHit
+  const endHit   = pitch.endPlaneHit
+  const planeCount = pitch.planeHitCount ?? 0
+  const hasPlaneData = frontHit !== undefined
 
   return (
     <div style={styles.wrap}>
-      {/* 타이틀 */}
-      <div style={styles.title}>투구 위치</div>
+      <div style={styles.title}>투구 결과</div>
 
-      <svg
-        width={VIEW_W}
-        height={VIEW_H}
-        style={{ display: 'block' }}
-      >
-        {/* 배경 */}
-        <rect x={0} y={0} width={VIEW_W} height={VIEW_H}
-          fill="rgba(0,0,0,0)" />
-
+      <svg width={VIEW_W} height={VIEW_H} style={{ display: 'block' }}>
         {/* 보더라인 영역 */}
         <rect
           x={blX1} y={blY1}
           width={blX2 - blX1} height={blY2 - blY1}
-          fill="rgba(255,200,0,0.08)"
-          stroke="rgba(255,200,0,0.35)"
+          fill="rgba(255,200,0,0.07)"
+          stroke="rgba(255,200,0,0.3)"
           strokeWidth={1}
           strokeDasharray="4 3"
         />
 
-        {/* 홈플레이트 (오각형, 실제 비율 반영) */}
+        {/* 홈플레이트 오각형 */}
         {(() => {
-          const hw  = toSvgX(batter.zoneHalfWidth)  - toSvgX(0)  // SVG 상의 반폭
+          const hw  = toSvgX(batter.zoneHalfWidth) - toSvgX(0)
           const cx  = VIEW_W / 2
-          const top = toSvgY(0)       // 플레이트 상단 Y
-          const ph  = 14              // 플레이트 높이 (픽셀)
-          const ps  = 8               // 하단 꼭지점까지 추가 거리
+          const top = toSvgY(0)
+          const ph  = 13
+          const ps  = 7
           const pts = [
             `${cx - hw},${top}`,
             `${cx + hw},${top}`,
@@ -96,8 +91,8 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
           return (
             <polygon
               points={pts}
-              fill="rgba(255,255,255,0.92)"
-              stroke="rgba(200,200,200,0.6)"
+              fill="rgba(255,255,255,0.9)"
+              stroke="rgba(200,200,200,0.5)"
               strokeWidth={1}
             />
           )
@@ -107,123 +102,122 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
         <rect
           x={zoneX1} y={zoneY1}
           width={zoneX2 - zoneX1} height={zoneY2 - zoneY1}
-          fill={pitch.isStrike ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)'}
+          fill={pitch.isStrike ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'}
           stroke="#00e5ff"
           strokeWidth={2}
         />
 
-        {/* 존 가로/세로 중심선 */}
+        {/* 중심선 */}
         <line
           x1={(zoneX1 + zoneX2) / 2} y1={zoneY1}
           x2={(zoneX1 + zoneX2) / 2} y2={zoneY2}
-          stroke="rgba(0,229,255,0.2)" strokeWidth={1}
+          stroke="rgba(0,229,255,0.18)" strokeWidth={1}
         />
         <line
           x1={zoneX1} y1={(zoneY1 + zoneY2) / 2}
           x2={zoneX2} y2={(zoneY1 + zoneY2) / 2}
-          stroke="rgba(0,229,255,0.2)" strokeWidth={1}
+          stroke="rgba(0,229,255,0.18)" strokeWidth={1}
         />
 
-        {/* 공 궤적 점선 (중앙에서 공 위치까지) */}
+        {/* 존 → 공 점선 */}
         <line
           x1={(zoneX1 + zoneX2) / 2}
           y1={(zoneY1 + zoneY2) / 2}
           x2={ballSvgX} y2={ballSvgY}
           stroke={ballColor}
           strokeWidth={1}
-          strokeOpacity={0.4}
+          strokeOpacity={0.35}
           strokeDasharray="3 3"
         />
 
-        {/* 공 위치 외부 링 (보더라인 강조) */}
+        {/* 보더라인 강조 링 */}
         {isBorderline && (
-          <circle
-            cx={ballSvgX} cy={ballSvgY} r={13}
-            fill="none"
-            stroke="#ffcc00"
-            strokeWidth={2}
-            strokeOpacity={0.7}
-          />
+          <circle cx={ballSvgX} cy={ballSvgY} r={14}
+            fill="none" stroke="#ffcc00" strokeWidth={2} strokeOpacity={0.6} />
         )}
 
         {/* 공 */}
-        <circle
-          cx={ballSvgX} cy={ballSvgY} r={8}
-          fill={ballColor}
-          stroke="#fff"
-          strokeWidth={1.5}
-          opacity={0.95}
-        />
-
-        {/* 공 위에 판정 텍스트 */}
+        <circle cx={ballSvgX} cy={ballSvgY} r={9}
+          fill={ballColor} stroke="#fff" strokeWidth={1.5} opacity={0.95} />
         <text
           x={ballSvgX} y={ballSvgY + 1}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fontSize={9}
-          fontWeight="bold"
-          fill="#fff"
+          textAnchor="middle" dominantBaseline="middle"
+          fontSize={9} fontWeight="bold" fill="#fff"
         >
           {callText}
         </text>
 
         {/* 존 레이블 */}
         <text x={zoneX1 + 4} y={zoneY1 - 5}
-          fontSize={9} fill="rgba(0,229,255,0.7)">
-          ZONE
-        </text>
-
-        {/* 좌우 레이블 */}
-        <text x={PADDING / 2} y={VIEW_H - 8}
-          fontSize={9} fill="rgba(255,255,255,0.3)" textAnchor="middle">안쪽</text>
-        <text x={VIEW_W - PADDING / 2} y={VIEW_H - 8}
-          fontSize={9} fill="rgba(255,255,255,0.3)" textAnchor="middle">바깥</text>
+          fontSize={9} fill="rgba(0,229,255,0.65)">ZONE</text>
       </svg>
 
       {/* 하단 결과 요약 */}
       <div style={styles.summary}>
-        <div style={styles.summaryItem}>
-          <span style={styles.summaryLabel}>실제</span>
-          <span style={{
-            ...styles.summaryValue,
-            color: pitch.isStrike ? '#ff5722' : '#2196f3'
-          }}>
+        <div style={styles.row}>
+          <span style={styles.label}>실제</span>
+          <span style={{ ...styles.value, color: pitch.isStrike ? '#ff5722' : '#2196f3' }}>
             {realText}
           </span>
         </div>
-        <div style={styles.divider} />
-        <div style={styles.summaryItem}>
-          <span style={styles.summaryLabel}>나의 판정</span>
-          <span style={{
-            ...styles.summaryValue,
-            color: pitch.playerCall === 'strike' ? '#ff5722' : '#2196f3'
-          }}>
+        <div style={styles.sep} />
+        <div style={styles.row}>
+          <span style={styles.label}>나의 판정</span>
+          <span style={{ ...styles.value, color: pitch.playerCall === 'strike' ? '#ff5722' : '#2196f3' }}>
             {pitch.playerCall === 'strike' ? '스트라이크' : '볼'}
           </span>
         </div>
-        <div style={styles.divider} />
-        <div style={styles.summaryItem}>
-          <span style={styles.summaryLabel}>오차</span>
-          <span style={{ ...styles.summaryValue, color: '#ccc', fontSize: 11 }}>
-            X {pitch.plateX.toFixed(2)}m &nbsp; Y {pitch.plateY.toFixed(2)}m
-          </span>
-        </div>
+
+        {/* KBO ABS 3면 통과 */}
+        {hasPlaneData && (
+          <>
+            <div style={styles.sep} />
+            <div style={styles.planesRow}>
+              <PlaneChip label="앞" hit={frontHit!} />
+              <PlaneChip label="중" hit={midHit!} />
+              <PlaneChip label="끝" hit={endHit!} />
+              <span style={{
+                ...styles.planeCount,
+                color: planeCount >= 2 ? '#ff5722' : '#2196f3',
+              }}>
+                {planeCount}/3면
+              </span>
+            </div>
+          </>
+        )}
       </div>
+    </div>
+  )
+}
+
+function PlaneChip({ label, hit }: { label: string; hit: boolean }) {
+  return (
+    <div style={{
+      padding: '2px 7px',
+      borderRadius: 4,
+      fontSize: 11,
+      fontWeight: 700,
+      background: hit ? 'rgba(255,87,34,0.25)' : 'rgba(255,255,255,0.07)',
+      border: `1px solid ${hit ? '#ff5722' : 'rgba(255,255,255,0.15)'}`,
+      color: hit ? '#ff8a65' : '#666',
+    }}>
+      {label}
     </div>
   )
 }
 
 const styles: Record<string, React.CSSProperties> = {
   wrap: {
-    background: 'rgba(10,18,35,0.88)',
-    border: '1px solid rgba(0,229,255,0.3)',
+    background: 'rgba(8,15,28,0.92)',
+    border: '1px solid rgba(0,229,255,0.25)',
     borderRadius: 14,
     padding: '10px 14px 12px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    backdropFilter: 'blur(6px)',
+    backdropFilter: 'blur(8px)',
     minWidth: VIEW_W + 28,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
   },
   title: {
     fontSize: 11,
@@ -238,23 +232,35 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
-    gap: 4,
+    gap: 5,
   },
-  summaryItem: {
+  row: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  summaryLabel: {
+  label: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(255,255,255,0.4)',
   },
-  summaryValue: {
+  value: {
     fontSize: 13,
     fontWeight: 700,
   },
-  divider: {
+  sep: {
     height: 1,
     background: 'rgba(255,255,255,0.07)',
+  },
+  planesRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5,
+    justifyContent: 'center',
+    paddingTop: 2,
+  },
+  planeCount: {
+    fontSize: 12,
+    fontWeight: 800,
+    marginLeft: 4,
   },
 }

@@ -68,6 +68,8 @@ export default function GamePlay({
   const [replayPitch, setReplayPitch]     = useState<PitchParams | null>(null)
   const [replaySpeed, setReplaySpeed]     = useState(1)
   const [replayPlaying, setReplayPlaying] = useState(false)
+  const [replayStage, setReplayStage]     = useState(1)
+  const [replayStageOverride, setReplayStageOverride] = useState<number | undefined>(undefined)
 
   // ── Refs (stale closure 방지용 최신값 저장) ──────────────────────────────
   const rngRef            = useRef<SeededRng>(new SeededRng(initialSeed ?? randomSeed()))
@@ -277,6 +279,8 @@ export default function GamePlay({
   const handleReplaySelect = useCallback((index: number) => {
     const pitch = pitchHistoryRef.current[index]
     if (!pitch) return
+    setReplayStage(1)
+    setReplayStageOverride(undefined)
     setReplayPitch(pitch)
     setReplayPlaying(true)
   }, [])
@@ -287,6 +291,8 @@ export default function GamePlay({
 
   const handleReplayAgain = useCallback(() => {
     if (!replayPitch) return
+    setReplayStage(1)
+    setReplayStageOverride(undefined)
     setReplayPlaying(true)
     setReplayPitch({ ...replayPitch })
   }, [replayPitch])
@@ -294,6 +300,13 @@ export default function GamePlay({
   const handleReplayClose = useCallback(() => {
     setReplayPitch(null)
     setReplayPlaying(false)
+    setReplayStage(1)
+    setReplayStageOverride(undefined)
+  }, [])
+
+  const handleStageChange = useCallback((s: number) => {
+    setReplayStage(s)
+    setReplayStageOverride(s)
   }, [])
 
   return (
@@ -307,7 +320,9 @@ export default function GamePlay({
         onSceneReady={handleSceneReady}
         replayPitch={replayPitch}
         replaySpeed={replaySpeed}
+        replayStageOverride={replayStageOverride}
         onReplayEnd={handleReplayEnd}
+        onReplayStageChange={setReplayStage}
       />
 
       <HUD
@@ -337,7 +352,7 @@ export default function GamePlay({
         <JudgmentFeedbackUI feedback={feedback} />
       )}
 
-      {/* 2D 존 결과 뷰 (화면 오른쪽 중단) */}
+      {/* 2D 존 결과 뷰 (화면 중앙 하단) */}
       {feedbackVisible && feedback && currentPitch && currentBatter && (
         <div style={styles.zoneViewWrap}>
           <StrikeZoneResult2D
@@ -366,7 +381,9 @@ export default function GamePlay({
           pitch={replayPitch}
           speed={replaySpeed}
           isPlaying={replayPlaying}
+          stage={replayStage}
           onSpeedChange={setReplaySpeed}
+          onStageChange={handleStageChange}
           onReplay={handleReplayAgain}
           onClose={handleReplayClose}
         />
@@ -387,8 +404,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   zoneViewWrap: {
     position: 'absolute',
-    top: '50%', right: 20,
-    transform: 'translateY(-50%)',
+    top: '52%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
     zIndex: 24,
     pointerEvents: 'none',
   },
