@@ -9,7 +9,6 @@ import { SeededRng } from './rng'
 export const MOUND_DISTANCE = 18.44
 
 // 공 반지름 (MLB 규정: 지름 73~75mm → 반지름 0.037m)
-// 실제 야구 규칙상 공의 어느 부분이라도 존을 통과하면 스트라이크
 export const BALL_RADIUS = 0.037
 
 // 투구 시작점 Y (릴리즈 높이)
@@ -20,15 +19,42 @@ const RELEASE_HEIGHT: Record<PitcherForm, number> = {
   underhand:      0.90,
 }
 
-// 구종별 무브먼트 파라미터 (x: 좌우, y: 상하 - 중력 외 추가 무브먼트)
+// ── 구종별 구속 배율 (직구 기준 상대 속도) ────────────────────────────────────
+// 직구 = config.speedMin~speedMax, 다른 구종은 이 범위에 배율 적용
+const PITCH_SPEED_RATIO: Record<PitchType, [number, number]> = {
+  fastball: [0.97, 1.00],   // 기준 속도
+  two_seam: [0.94, 0.98],   // 직구 대비 -2~-6%  (2~6 km/h 느림)
+  changeup: [0.80, 0.87],   // 직구 대비 -13~-20% (체인지업의 핵심 = 속도차)
+  slider:   [0.85, 0.91],   // 직구 대비 -9~-15%
+  curve:    [0.78, 0.85],   // 직구 대비 -15~-22%
+  splitter: [0.87, 0.93],   // 직구 대비 -7~-13%
+}
+
+// ── 구종별 무브먼트 (홈플레이트 통과 좌표 오프셋, 단위: m) ─────────────────────
+// x: 좌우 이동 (±), y: 수직 추가 이동 (음수=낙하 가속, 중력 외 추가량)
 type MovementRange = { x: [number, number]; y: [number, number] }
 const PITCH_MOVEMENT: Record<PitchType, MovementRange> = {
-  fastball:  { x: [-0.03, 0.03], y: [-0.05, 0.05] },
-  two_seam:  { x: [-0.12, 0.12], y: [-0.10, 0.05] },
-  changeup:  { x: [-0.08, 0.08], y: [-0.20, -0.05] },
-  slider:    { x: [-0.30, 0.30], y: [-0.15, 0.05] },
-  curve:     { x: [-0.15, 0.15], y: [-0.45, -0.20] },
-  splitter:  { x: [-0.08, 0.08], y: [-0.55, -0.35] },
+  fastball: { x: [-0.04, 0.04], y: [-0.02, 0.03] },   // 백스핀으로 거의 직선
+  two_seam: { x: [-0.14, 0.14], y: [-0.12, -0.02] },  // 아무쪽으로 흘러내림
+  changeup: { x: [-0.10, 0.10], y: [-0.15, -0.05] },  // 떨어지며 빠져나감
+  slider:   { x: [-0.20, 0.20], y: [-0.12, -0.03] },  // 횡 변화 + 약간 낙하
+  curve:    { x: [-0.09, 0.09], y: [-0.38, -0.18] },  // 큰 낙차
+  splitter: { x: [-0.06, 0.06], y: [-0.28, -0.15] },  // 급강하 (old보다 현실적)
+}
+
+// ── 구종별 베지어 궤적 파라미터 ───────────────────────────────────────────────
+// 쿼드라틱 → 큐빅 베지어로 변경: 제어점 2개로 구종별 고유 궤적 구현
+// t1/t2: 직선 경로 위 제어점 위치 (0=마운드, 1=홈플레이트)
+// y1/y2: 직선 경로 대비 Y 오프셋 (양수=위, 음수=아래)
+interface BreakProfile { t1: number; y1: number; t2: number; y2: number }
+const PITCH_BREAK: Record<PitchType, BreakProfile> = {
+  //           early                   late
+  fastball: { t1: 0.33, y1: +0.10,  t2: 0.72, y2: +0.06 },  // 역회전 → 떠오르는 느낌
+  two_seam: { t1: 0.33, y1: +0.05,  t2: 0.72, y2: -0.07 },  // 초반 직구처럼 → 후반 침하
+  changeup: { t1: 0.33, y1: +0.09,  t2: 0.76, y2: -0.14 },  // 초반 직구 위장 → 후반 낙하
+  slider:   { t1: 0.30, y1: +0.04,  t2: 0.78, y2: -0.06 },  // 직구 유사 → 후반 횡 꺾임
+  curve:    { t1: 0.28, y1: +0.20,  t2: 0.67, y2: -0.15 },  // 큰 포물선 (12-6 커브)
+  splitter: { t1: 0.33, y1: +0.06,  t2: 0.83, y2: -0.24 },  // 직구 위장 → 극후반 급락
 }
 
 /** 보더라인 공: 존 경계 ±5% 이내에 의도적으로 위치 */
@@ -52,7 +78,11 @@ export function generatePitch(
   pitcherForm: PitcherForm,
 ): PitchParams {
   const pitchType = rng.pick(config.pitchTypes)
-  const speed = rng.float(config.speedMin, config.speedMax)
+
+  // 구종별 구속 계산: 직구 기준 속도 × 구종 배율
+  const baseSpeed = rng.float(config.speedMin, config.speedMax)
+  const speedRatio = rng.float(PITCH_SPEED_RATIO[pitchType][0], PITCH_SPEED_RATIO[pitchType][1])
+  const speed = Math.round(baseSpeed * speedRatio)
 
   const isBorderline = rng.next() < config.borderlineRatio
 
@@ -60,49 +90,37 @@ export function generatePitch(
   let plateY: number
 
   if (isBorderline) {
-    // 존 경계에 걸치게
     plateX = borderlineX(rng, batter)
     plateY = borderlineY(rng, batter)
   } else {
-    // 완전 스트라이크 or 완전 볼 (50:50)
     const shouldBeStrike = rng.next() < 0.5
     if (shouldBeStrike) {
       plateX = rng.float(-batter.zoneHalfWidth * 0.85, batter.zoneHalfWidth * 0.85)
       plateY = rng.float(batter.zoneBottom + 0.05, batter.zoneTop - 0.05)
     } else {
-      // 존 밖 - 방향 랜덤
       const dir = rng.int(0, 4)
       if (dir === 0) {
-        // 바깥쪽 (X)
         plateX = batter.zoneHalfWidth + rng.float(0.05, 0.35)
         if (rng.next() < 0.5) plateX = -plateX
         plateY = rng.float(batter.zoneBottom, batter.zoneTop)
       } else if (dir === 1) {
-        // 높은 볼
         plateX = rng.float(-batter.zoneHalfWidth * 1.2, batter.zoneHalfWidth * 1.2)
         plateY = batter.zoneTop + rng.float(0.05, 0.40)
       } else {
-        // 낮은 볼
         plateX = rng.float(-batter.zoneHalfWidth * 1.2, batter.zoneHalfWidth * 1.2)
         plateY = batter.zoneBottom - rng.float(0.05, 0.35)
       }
     }
   }
 
-  // 무브먼트 적용 후 최종 위치로 역산 → 시작점 결정은 씬에서
   const mvRange = PITCH_MOVEMENT[pitchType]
   const mvX = rng.float(mvRange.x[0], mvRange.x[1])
   const mvY = rng.float(mvRange.y[0], mvRange.y[1])
 
-  // 실제 통과 좌표에서 무브먼트를 빼면 "직선 기준" 통과점이 나옴
-  // 베지어 제어점 계산을 위해 plateX/Y는 최종 통과 좌표로 사용
   const finalPlateX = plateX + mvX
   const finalPlateY = plateY + mvY
 
-  // KBO ABS 3-plane 판정:
-  //   앞면(Front): zoneHalfWidth + 2cm 확대
-  //   중간면(Mid):  zoneHalfWidth + 2cm 확대
-  //   끝면(End):   zoneHalfWidth 그대로, 하단 1.5cm 낮게
+  // KBO ABS 3-plane 판정
   const frontHalfW = batter.zoneHalfWidth + 0.02
   const midHalfW   = batter.zoneHalfWidth + 0.02
   const endHalfW   = batter.zoneHalfWidth
@@ -131,7 +149,7 @@ export function generatePitch(
     pitchIndex,
     pitchType,
     pitcherForm,
-    speed: Math.round(speed),
+    speed,
     plateX: finalPlateX,
     plateY: finalPlateY,
     isStrike,
@@ -147,33 +165,44 @@ export function generatePitch(
 }
 
 /**
- * 투구 베지어 곡선 생성
- * 시작점(마운드) → 제어점 → 끝점(홈플레이트)
+ * 구종별 고유 궤적 생성 (CubicBezierCurve3)
+ *
+ * 마운드(시작) → ctrl1(초반 방향) → ctrl2(후반 꺾임) → 홈플레이트(끝)
+ *
+ * 제어점은 직선 경로 위 특정 t 위치에서 Y 오프셋으로 정의:
+ *   - 직구:    ctrl1 위로 → 올라오는 느낌
+ *   - 커브:    ctrl1 크게 위 → ctrl2 아래 → 큰 포물선
+ *   - 체인지업: ctrl1 직구처럼 위 → ctrl2 크게 아래 → 후반 낙하 위장
+ *   - 스플리터: ctrl1 직구와 동일 → ctrl2 극후반에 급락
  */
 export function buildPitchCurve(
   params: PitchParams,
   form: PitcherForm,
-): THREE.QuadraticBezierCurve3 {
+): THREE.CubicBezierCurve3 {
   const releaseH = RELEASE_HEIGHT[form]
+  const bp = PITCH_BREAK[params.pitchType]
 
-  // 투수 마운드 위치: z = +MOUND_DISTANCE (카메라에서 먼 쪽)
   const start = new THREE.Vector3(0, releaseH, MOUND_DISTANCE)
+  const end   = new THREE.Vector3(params.plateX, params.plateY, 0)
 
-  // 홈플레이트 통과점: z = 0
-  const end = new THREE.Vector3(params.plateX, params.plateY, 0)
+  // 직선 경로 위 t 위치 보간 헬퍼
+  const lerpOnLine = (t: number) => new THREE.Vector3(
+    params.plateX * t,
+    releaseH + (params.plateY - releaseH) * t,
+    MOUND_DISTANCE * (1 - t),
+  )
 
-  // 제어점: 중간 높이 + 사이드암 등 폼별 보정
-  const ctrlX = params.plateX * 0.3
-  const ctrlY = (releaseH + params.plateY) * 0.7
-  const ctrlZ = MOUND_DISTANCE * 0.5
-  const ctrl  = new THREE.Vector3(ctrlX, ctrlY, ctrlZ)
+  const base1 = lerpOnLine(bp.t1)
+  const base2 = lerpOnLine(bp.t2)
 
-  return new THREE.QuadraticBezierCurve3(start, ctrl, end)
+  const ctrl1 = new THREE.Vector3(base1.x, base1.y + bp.y1, base1.z)
+  const ctrl2 = new THREE.Vector3(base2.x, base2.y + bp.y2, base2.z)
+
+  return new THREE.CubicBezierCurve3(start, ctrl1, ctrl2, end)
 }
 
 /** km/h → 투구 비행 시간(ms) */
 export function speedToFlightMs(speedKph: number): number {
-  // 거리 18.44m
   const mps = speedKph / 3.6
   return (MOUND_DISTANCE / mps) * 1000
 }
@@ -188,7 +217,6 @@ export function calcScore(
   const correct = (playerCall === 'strike') === params.isStrike
 
   if (!correct) {
-    // 감점: 경계까지 거리 비례 0~100
     const dX = Math.max(0, Math.abs(params.plateX) - batter.zoneHalfWidth)
     const dY = params.plateY < batter.zoneBottom
       ? batter.zoneBottom - params.plateY

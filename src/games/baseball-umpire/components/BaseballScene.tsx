@@ -61,12 +61,12 @@ export default function BaseballScene({
   const onReplayStageChangeRef = useRef(onReplayStageChange)
 
   const pitchAnimRef = useRef<{
-    curve: THREE.QuadraticBezierCurve3
+    curve: THREE.Curve<THREE.Vector3>
     startTime: number
     duration: number
   } | null>(null)
   const replayAnimRef = useRef<{
-    curve: THREE.QuadraticBezierCurve3
+    curve: THREE.Curve<THREE.Vector3>
     startTime: number
     duration: number
     done: boolean
