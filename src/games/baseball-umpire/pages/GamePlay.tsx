@@ -109,11 +109,19 @@ export default function GamePlay({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ── 존 잠깐 표시 (투구 전) ───────────────────────────────────────────────
+  const showZoneTemporarily = useCallback(() => {
+    if (mode === 'practice') return   // 연습 모드는 항상 표시
+    setShowZone(true)
+    setTimeout(() => setShowZone(false), config.zoneShowTime)
+  }, [mode, config.zoneShowTime])
+
   // ── 다음 투구 시작 ───────────────────────────────────────────────────────
   const startNextPitch = useCallback((bidx: number) => {
     const batter = battersRef.current[bidx]
     if (!batter) return
 
+    showZoneTemporarily()
     setAndRefPitchPhase('wind_up')
 
     setTimeout(() => {
@@ -137,7 +145,7 @@ export default function GamePlay({
       setPitchCount(pitchIndexRef.current)  // 방금 증가된 인덱스 = 1-based count
       setAndRefPitchPhase('in_flight')
     }, 1200)
-  }, [config])
+  }, [config, showZoneTemporarily])
 
   // ── 판정 처리 (ref 기반 → stale closure 없음) ────────────────────────────
   const judgeRef = useRef<(call: 'strike' | 'ball' | null) => void>(() => {})

@@ -38,6 +38,7 @@ export interface DifficultyConfig {
   speedMax: number
   pitchTypes: PitchType[]
   borderlineRatio: number  // 0~1
+  zoneShowTime: number     // ms — 투구 전 존 표시 시간
 }
 
 export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
@@ -46,24 +47,28 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
     speedMin: 80, speedMax: 100,
     pitchTypes: ['fastball', 'changeup'],
     borderlineRatio: 0.1,
+    zoneShowTime: 3000,
   },
   amateur: {
     label: '아마추어',
     speedMin: 100, speedMax: 120,
     pitchTypes: ['fastball', 'two_seam', 'changeup', 'slider'],
     borderlineRatio: 0.2,
+    zoneShowTime: 2000,
   },
   pro: {
     label: '프로',
     speedMin: 120, speedMax: 140,
     pitchTypes: ['fastball', 'two_seam', 'changeup', 'slider', 'curve'],
     borderlineRatio: 0.35,
+    zoneShowTime: 1000,
   },
   major: {
     label: '메이저',
     speedMin: 140, speedMax: 150,
     pitchTypes: ['fastball', 'two_seam', 'changeup', 'slider', 'curve', 'splitter'],
     borderlineRatio: 0.5,
+    zoneShowTime: 500,
   },
 }
 
