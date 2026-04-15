@@ -82,6 +82,73 @@ function RankTrendChart({ room, playerCount }: { room: Room; playerCount: number
   )
 }
 
+// ── 주가 스파크라인 (소형) ────────────────────────────────────────────────────
+function PriceSparkline({ prices }: { prices: number[] }) {
+  if (prices.length < 2) return null
+  const W = 72, H = 28, PAD = 2
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  const range = max - min || 1
+  const pts = prices.map((p, i) => {
+    const x = PAD + (i / (prices.length - 1)) * (W - PAD * 2)
+    const y = PAD + (1 - (p - min) / range) * (H - PAD * 2)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  const up = prices[prices.length - 1] >= prices[0]
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ flexShrink: 0 }}>
+      <polyline points={pts} fill="none" stroke={up ? '#4caf50' : '#f44336'}
+        strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// ── 종목별 전체 주가 차트 ─────────────────────────────────────────────────────
+function fmtPrice(p: number) {
+  if (p >= 100000) return `${(p / 10000).toFixed(0)}만`
+  if (p >= 10000) return `${(p / 10000).toFixed(1)}만`
+  if (p >= 1000) return `${(p / 1000).toFixed(0)}천`
+  return `${p}`
+}
+
+function CompanyPriceChart({ prices }: { prices: number[] }) {
+  const W = 520, H = 140
+  const PAD = { top: 12, right: 20, bottom: 24, left: 44 }
+  const innerW = W - PAD.left - PAD.right
+  const innerH = H - PAD.top - PAD.bottom
+  const n = prices.length
+  if (n < 2) return null
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  const range = max - min || 1
+  const xOf = (i: number) => PAD.left + (i / (n - 1)) * innerW
+  const yOf = (p: number) => PAD.top + (1 - (p - min) / range) * innerH
+  const pts = prices.map((p, i) => `${xOf(i).toFixed(1)},${yOf(p).toFixed(1)}`).join(' ')
+  const up = prices[n - 1] >= prices[0]
+  const color = up ? '#4caf50' : '#f44336'
+  const yTicks = [min, (min + max) / 2, max]
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
+      {yTicks.map((t, ti) => (
+        <line key={ti} x1={PAD.left} y1={yOf(t)} x2={PAD.left + innerW} y2={yOf(t)}
+          stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+      ))}
+      {yTicks.map((t, ti) => (
+        <text key={ti} x={PAD.left - 4} y={yOf(t) + 4} textAnchor="end"
+          fontSize="9" fill="rgba(255,255,255,0.35)">{fmtPrice(t)}</text>
+      ))}
+      {prices.map((_, i) => (
+        <text key={i} x={xOf(i)} y={H - 4} textAnchor="middle"
+          fontSize="9" fill="rgba(255,255,255,0.3)">{i === 0 ? '시작' : `${i}R`}</text>
+      ))}
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" />
+      {prices.map((p, i) => (
+        <circle key={i} cx={xOf(i)} cy={yOf(p)} r="3" fill={color} opacity="0.85" />
+      ))}
+    </svg>
+  )
+}
+
 interface PlayerResult {
   player: Player
   totalAssets: number
@@ -97,6 +164,7 @@ export default function FinalResult() {
   const [room, setRoom] = useState<Room | null>(null)
   const [revealed, setRevealed] = useState(false)
   const [showRankTrend, setShowRankTrend] = useState(false)
+  const [expandedCompany, setExpandedCompany] = useState<string | null>(null)
 
   useEffect(() => {
     if (!roomId) return
@@ -134,6 +202,24 @@ export default function FinalResult() {
     })
     .sort((a, b) => b.totalAssets - a.totalAssets)
     .map((r, i) => ({ ...r, rank: i + 1 }))
+
+  // ── 플레이어별 통계 계산 ──────────────────────────────────────────────────
+  const playerStats = results.map(({ player, totalAssets, rank, cashChange }) => {
+    const totalTax = Array.from({ length: totalRounds }, (_, i) => i + 1)
+      .reduce((sum, r) => sum + (room.roundResults?.[r]?.taxApplied?.[player.uid] ?? 0), 0)
+    const rankHistory = Array.from({ length: totalRounds }, (_, i) => i + 1)
+      .map(r => {
+        const snap = room.roundResults?.[r]?.rankSnapshot
+        if (!snap) return null
+        const arr: { uid: string; rank: number }[] = Array.isArray(snap) ? snap : Object.values(snap)
+        return arr.find(s => s.uid === player.uid)?.rank ?? null
+      })
+      .filter((r): r is number => r !== null)
+    const bestRank = rankHistory.length > 0 ? Math.min(...rankHistory) : rank
+    const worstRank = rankHistory.length > 0 ? Math.max(...rankHistory) : rank
+    const returnRate = ((totalAssets - room.settings.startCash) / room.settings.startCash) * 100
+    return { player, rank, totalAssets, cashChange, totalTax, bestRank, worstRank, returnRate, refill: player.refillTotal ?? 0 }
+  })
 
   const me = results.find(r => r.player.uid === user.uid)
   const winner = results[0]
@@ -232,27 +318,86 @@ export default function FinalResult() {
           )}
         </div>
 
-        {/* 주가 변동 히스토리 */}
+        {/* 종목별 주가 히스토리 */}
         <div className={styles.card}>
-          <h2 className={styles.sectionTitle}>종목별 최종 주가</h2>
+          <h2 className={styles.sectionTitle}>종목별 주가 히스토리 (클릭 시 차트)</h2>
           <div className={styles.stockList}>
             {Object.values(room.companies).map(c => {
-              const startPrice = c.priceHistory[0]
+              const prices = c.priceHistory
+              const startPrice = prices[0]
               const endPrice = lastRoundPrices[c.id]
               const totalRate = startPrice > 0 ? (endPrice - startPrice) / startPrice : 0
+              const isExpanded = expandedCompany === c.id
               return (
-                <div key={c.id} className={styles.stockRow}>
-                  <span className={styles.stockEmoji}>{c.emoji}</span>
-                  <span className={styles.stockName}>{c.name}</span>
-                  <div className={styles.stockPrices}>
-                    <span className={styles.stockEnd}>{endPrice.toLocaleString()}원</span>
-                    <span
-                      className={styles.stockTotal}
-                      style={{ color: totalRate >= 0 ? '#4caf50' : '#f44336' }}
-                    >
-                      {totalRate >= 0 ? '+' : ''}{(totalRate * 100).toFixed(1)}%
+                <div key={c.id}>
+                  <div
+                    className={`${styles.stockRow} ${styles.stockRowClickable} ${c.delisted ? styles.stockDelisted : ''}`}
+                    onClick={() => setExpandedCompany(isExpanded ? null : c.id)}
+                  >
+                    <span className={styles.stockEmoji}>{c.emoji}</span>
+                    <span className={styles.stockName}>
+                      {c.name}
+                      {c.delisted && <span className={styles.delistedTag}>상장폐지</span>}
                     </span>
+                    <PriceSparkline prices={prices} />
+                    <div className={styles.stockPrices}>
+                      <span className={styles.stockEnd}>{endPrice.toLocaleString()}원</span>
+                      <span
+                        className={styles.stockTotal}
+                        style={{ color: totalRate >= 0 ? '#4caf50' : '#f44336' }}
+                      >
+                        {totalRate >= 0 ? '+' : ''}{(totalRate * 100).toFixed(1)}%
+                      </span>
+                    </div>
                   </div>
+                  {isExpanded && (
+                    <div className={styles.stockChartExpanded}>
+                      <CompanyPriceChart prices={prices} />
+                      <div className={styles.stockChartMeta}>
+                        시작가 {startPrice.toLocaleString()}원 → 최종가 {endPrice.toLocaleString()}원
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 플레이어별 수익률 통계 */}
+        <div className={styles.card}>
+          <h2 className={styles.sectionTitle}>플레이어별 수익률 통계</h2>
+          <div className={styles.statsTable}>
+            <div className={styles.statsHeader}>
+              <span className={styles.statsColRank}>순위</span>
+              <span className={styles.statsColName}>이름</span>
+              <span className={styles.statsColNum}>총수익률</span>
+              <span className={styles.statsColNum}>세금납부</span>
+              <span className={styles.statsColNum}>최고↔최저</span>
+            </div>
+            {playerStats.map(({ player, rank, returnRate, totalTax, bestRank, worstRank, refill }) => {
+              const isMe = player.uid === user.uid
+              return (
+                <div key={player.uid} className={`${styles.statsRow} ${isMe ? styles.statsRowMe : ''}`}>
+                  <span className={styles.statsColRank}>{rankEmoji(rank)}</span>
+                  <span className={styles.statsColName}>
+                    {player.name}
+                    {refill > 0 && <span className={styles.statsRefillTag}>구제</span>}
+                  </span>
+                  <span
+                    className={styles.statsColNum}
+                    style={{ color: returnRate >= 0 ? '#4caf50' : '#f44336', fontWeight: 700 }}
+                  >
+                    {returnRate >= 0 ? '+' : ''}{returnRate.toFixed(1)}%
+                  </span>
+                  <span className={styles.statsColNum} style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    −{totalTax.toLocaleString()}원
+                  </span>
+                  <span className={styles.statsColNum}>
+                    <span style={{ color: '#6366f1' }}>{bestRank}위</span>
+                    <span style={{ color: 'rgba(255,255,255,0.3)' }}>~</span>
+                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>{worstRank}위</span>
+                  </span>
                 </div>
               )
             })}
