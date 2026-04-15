@@ -301,10 +301,12 @@ export default function BaseballScene({
     trailRef.current = line
   }, [pitchPhase, currentPitch])
 
-  // ── 다음 투구 준비 시 공 숨기기 ──────────────────────────────────────────
+  // ── 공 숨기기: 미트 도착 즉시(judging) + 대기/와인드업 단계 ─────────────
   useEffect(() => {
-    if (pitchPhase === 'idle' || pitchPhase === 'wind_up') {
+    if (pitchPhase === 'judging' || pitchPhase === 'idle' || pitchPhase === 'wind_up') {
       if (ballRef.current) ballRef.current.visible = false
+    }
+    if (pitchPhase === 'idle' || pitchPhase === 'wind_up') {
       if (trailRef.current && sceneRef.current) {
         sceneRef.current.remove(trailRef.current)
         trailRef.current.geometry.dispose()

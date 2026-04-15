@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import type { DatabaseReference } from 'firebase/database'
 import { GameMode, Difficulty, PitchParams } from './types'
 import { useAuth } from '../../contexts/AuthContext'
-import { MultiRoom, submitMultiResult, finishMultiRoom } from './utils/umpire-rtdb'
+import {
+  MultiRoom, submitMultiResult, finishMultiRoom,
+  subscribeMultiRoom, unsubscribeMultiRoom,
+} from './utils/umpire-rtdb'
 import ModeSelect from './pages/ModeSelect'
 import GamePlay from './pages/GamePlay'
 import ResultScreen from './pages/ResultScreen'
@@ -14,10 +18,10 @@ type Phase =
   | 'select'
   | 'playing'
   | 'result'
-  | 'multi_enter'     // 방 생성/참가 화면
-  | 'multi_lobby'     // 대기실
-  | 'multi_playing'   // 멀티 게임 진행
-  | 'multi_result'    // 멀티 결과 비교
+  | 'multi_enter'
+  | 'multi_lobby'
+  | 'multi_playing'
+  | 'multi_result'
 
 interface GameResult {
   score: number
@@ -25,6 +29,12 @@ interface GameResult {
   correctCount: number
   maxCombo: number
   pitchHistory: PitchParams[]
+}
+
+interface MultiRankEntry {
+  uid: string
+  email: string
+  score: number
 }
 
 const DIFFICULTY_LABELS: Record<Difficulty, string> = {
@@ -44,8 +54,33 @@ export default function BaseballUmpireGame() {
   const [result, setResult]       = useState<GameResult | null>(null)
 
   // 멀티 전용
-  const [multiRoomId, setMultiRoomId]   = useState<string>('')
-  const [multiRoom, setMultiRoom]       = useState<MultiRoom | null>(null)
+  const [multiRoomId, setMultiRoomId]       = useState<string>('')
+  const [multiRoom, setMultiRoom]           = useState<MultiRoom | null>(null)
+  const [multiRankings, setMultiRankings]   = useState<MultiRankEntry[]>([])
+  const multiRtdbRefRef = useRef<DatabaseReference | null>(null)
+
+  // ── 멀티 플레이 중 실시간 순위 구독 ───────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'multi_playing' || !multiRoomId) return
+
+    const rtdbRef = subscribeMultiRoom(multiRoomId, (room) => {
+      if (!room?.players) return
+      const entries: MultiRankEntry[] = Object.values(room.players).map(p => ({
+        uid: p.uid,
+        email: p.email,
+        score: p.score,
+      }))
+      setMultiRankings(entries)
+    })
+    multiRtdbRefRef.current = rtdbRef
+
+    return () => {
+      if (multiRtdbRefRef.current) {
+        unsubscribeMultiRoom(multiRtdbRefRef.current)
+        multiRtdbRefRef.current = null
+      }
+    }
+  }, [phase, multiRoomId])
 
   // ── 싱글플레이 ──────────────────────────────────────────────────────────────
   const handleStart = (m: GameMode, d: Difficulty) => {
@@ -82,6 +117,7 @@ export default function BaseballUmpireGame() {
   const handleMultiGameStart = (room: MultiRoom) => {
     setMultiRoom(room)
     setDiff(room.difficulty)
+    setMultiRankings([])
     setPhase('multi_playing')
   }
 
@@ -89,7 +125,6 @@ export default function BaseballUmpireGame() {
     if (!user || !multiRoomId) return
     setResult(r)
 
-    // 내 결과 제출
     await submitMultiResult(multiRoomId, user.uid, {
       score:        r.score,
       correctCount: r.correctCount,
@@ -97,10 +132,7 @@ export default function BaseballUmpireGame() {
       maxCombo:     r.maxCombo,
     })
 
-    // 방 전체 완료 체크는 MultiResult 쪽에서 실시간으로 감지
-    // 방장이면 일정 시간 후 status를 finished로 변경 (옵션)
     if (multiRoom?.hostUid === user.uid) {
-      // 비동기로 방 종료 상태 업데이트 (다른 플레이어도 완료 후 결과 확인 가능)
       finishMultiRoom(multiRoomId).catch(() => {})
     }
 
@@ -174,6 +206,8 @@ export default function BaseballUmpireGame() {
         mode="normal"
         difficulty={multiRoom.difficulty}
         initialSeed={multiRoom.seed}
+        multiRankings={multiRankings}
+        myUid={user?.uid}
         onGameEnd={handleMultiGameEnd}
         onBack={() => setPhase('multi_lobby')}
       />
@@ -186,7 +220,6 @@ export default function BaseballUmpireGame() {
         roomId={multiRoomId}
         user={user}
         onRetry={() => {
-          // 같은 방에서 재대기
           setPhase('multi_lobby')
         }}
         onLobby={() => navigate('/')}

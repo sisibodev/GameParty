@@ -70,7 +70,7 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
             <table style={{ borderCollapse: 'collapse', color: '#eee', fontSize: 13, width: '100%' }}>
               <thead>
                 <tr style={{ color: '#9ecaf8' }}>
-                  {['레벨', '속도', '사용 구종', '보더라인', '존 표시'].map(h => (
+                  {['레벨', '속도', '사용 구종', '보더라인'].map(h => (
                     <th key={h} style={th}>{h}</th>
                   ))}
                 </tr>
@@ -84,7 +84,6 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
                       <td style={td}>{c.speedMin}~{c.speedMax}km/h</td>
                       <td style={td}>{c.pitchTypes.length}종</td>
                       <td style={td}>{(c.borderlineRatio * 100).toFixed(0)}%</td>
-                      <td style={td}>{c.zoneShowTime / 1000}초</td>
                     </tr>
                   )
                 })}
@@ -113,7 +112,7 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
                   <div style={styles.diffLabel}>{c.label}</div>
                   <div style={styles.diffDetail}>{c.speedMin}~{c.speedMax} km/h</div>
                   <div style={styles.diffDetail}>{c.pitchTypes.length}가지 구종</div>
-                  <div style={styles.diffDetail}>존 {c.zoneShowTime / 1000}초 표시</div>
+
                 </button>
               )
             })}

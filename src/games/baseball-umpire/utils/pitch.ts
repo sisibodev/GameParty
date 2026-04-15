@@ -49,10 +49,9 @@ export function generatePitch(
   batter: BatterProfile,
   config: DifficultyConfig,
   pitchIndex: number,
+  pitcherForm: PitcherForm,
 ): PitchParams {
   const pitchType = rng.pick(config.pitchTypes)
-  const forms: PitcherForm[] = ['overhand', 'three_quarter', 'sidearm', 'underhand']
-  const pitcherForm = rng.pick(forms)
   const speed = rng.float(config.speedMin, config.speedMax)
 
   const isBorderline = rng.next() < config.borderlineRatio
@@ -100,23 +99,33 @@ export function generatePitch(
   const finalPlateX = plateX + mvX
   const finalPlateY = plateY + mvY
 
-  // 공 가장자리 기준 판정 (MLB 규칙: 공의 어느 부분이든 존을 통과하면 스트라이크)
-  const isStrike =
-    Math.abs(finalPlateX) <= batter.zoneHalfWidth + BALL_RADIUS &&
+  // KBO ABS 3-plane 판정:
+  //   앞면(Front): zoneHalfWidth + 2cm 확대
+  //   중간면(Mid):  zoneHalfWidth + 2cm 확대
+  //   끝면(End):   zoneHalfWidth 그대로, 하단 1.5cm 낮게
+  const frontHalfW = batter.zoneHalfWidth + 0.02
+  const midHalfW   = batter.zoneHalfWidth + 0.02
+  const endHalfW   = batter.zoneHalfWidth
+
+  const frontPlaneHit =
+    Math.abs(finalPlateX) <= frontHalfW + BALL_RADIUS &&
     finalPlateY >= batter.zoneBottom - BALL_RADIUS &&
     finalPlateY <= batter.zoneTop    + BALL_RADIUS
 
-  // 공 가장자리 기준 경계까지 거리 (감점용)
-  const dX = Math.max(0, Math.abs(finalPlateX) - (batter.zoneHalfWidth + BALL_RADIUS))
-  const dY = finalPlateY < batter.zoneBottom - BALL_RADIUS
-    ? (batter.zoneBottom - BALL_RADIUS) - finalPlateY
-    : finalPlateY > batter.zoneTop + BALL_RADIUS
-      ? finalPlateY - (batter.zoneTop + BALL_RADIUS)
-      : 0
-  const borderDist = Math.sqrt(dX * dX + dY * dY)
+  const midPlaneHit =
+    Math.abs(finalPlateX) <= midHalfW + BALL_RADIUS &&
+    finalPlateY >= batter.zoneBottom - BALL_RADIUS &&
+    finalPlateY <= batter.zoneTop    + BALL_RADIUS
+
+  const endPlaneHit =
+    Math.abs(finalPlateX) <= endHalfW + BALL_RADIUS &&
+    finalPlateY >= (batter.zoneBottom - 0.015) - BALL_RADIUS &&
+    finalPlateY <= batter.zoneTop + BALL_RADIUS
+
+  const planeHitCount = [frontPlaneHit, midPlaneHit, endPlaneHit].filter(Boolean).length
+  const isStrike = planeHitCount >= 2
 
   void index
-  void borderDist
 
   return {
     pitchIndex,
@@ -126,6 +135,10 @@ export function generatePitch(
     plateX: finalPlateX,
     plateY: finalPlateY,
     isStrike,
+    frontPlaneHit,
+    midPlaneHit,
+    endPlaneHit,
+    planeHitCount,
     isBorderline,
     playerCall: null,
     correct: undefined,

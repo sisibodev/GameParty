@@ -1,39 +1,29 @@
-import { BatterProfile, PitchPhase } from '../types'
+import { PitchPhase } from '../types'
 
 interface Props {
-  batterIndex: number
-  totalBatters: number
-  balls: number
-  strikes: number
+  pitchCount: number     // 현재 구수 (1-based)
+  totalPitches: number   // 30
   score: number
   combo: number
-  batter: BatterProfile | null
   pitchPhase: PitchPhase
-  countdown: number  // 판정 카운트다운 (초)
+  countdown: number
   showZone: boolean
   onToggleZone?: () => void
 }
 
 export default function HUD({
-  batterIndex, totalBatters, balls, strikes, score, combo,
-  batter, pitchPhase, countdown, showZone, onToggleZone,
+  pitchCount, totalPitches, score, combo,
+  pitchPhase, countdown, showZone, onToggleZone,
 }: Props) {
   return (
     <div style={styles.hud}>
-      {/* 왼쪽: 타자 정보 */}
+      {/* 왼쪽: 구수 카운터 */}
       <div style={styles.left}>
-        <span style={styles.batterLabel}>타자 {batterIndex + 1}/{totalBatters}</span>
-        {batter && (
-          <span style={styles.batterInfo}>
-            {heightLabel(batter.height)} {buildLabel(batter.build)} {batter.isLefty ? '좌타' : '우타'}
-          </span>
-        )}
-      </div>
-
-      {/* 중앙: 카운트 */}
-      <div style={styles.center}>
-        <CountDots label="B" count={balls} max={4} color="#4fc3f7" />
-        <CountDots label="S" count={strikes} max={3} color="#ff7043" />
+        <span style={styles.pitchLabel}>
+          <span style={styles.pitchNum}>{pitchCount}</span>
+          <span style={styles.pitchSep}>/</span>
+          <span style={styles.pitchTotal}>{totalPitches}구</span>
+        </span>
       </div>
 
       {/* 오른쪽: 점수/콤보 */}
@@ -61,33 +51,6 @@ export default function HUD({
   )
 }
 
-function CountDots({ label, count, max, color }: {
-  label: string; count: number; max: number; color: string
-}) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <span style={{ color, fontWeight: 700, fontSize: 14, marginRight: 2 }}>{label}</span>
-      {Array.from({ length: max }, (_, i) => (
-        <div
-          key={i}
-          style={{
-            width: 12, height: 12, borderRadius: '50%',
-            background: i < count ? color : 'rgba(255,255,255,0.2)',
-            border: `1.5px solid ${color}`,
-          }}
-        />
-      ))}
-    </div>
-  )
-}
-
-function heightLabel(h: string) {
-  return h === 'short' ? '단신' : h === 'medium' ? '보통' : '장신'
-}
-function buildLabel(b: string) {
-  return b === 'slim' ? '마름' : b === 'normal' ? '보통' : '다부짐'
-}
-
 const styles: Record<string, React.CSSProperties> = {
   hud: {
     position: 'absolute',
@@ -102,10 +65,11 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 10,
     gap: 12,
   },
-  left: { display: 'flex', flexDirection: 'column', gap: 2 },
-  batterLabel: { fontSize: 16, fontWeight: 700 },
-  batterInfo: { fontSize: 12, color: '#ccc' },
-  center: { display: 'flex', gap: 16 },
+  left: { display: 'flex', alignItems: 'center' },
+  pitchLabel: { display: 'flex', alignItems: 'baseline', gap: 2 },
+  pitchNum: { fontSize: 24, fontWeight: 900 },
+  pitchSep: { fontSize: 14, color: '#888' },
+  pitchTotal: { fontSize: 14, color: '#aac' },
   right: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 },
   score: { fontSize: 18, fontWeight: 700 },
   combo: { fontSize: 13, color: '#ffcc00' },
@@ -119,7 +83,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   zoneBtn: {
     position: 'absolute',
-    top: 60, left: 20,
+    top: 60, left: 170,
     padding: '4px 10px',
     fontSize: 12,
     background: 'rgba(0,200,200,0.3)',

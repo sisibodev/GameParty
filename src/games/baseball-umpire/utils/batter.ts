@@ -22,14 +22,14 @@ export function generateBatterProfile(rng: SeededRng, index: number): BatterProf
   const totalHeight = HEIGHTS[height] * BUILDS[build]
   const stanceOffset = STANCES[stance]
 
-  // 야구 규칙: 존 하단 = 무릎(키의 약 27%), 존 상단 = 유니폼 상단(키의 약 55%)
-  const zoneBottom = totalHeight * 0.27 + stanceOffset
-  const zoneTop    = totalHeight * 0.55 + stanceOffset
+  // KBO ABS 기준: 상단 = 신장 × 56.35%, 하단 = 신장 × 27.64%
+  const zoneBottom = totalHeight * 0.2764 + stanceOffset
+  const zoneTop    = totalHeight * 0.5635 + stanceOffset
   const zoneHalfWidth = HOME_PLATE_HALF_WIDTH
 
   return { index, height, build, stance, isLefty, zoneBottom, zoneTop, zoneHalfWidth }
 }
 
-export function generateBatters(rng: SeededRng, count = 9): BatterProfile[] {
+export function generateBatters(rng: SeededRng, count = 6): BatterProfile[] {
   return Array.from({ length: count }, (_, i) => generateBatterProfile(rng, i))
 }
