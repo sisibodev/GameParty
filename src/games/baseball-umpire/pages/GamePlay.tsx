@@ -77,8 +77,17 @@ export default function GamePlay({
   const pitcherFormsRef   = useRef<PitcherForm[]>([])   // 3 forms for 10-pitch segments
   const judgeTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownRef      = useRef<ReturnType<typeof setInterval> | null>(null)
+  const advanceTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)  // 판정 후 2s 진행 타이머
+  const nextPitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)  // 다음 투구 대기 타이머
+  const windupTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)  // 와인드업 1.2s 타이머
   const pitchIndexRef     = useRef(0)   // global pitch index (0-29)
   const pitchInBatterRef  = useRef(0)   // pitches thrown to current batter (0-4)
+
+  // 리플레이 일시정지 관련
+  const isReplayActiveRef          = useRef(false)
+  const replayPausePhaseRef        = useRef<PitchPhase>('idle')
+  const replayPauseBidxRef         = useRef(0)
+  const ballArrivedDuringReplayRef = useRef(false)
 
   // 게임 상태 최신값 ref
   const batterIndexRef  = useRef(0)
@@ -126,7 +135,7 @@ export default function GamePlay({
     showZoneTemporarily()
     setAndRefPitchPhase('wind_up')
 
-    setTimeout(() => {
+    windupTimerRef.current = setTimeout(() => {
       // 타자 2명마다 구속 10km/h 증가 (0,1→+0 / 2,3→+10 / 4,5→+20)
       const speedBonus = Math.floor(bidx / 2) * 10
       const boostedConfig = {
@@ -148,6 +157,51 @@ export default function GamePlay({
       setAndRefPitchPhase('in_flight')
     }, 1200)
   }, [config, showZoneTemporarily])
+
+  // ── 게임 진행 헬퍼 (ref 패턴으로 stale closure 방지) ─────────────────────
+
+  // 판정 후 게임 진행 (advance timer에서 호출)
+  const doAdvanceRef = useRef<(bidx: number, latestScore: number) => void>(() => {})
+  doAdvanceRef.current = (bidx: number, latestScore: number) => {
+    setFeedback(null)
+    setAndRefPitchPhase('next')
+
+    if (pitchInBatterRef.current >= PITCHES_PER_BATTER) {
+      const nextBidx = bidx + 1
+      pitchInBatterRef.current = 0
+
+      if (nextBidx >= TOTAL_BATTERS) {
+        onGameEnd({
+          score: latestScore,
+          totalPitches: totalPitchesRef.current,
+          correctCount: correctCountRef.current,
+          maxCombo: maxComboRef.current,
+          pitchHistory: pitchHistoryRef.current,
+        })
+      } else {
+        batterIndexRef.current = nextBidx
+        setBatterIndex(nextBidx)
+        nextPitchTimerRef.current = setTimeout(() => startNextPitch(nextBidx), 1500)
+      }
+    } else {
+      nextPitchTimerRef.current = setTimeout(() => startNextPitch(bidx), 1200)
+    }
+  }
+
+  // 판정 타이머 시작 (판정 단계 진입 시 호출)
+  const startJudgingRef = useRef<() => void>(() => {})
+  startJudgingRef.current = () => {
+    setCountdown(3)
+    let count = 3
+    countdownRef.current = setInterval(() => {
+      count--
+      setCountdown(count)
+      if (count <= 0) clearInterval(countdownRef.current!)
+    }, 1000)
+    judgeTimerRef.current = setTimeout(() => {
+      judgeRef.current(null)
+    }, JUDGMENT_TIMEOUT)
+  }
 
   // ── 판정 처리 (ref 기반 → stale closure 없음) ────────────────────────────
   const judgeRef = useRef<(call: 'strike' | 'ball' | null) => void>(() => {})
@@ -212,31 +266,8 @@ export default function GamePlay({
     pitchInBatterRef.current++
 
     // 5구 소화 시 타자 교체, 30구 완료 시 게임 종료
-    setTimeout(() => {
-      setFeedback(null)
-      setAndRefPitchPhase('next')
-
-      if (pitchInBatterRef.current >= PITCHES_PER_BATTER) {
-        const nextBidx = bidx + 1
-        pitchInBatterRef.current = 0
-
-        if (nextBidx >= TOTAL_BATTERS) {
-          // 게임 종료
-          onGameEnd({
-            score: newScore,
-            totalPitches: totalPitchesRef.current,
-            correctCount: correctCountRef.current,
-            maxCombo: maxComboRef.current,
-            pitchHistory: pitchHistoryRef.current,
-          })
-        } else {
-          batterIndexRef.current = nextBidx
-          setBatterIndex(nextBidx)
-          setTimeout(() => startNextPitch(nextBidx), 1500)
-        }
-      } else {
-        setTimeout(() => startNextPitch(bidx), 1200)
-      }
+    advanceTimerRef.current = setTimeout(() => {
+      doAdvanceRef.current(bidx, newScore)
     }, 2000)
   }
 
@@ -246,17 +277,60 @@ export default function GamePlay({
     setAndRefPitchPhase('judging')
     setCountdown(3)
 
-    let count = 3
-    countdownRef.current = setInterval(() => {
-      count--
-      setCountdown(count)
-      if (count <= 0) clearInterval(countdownRef.current!)
-    }, 1000)
+    if (isReplayActiveRef.current) {
+      // 리플레이 활성 중 공 도착 → 타이머 시작 없이 상태만 저장
+      ballArrivedDuringReplayRef.current = true
+      replayPausePhaseRef.current = 'judging'
+      return
+    }
 
-    judgeTimerRef.current = setTimeout(() => {
-      judgeRef.current(null)
-    }, JUDGMENT_TIMEOUT)
+    startJudgingRef.current()
   }, [])
+
+  // ── 리플레이 열림 → 게임 일시정지 ──────────────────────────────────────
+  useEffect(() => {
+    if (!replayPitch) return
+    isReplayActiveRef.current = true
+    replayPausePhaseRef.current = pitchPhaseRef.current
+    replayPauseBidxRef.current = batterIndexRef.current
+    ballArrivedDuringReplayRef.current = false
+
+    clearTimeout(judgeTimerRef.current!)
+    clearInterval(countdownRef.current!)
+    clearTimeout(advanceTimerRef.current!)
+    clearTimeout(nextPitchTimerRef.current!)
+    clearTimeout(windupTimerRef.current!)
+    clearTimeout(feedbackTimerRef.current!)
+  }, [replayPitch])
+
+  // ── 리플레이 닫힘 → 게임 재개 ───────────────────────────────────────────
+  useEffect(() => {
+    if (replayPitch) return
+    if (!isReplayActiveRef.current) return   // 초기 렌더 스킵
+    isReplayActiveRef.current = false
+
+    const phase = replayPausePhaseRef.current
+    const bidx  = replayPauseBidxRef.current
+
+    if (phase === 'judging' || ballArrivedDuringReplayRef.current) {
+      // 판정 대기 재개
+      ballArrivedDuringReplayRef.current = false
+      setAndRefPitchPhase('judging')
+      startJudgingRef.current()
+    } else if (phase === 'feedback') {
+      // 피드백 후 진행 재개
+      advanceTimerRef.current = setTimeout(
+        () => doAdvanceRef.current(bidx, scoreRef.current), 800
+      )
+    } else if (phase === 'wind_up') {
+      // 와인드업 재시작
+      startNextPitch(bidx)
+    } else if (phase === 'next' || phase === 'idle') {
+      // 다음 타자/투구 시작
+      nextPitchTimerRef.current = setTimeout(() => startNextPitch(bidx), 800)
+    }
+    // 'in_flight': 공이 아직 날아오는 중 → handlePitchArrived 대기
+  }, [replayPitch, startNextPitch])
 
   // ── 씬 준비 → 첫 투구 시작 ─────────────────────────────────────────────
   const handleSceneReady = useCallback(() => {
