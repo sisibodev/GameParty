@@ -450,13 +450,13 @@ export default function GamePlay({
         myUid={myUid}
       />
 
-      {/* 판정 피드백 텍스트 (화면 상단 중앙) */}
-      {feedbackVisible && feedback && (
+      {/* 판정 피드백 텍스트 (화면 상단 중앙) — 리플레이 중 숨김 */}
+      {feedbackVisible && feedback && !replayPitch && (
         <JudgmentFeedbackUI feedback={feedback} />
       )}
 
-      {/* 2D 존 결과 뷰 (화면 중앙 하단) */}
-      {feedbackVisible && feedback && currentPitch && currentBatter && (
+      {/* 2D 존 결과 뷰 (화면 중앙 하단) — 리플레이 중 숨김 */}
+      {feedbackVisible && feedback && currentPitch && currentBatter && !replayPitch && (
         <div style={styles.zoneViewWrap}>
           <StrikeZoneResult2D
             pitch={currentPitch}
