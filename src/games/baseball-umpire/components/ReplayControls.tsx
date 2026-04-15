@@ -4,10 +4,14 @@ import { PitchParams, PitchType } from '../types'
 const PITCH_NAMES: Record<PitchType, string> = {
   fastball:  '직구',
   two_seam:  '투심',
+  sinker:    '싱커',
+  cutter:    '커터',
   changeup:  '체인지업',
   slider:    '슬라이더',
+  sweeper:   '스위퍼',
   curve:     '커브',
   splitter:  '스플리터',
+  forkball:  '포크볼',
 }
 
 const STAGE_LABELS = ['', '1단계 — 주심 시점', '2단계 — 사선 시점', '3단계 — 측면 시점']

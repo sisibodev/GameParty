@@ -1,5 +1,18 @@
 import { useState } from 'react'
-import { GameMode, Difficulty, DIFFICULTY_CONFIG } from '../types'
+import { GameMode, Difficulty, PitchType, DIFFICULTY_CONFIG } from '../types'
+
+const PITCH_NAMES: Record<PitchType, string> = {
+  fastball:  '직구',
+  two_seam:  '투심',
+  sinker:    '싱커',
+  cutter:    '커터',
+  changeup:  '체인지업',
+  slider:    '슬라이더',
+  sweeper:   '스위퍼',
+  curve:     '커브',
+  splitter:  '스플리터',
+  forkball:  '포크볼',
+}
 
 interface Props {
   onStart: (mode: GameMode, difficulty: Difficulty) => void
@@ -112,7 +125,11 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
                   <div style={styles.diffLabel}>{c.label}</div>
                   <div style={styles.diffDetail}>{c.speedMin}~{c.speedMax} km/h</div>
                   <div style={styles.diffDetail}>{c.pitchTypes.length}가지 구종</div>
-
+                  <div style={styles.pitchChips}>
+                    {c.pitchTypes.map(pt => (
+                      <span key={pt} style={styles.pitchChip}>{PITCH_NAMES[pt]}</span>
+                    ))}
+                  </div>
                 </button>
               )
             })}
@@ -194,4 +211,14 @@ const styles: Record<string, React.CSSProperties> = {
   diffEmoji: { fontSize: 28, marginBottom: 8 },
   diffLabel: { fontSize: 18, fontWeight: 700, marginBottom: 10 },
   diffDetail: { fontSize: 12, color: '#aac', lineHeight: 1.8 },
+  pitchChips: {
+    display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
+    gap: 4, marginTop: 10,
+  },
+  pitchChip: {
+    fontSize: 10, color: '#9ecaf8',
+    background: 'rgba(0,180,255,0.12)',
+    border: '1px solid rgba(0,180,255,0.25)',
+    borderRadius: 4, padding: '2px 6px',
+  },
 }

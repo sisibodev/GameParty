@@ -1,11 +1,15 @@
 // ─── 구종 ───────────────────────────────────────────────────────────────────
 export type PitchType =
-  | 'fastball'
-  | 'two_seam'
-  | 'changeup'
-  | 'slider'
-  | 'curve'
-  | 'splitter'
+  | 'fastball'    // 직구 (4심)
+  | 'two_seam'    // 투심
+  | 'sinker'      // 싱커
+  | 'cutter'      // 커터
+  | 'changeup'    // 체인지업
+  | 'slider'      // 슬라이더
+  | 'sweeper'     // 스위퍼
+  | 'curve'       // 커브
+  | 'splitter'    // 스플리터
+  | 'forkball'    // 포크볼
 
 // ─── 투구폼 ──────────────────────────────────────────────────────────────────
 export type PitcherForm = 'overhand' | 'three_quarter' | 'sidearm' | 'underhand'
@@ -45,28 +49,28 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
   rookie: {
     label: '루키',
     speedMin: 80, speedMax: 100,
-    pitchTypes: ['fastball', 'changeup'],
+    pitchTypes: ['fastball', 'changeup'],                                          // 2종
     borderlineRatio: 0.1,
     zoneShowTime: 3000,
   },
   amateur: {
     label: '아마추어',
     speedMin: 100, speedMax: 120,
-    pitchTypes: ['fastball', 'two_seam', 'changeup', 'slider'],
+    pitchTypes: ['fastball', 'two_seam', 'changeup', 'slider'],                   // 4종
     borderlineRatio: 0.2,
     zoneShowTime: 2000,
   },
   pro: {
     label: '프로',
     speedMin: 120, speedMax: 140,
-    pitchTypes: ['fastball', 'two_seam', 'changeup', 'slider', 'curve'],
+    pitchTypes: ['fastball', 'two_seam', 'sinker', 'cutter', 'changeup', 'slider', 'curve'], // 7종
     borderlineRatio: 0.35,
     zoneShowTime: 1000,
   },
   major: {
     label: '메이저',
     speedMin: 140, speedMax: 150,
-    pitchTypes: ['fastball', 'two_seam', 'changeup', 'slider', 'curve', 'splitter'],
+    pitchTypes: ['fastball', 'two_seam', 'sinker', 'cutter', 'changeup', 'slider', 'sweeper', 'curve', 'splitter', 'forkball'], // 10종
     borderlineRatio: 0.5,
     zoneShowTime: 500,
   },
