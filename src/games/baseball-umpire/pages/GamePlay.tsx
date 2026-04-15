@@ -360,15 +360,21 @@ export default function GamePlay({
       if (replayPitch) return  // 리플레이 중 화살표 키는 단계 이동에 양보
       if (e.key === 's' || e.key === 'S' || e.key === 'ArrowRight') judgeRef.current('strike')
       if (e.key === 'b' || e.key === 'B' || e.key === 'ArrowLeft')  judgeRef.current('ball')
-      // ↑ 마지막 공 리플레이 열기
+      // ↑ 마지막 공 리플레이 열기 (pitchHistoryRef로 직접 접근 → 의존성 없음)
       if (e.key === 'ArrowUp') {
         const last = pitchHistoryRef.current.length - 1
-        if (last >= 0) handleReplaySelect(last)
+        if (last >= 0) {
+          const pitch = pitchHistoryRef.current[last]
+          setReplayStage(1)
+          setReplayStageOverride(undefined)
+          setReplayPitch(pitch)
+          setReplayPlaying(true)
+        }
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [replayPitch, handleReplaySelect])
+  }, [replayPitch])
 
   const currentBatter = battersRef.current[batterIndex] ?? null
 
