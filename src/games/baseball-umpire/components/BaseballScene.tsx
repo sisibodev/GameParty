@@ -53,7 +53,6 @@ export default function BaseballScene({
     done: boolean
   } | null>(null)
   const arrivedRef    = useRef(false)
-  const batterGroupRef = useRef<THREE.Group | null>(null)
   // 리플레이 공 (게임 공과 분리)
   const replayBallRef = useRef<THREE.Mesh | null>(null)
 
@@ -449,8 +448,8 @@ function mat(color: number, transparent = false, opacity = 1) {
   return new THREE.MeshLambertMaterial({ color, transparent, opacity })
 }
 
-// ── 투수 캐릭터 (마운드 위, 와인드업 포즈) ────────────────────────────────
-function buildPitcher(scene: THREE.Scene): THREE.Group {
+// ── 투수 캐릭터 (추후 활성화 예정) ──────────────────────────────────────────
+export function buildPitcher(scene: THREE.Scene): THREE.Group {
   const group = new THREE.Group()
 
   const SKIN   = mat(0xf5cba7)
@@ -527,8 +526,8 @@ function buildPitcher(scene: THREE.Scene): THREE.Group {
   return group
 }
 
-// ── 타자 캐릭터 ────────────────────────────────────────────────────────────
-function buildBatter(scene: THREE.Scene, profile: BatterProfile): THREE.Group {
+// ── 타자 캐릭터 (추후 활성화 예정) ──────────────────────────────────────────
+export function buildBatter(scene: THREE.Scene, profile: BatterProfile): THREE.Group {
   const group = new THREE.Group()
 
   const heightMul = { short: 0.88, medium: 1.0, tall: 1.12 }[profile.height]
