@@ -150,6 +150,15 @@ export async function submitMultiResult(
   })
 }
 
+/** 게임 중 내 점수 실시간 업데이트 */
+export async function updateLiveScore(
+  roomId: string,
+  uid: string,
+  score: number,
+): Promise<void> {
+  await update(ref(db(), `umpire_rooms/${roomId}/players/${uid}`), { score })
+}
+
 /** 방 종료 상태로 변경 (모든 플레이어 완료 시) */
 export async function finishMultiRoom(roomId: string): Promise<void> {
   await update(ref(db(), `umpire_rooms/${roomId}`), { status: 'finished' })

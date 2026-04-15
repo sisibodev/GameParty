@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import {
   MultiRoom, submitMultiResult, finishMultiRoom,
   subscribeMultiRoom, unsubscribeMultiRoom,
+  updateLiveScore,
 } from './utils/umpire-rtdb'
 import ModeSelect from './pages/ModeSelect'
 import GamePlay from './pages/GamePlay'
@@ -208,6 +209,9 @@ export default function BaseballUmpireGame() {
         initialSeed={multiRoom.seed}
         multiRankings={multiRankings}
         myUid={user?.uid}
+        onScoreUpdate={(score) => {
+          if (user && multiRoomId) updateLiveScore(multiRoomId, user.uid, score)
+        }}
         onGameEnd={handleMultiGameEnd}
         onBack={() => setPhase('multi_lobby')}
       />

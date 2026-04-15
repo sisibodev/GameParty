@@ -35,6 +35,7 @@ interface Props {
   initialSeed?: number   // 멀티 모드: 공통 시드 고정
   multiRankings?: MultiRankEntry[]
   myUid?: string
+  onScoreUpdate?: (score: number) => void   // 멀티: 판정마다 점수 실시간 전송
   onGameEnd: (result: {
     score: number
     totalPitches: number
@@ -46,7 +47,8 @@ interface Props {
 }
 
 export default function GamePlay({
-  mode, difficulty, initialSeed, multiRankings, myUid, onGameEnd, onBack,
+  mode, difficulty, initialSeed, multiRankings, myUid,
+  onScoreUpdate, onGameEnd, onBack,
 }: Props) {
   const config = DIFFICULTY_CONFIG[difficulty]
 
@@ -238,6 +240,9 @@ export default function GamePlay({
     }
     pitchHistoryRef.current = [...pitchHistoryRef.current, updatedPitch]
     currentPitchRef.current = updatedPitch
+
+    // 멀티 모드: 점수 실시간 전송
+    onScoreUpdate?.(newScore)
 
     // UI 업데이트
     setScore(newScore)
