@@ -74,6 +74,7 @@ export default function BaseballScene({
   const replayPlaneGroupRef = useRef<THREE.Group | null>(null)
   const animFrameRef    = useRef<number>(0)
   const flightTrailRef  = useRef<THREE.Line | null>(null)   // 비행 중 실시간 잔상
+  const ballShadowRef   = useRef<THREE.Mesh | null>(null)   // 공 블롭 그림자
   const clockRef         = useRef(new THREE.Timer())
   const batterModelRef   = useRef<THREE.Group | null>(null)
   const pitcherModelRef  = useRef<THREE.Group | null>(null)
@@ -248,6 +249,22 @@ export default function BaseballScene({
     )
     zoneBox.add(edges)
 
+    // ── 공 블롭 그림자 ───────────────────────────────────────────────────────
+    const ballShadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.13, 20),
+      new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      })
+    )
+    ballShadow.rotation.x = -Math.PI / 2
+    ballShadow.position.y = 0.016   // 지면 바로 위 (z-fighting 방지)
+    ballShadow.visible = false
+    scene.add(ballShadow)
+    ballShadowRef.current = ballShadow
+
     // ── 비행 중 실시간 잔상 라인 ─────────────────────────────────────────────
     const TRAIL_LEN = 12
     const trailPositions = new Float32Array(TRAIL_LEN * 3)
@@ -367,6 +384,27 @@ export default function BaseballScene({
           arrivedRef.current = true
           pitchAnimRef.current = null
           onPitchArrivedRef.current()
+        }
+      }
+
+      // 공 블롭 그림자 업데이트 (비행 중 공 or 리플레이 공)
+      if (ballShadowRef.current) {
+        const activeBall = ballRef.current?.visible
+          ? ballRef.current
+          : replayBallRef.current?.visible
+            ? replayBallRef.current
+            : null
+        if (activeBall) {
+          const bp = activeBall.position
+          const h  = Math.max(0, bp.y)                        // 지면 기준 높이
+          const scale   = Math.max(0.2, 1.1 - h * 0.38)      // 높을수록 작아짐
+          const opacity = Math.max(0.04, 0.42 - h * 0.10)    // 높을수록 투명
+          ballShadowRef.current.visible = true
+          ballShadowRef.current.position.set(bp.x, 0.016, bp.z)
+          ballShadowRef.current.scale.setScalar(scale)
+          ;(ballShadowRef.current.material as THREE.MeshBasicMaterial).opacity = opacity
+        } else {
+          ballShadowRef.current.visible = false
         }
       }
 

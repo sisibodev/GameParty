@@ -221,14 +221,17 @@ export default function BaseballUmpireGame() {
     )
   }
 
-  if (phase === 'multi_result' && user) {
+  if (phase === 'multi_result' && user && result) {
     return (
       <MultiResult
         roomId={multiRoomId}
         user={user}
-        onRetry={() => {
-          setPhase('multi_lobby')
-        }}
+        score={result.score}
+        totalPitches={result.totalPitches}
+        correctCount={result.correctCount}
+        maxCombo={result.maxCombo}
+        pitchHistory={result.pitchHistory}
+        onRetry={() => setPhase('multi_lobby')}
         onLobby={() => navigate('/')}
       />
     )
