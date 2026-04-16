@@ -44,9 +44,6 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
   const toSvgY = (y: number) =>
     PADDING + (1 - (y - rangeYb) / rangeH) * ZONE_H
 
-  const drawW = ZONE_W
-  const drawH = ZONE_H
-
   // 공 위치 — 카메라가 뒤에서 보므로 X 반전
   const ballSvgX = toSvgX(-pitch.plateX)
   const ballSvgY = toSvgY(pitch.plateY)

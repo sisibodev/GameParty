@@ -81,7 +81,7 @@ export default function MultiLobby({ roomId, user, onGameStart, onBack }: Props)
         <span style={styles.settingLabel}>속도</span>
         <span style={styles.settingValue}>{config.speedMin}~{config.speedMax} km/h</span>
         <span style={styles.settingLabel}>구종</span>
-        <span style={styles.settingValue}>{config.pitchTypes.length}종</span>
+        <span style={styles.settingValue}>직구 + 변화구 {config.breakingBallCount}종</span>
       </div>
 
       {/* 플레이어 목록 */}
