@@ -1,7 +1,25 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { PitchParams, PitchPhase, BatterProfile, PitcherForm } from '../types'
-import { buildPitchCurve, speedToFlightMs, MOUND_DISTANCE } from '../utils/pitch'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { PitchParams, PitchPhase, BatterProfile, PitcherForm, TrajectoryMode } from '../types'
+import { buildPitchCurve, buildPhysicsCurve, speedToFlightMs, MOUND_DISTANCE } from '../utils/pitch'
+
+const BATTER_ANIM_PATH  = `${import.meta.env.BASE_URL}games/baseball-umpire/animations/Idle.glb`
+const PITCHER_ANIM_PATH = `${import.meta.env.BASE_URL}games/baseball-umpire/animations/Pitching.glb`
+
+// 체형별 scale 배율
+const HEIGHT_SCALE: Record<string, number> = { short: 0.92, medium: 1.0, tall: 1.07 }
+const BUILD_SCALE:  Record<string, number> = { slim:  0.92, normal: 1.0, stocky: 1.08 }
+
+function applyBatterProfile(model: THREE.Group, profile: BatterProfile) {
+  const sy  = HEIGHT_SCALE[profile.height]  ?? 1.0
+  const sxz = BUILD_SCALE[profile.build]    ?? 1.0
+  const sx  = profile.isLefty ? -sxz : sxz
+  const xPos = profile.isLefty ? -0.82 : 0.82
+  model.scale.set(sx, sy, sxz)
+  model.position.set(xPos, 0, 0.15)
+  // model.visible = false 유지 (캐릭터 숨김)
+}
 
 // 카메라 포지션 상수 (3단계 리플레이)
 const CAM_S1 = { pos: new THREE.Vector3(0, 1.5, -3.0),   look: new THREE.Vector3(0, 0.7, MOUND_DISTANCE * 0.35) }
@@ -18,6 +36,7 @@ interface Props {
   currentPitch: PitchParams | null
   pitchPhase: PitchPhase
   showZone: boolean
+  trajectoryMode?: TrajectoryMode           // 'bezier' | 'physics' (기본: 'bezier')
   onPitchArrived: () => void
   onSceneReady: () => void
   // 리플레이
@@ -33,6 +52,7 @@ export default function BaseballScene({
   currentPitch,
   pitchPhase,
   showZone,
+  trajectoryMode = 'bezier',
   onPitchArrived,
   onSceneReady,
   replayPitch = null,
@@ -49,10 +69,25 @@ export default function BaseballScene({
   const zoneBoxRef   = useRef<THREE.Mesh | null>(null)
   const trailRef     = useRef<THREE.Line | null>(null)
   const replayTrailRef   = useRef<THREE.Line | null>(null)
-  const replayMarkerRef  = useRef<THREE.Mesh | null>(null)
+  const replayMarkerRef  = useRef<THREE.Group | null>(null)  // 3면 마커 그룹
   const replayDropLineRef = useRef<THREE.Line | null>(null)
   const replayPlaneGroupRef = useRef<THREE.Group | null>(null)
-  const animFrameRef = useRef<number>(0)
+  const animFrameRef    = useRef<number>(0)
+  const flightTrailRef  = useRef<THREE.Line | null>(null)   // 비행 중 실시간 잔상
+  const clockRef         = useRef(new THREE.Timer())
+  const batterModelRef   = useRef<THREE.Group | null>(null)
+  const pitcherModelRef  = useRef<THREE.Group | null>(null)
+  const batterMixerRef   = useRef<THREE.AnimationMixer | null>(null)
+  const pitcherMixerRef  = useRef<THREE.AnimationMixer | null>(null)
+  const pitcherActionRef      = useRef<THREE.AnimationAction | null>(null)
+  const pitcherClipsRef       = useRef<THREE.AnimationClip[]>([])   // 폼별 클립 목록
+  const pitchReleaseTimeRef   = useRef<number>(2.0)  // frame 60의 실제 시간(초)
+  // GLB 로드 콜백에서 최신 batter 접근용
+  const currentBatterRef = useRef<BatterProfile | null>(null)
+
+  // 궤적 방식 ref (stale closure 방지 — useEffect 의존성 없이 항상 최신값)
+  const trajectoryModeRef = useRef<TrajectoryMode>(trajectoryMode)
+  useEffect(() => { trajectoryModeRef.current = trajectoryMode }, [trajectoryMode])
 
   // 콜백 ref (stale closure 방지)
   const onPitchArrivedRef      = useRef(onPitchArrived)
@@ -169,8 +204,12 @@ export default function BaseballScene({
 
     // ── 공 ──────────────────────────────────────────────────────────────────
     const ball = new THREE.Mesh(
-      new THREE.SphereGeometry(0.037, 16, 16),
-      new THREE.MeshLambertMaterial({ color: 0xfafafa })
+      new THREE.SphereGeometry(0.058, 16, 16),
+      new THREE.MeshLambertMaterial({
+        color: 0xfffde7,         // 크림 화이트 — 하늘 배경(0x87ceeb)과 대비
+        emissive: 0xfff9c4,      // 약한 자체 발광
+        emissiveIntensity: 0.35,
+      })
     )
     ball.visible = false
     ball.castShadow = true
@@ -179,8 +218,8 @@ export default function BaseballScene({
 
     // ── 리플레이 공 (노란색) ─────────────────────────────────────────────────
     const replayBall = new THREE.Mesh(
-      new THREE.SphereGeometry(0.037, 16, 16),
-      new THREE.MeshLambertMaterial({ color: 0xffee00 })
+      new THREE.SphereGeometry(0.058, 16, 16),
+      new THREE.MeshLambertMaterial({ color: 0xffee00, emissive: 0xffcc00, emissiveIntensity: 0.3 })
     )
     replayBall.visible = false
     scene.add(replayBall)
@@ -209,8 +248,78 @@ export default function BaseballScene({
     )
     zoneBox.add(edges)
 
+    // ── 비행 중 실시간 잔상 라인 ─────────────────────────────────────────────
+    const TRAIL_LEN = 12
+    const trailPositions = new Float32Array(TRAIL_LEN * 3)
+    const flightTrailGeo = new THREE.BufferGeometry()
+    flightTrailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3))
+    flightTrailGeo.setDrawRange(0, TRAIL_LEN)
+    const flightTrailLine = new THREE.Line(
+      flightTrailGeo,
+      new THREE.LineBasicMaterial({ color: 0xffe082, transparent: true, opacity: 0.65 })
+    )
+    flightTrailLine.visible = false
+    scene.add(flightTrailLine)
+    flightTrailRef.current = flightTrailLine
+
     // ── 외야 스탠드 ──────────────────────────────────────────────────────────
     buildStands(scene)
+
+    // ── GLB 로드 (StrictMode 이중 마운트 방지용 cancelled 플래그) ─────────────
+    const loader = new GLTFLoader()
+    let glbCancelled = false
+
+    loader.load(PITCHER_ANIM_PATH, (gltf) => {
+      if (glbCancelled || !sceneRef.current) return
+      const model = gltf.scene
+      model.position.set(0, 0, MOUND_DISTANCE)
+      model.rotation.y = Math.PI
+      model.visible = false
+      sceneRef.current.add(model)
+      pitcherModelRef.current = model
+
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(model)
+        pitcherClipsRef.current = gltf.animations
+
+        // 기본 클립: overhand (없으면 첫 번째)
+        const defaultClip = THREE.AnimationClip.findByName(gltf.animations, 'overhand')
+          ?? gltf.animations[0]
+
+        // frame 60의 실제 시간(초) 계산 — FPS를 첫 두 키프레임 간격으로 추정
+        const RELEASE_FRAME = 60
+        const track = defaultClip.tracks[0]
+        if (track && track.times.length >= 2) {
+          const fps = Math.round(1 / (track.times[1] - track.times[0]))
+          pitchReleaseTimeRef.current = RELEASE_FRAME / fps
+        }
+
+        const action = mixer.clipAction(defaultClip)
+        action.loop              = THREE.LoopOnce
+        action.clampWhenFinished = true
+        action.play()
+        pitcherActionRef.current = action
+        pitcherMixerRef.current  = mixer
+      }
+    })
+
+    loader.load(BATTER_ANIM_PATH, (gltf) => {
+      if (glbCancelled || !sceneRef.current) return
+      const model = gltf.scene
+      model.visible = false
+      sceneRef.current.add(model)
+      batterModelRef.current = model
+
+      if (currentBatterRef.current) {
+        applyBatterProfile(model, currentBatterRef.current)
+      }
+
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(model)
+        mixer.clipAction(gltf.animations[0]).play()
+        batterMixerRef.current = mixer
+      }
+    })
 
     // ── 리사이즈 핸들러 ─────────────────────────────────────────────────────
     const onResize = () => {
@@ -226,13 +335,34 @@ export default function BaseballScene({
     const lookAtWork = new THREE.Vector3()
     const animate = () => {
       animFrameRef.current = requestAnimationFrame(animate)
-      const now = performance.now()
+      const now   = performance.now()
+      clockRef.current.update()
+      const delta = clockRef.current.getDelta()
+
+      // 캐릭터 애니메이션 믹서 업데이트
+      if (batterMixerRef.current)  batterMixerRef.current.update(delta)
+      if (pitcherMixerRef.current) pitcherMixerRef.current.update(delta)
 
       // 투구 애니메이션
       if (pitchAnimRef.current && ballRef.current) {
         const { curve, startTime, duration } = pitchAnimRef.current
         const t = Math.min((now - startTime) / duration, 1)
         ballRef.current.position.copy(curve.getPoint(t))
+
+        // 비행 중 실시간 잔상 업데이트
+        if (flightTrailRef.current) {
+          const posAttr = flightTrailRef.current.geometry.attributes.position as THREE.BufferAttribute
+          const TLEN = posAttr.count
+          // 이전 점들을 뒤로 shift
+          for (let i = TLEN - 1; i > 0; i--) {
+            posAttr.setXYZ(i, posAttr.getX(i - 1), posAttr.getY(i - 1), posAttr.getZ(i - 1))
+          }
+          // 0번에 현재 공 위치 삽입
+          const bp = ballRef.current.position
+          posAttr.setXYZ(0, bp.x, bp.y, bp.z)
+          posAttr.needsUpdate = true
+        }
+
         if (t >= 1 && !arrivedRef.current) {
           arrivedRef.current = true
           pitchAnimRef.current = null
@@ -270,8 +400,12 @@ export default function BaseballScene({
     onSceneReadyRef.current()
 
     return () => {
+      glbCancelled = true
       window.removeEventListener('resize', onResize)
       cancelAnimationFrame(animFrameRef.current)
+      batterMixerRef.current?.stopAllAction()
+      pitcherMixerRef.current?.stopAllAction()
+      flightTrailRef.current?.geometry.dispose()
       renderer.dispose()
       if (mount.contains(renderer.domElement)) {
         mount.removeChild(renderer.domElement)
@@ -280,10 +414,11 @@ export default function BaseballScene({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 투수·타자 캐릭터는 현재 비활성 (추후 활성화 예정)
-
-  // ── 스트라이크존 업데이트 ────────────────────────────────────────────────
+  // ── 스트라이크존 + 타자 모델 업데이트 ──────────────────────────────────────
   useEffect(() => {
+    // currentBatterRef 항상 최신 유지 (GLB 로드 콜백에서도 접근)
+    currentBatterRef.current = batter
+
     if (!batter || !zoneBoxRef.current) return
     const box = zoneBoxRef.current
     const height = batter.zoneTop - batter.zoneBottom
@@ -299,6 +434,11 @@ export default function BaseballScene({
       edges.geometry.dispose()
       edges.geometry = new THREE.EdgesGeometry(box.geometry)
     }
+
+    // 타자 GLB 모델 scale/position 업데이트 (이미 로드된 경우)
+    if (batterModelRef.current) {
+      applyBatterProfile(batterModelRef.current, batter)
+    }
   }, [batter])
 
   // ── 존 표시/숨김 ─────────────────────────────────────────────────────────
@@ -308,17 +448,67 @@ export default function BaseballScene({
     }
   }, [showZone])
 
+  // ── 투수 애니메이션: wind_up 시 pitcherForm 클립 전환 + frame60 = 1200ms 동기화 ──
+  useEffect(() => {
+    const mixer = pitcherMixerRef.current
+    if (!mixer || pitchPhase !== 'wind_up') return
+
+    const WINDUP_SEC  = 1.2   // GamePlay.tsx wind_up 지속시간
+    const RELEASE_FRAME = 60
+
+    // pitcherForm에 맞는 클립 선택 (없으면 overhand 또는 첫 번째)
+    const formName = currentPitch?.pitcherForm ?? 'overhand'
+    const clips    = pitcherClipsRef.current
+    const clip     = THREE.AnimationClip.findByName(clips, formName)
+      ?? THREE.AnimationClip.findByName(clips, 'overhand')
+      ?? clips[0]
+
+    if (!clip) return
+
+    // 해당 클립의 FPS로 release 시간 재계산
+    const track = clip.tracks[0]
+    if (track && track.times.length >= 2) {
+      const fps = Math.round(1 / (track.times[1] - track.times[0]))
+      pitchReleaseTimeRef.current = RELEASE_FRAME / fps
+    }
+
+    // 기존 액션 중지 후 새 클립으로 전환
+    mixer.stopAllAction()
+    const action = mixer.clipAction(clip)
+    action.loop              = THREE.LoopOnce
+    action.clampWhenFinished = true
+    action.timeScale = pitchReleaseTimeRef.current / WINDUP_SEC
+    action.reset().play()
+    pitcherActionRef.current = action
+  }, [pitchPhase, currentPitch])
+
+  // ── 궤적 커브 빌더 헬퍼 ────────────────────────────────────────────────────
+  const getCurve = (pitch: PitchParams) =>
+    trajectoryModeRef.current === 'physics'
+      ? buildPhysicsCurve(pitch)
+      : buildPitchCurve(pitch, pitch.pitcherForm as PitcherForm)
+
   // ── 투구 애니메이션 시작 ─────────────────────────────────────────────────
   useEffect(() => {
     if (pitchPhase !== 'in_flight' || !currentPitch || !ballRef.current) return
 
-    const curve = buildPitchCurve(currentPitch, currentPitch.pitcherForm as PitcherForm)
+    const curve = getCurve(currentPitch)
     const duration = speedToFlightMs(currentPitch.speed)
 
     // 공을 시작점에 배치하고 표시
     const startPos = curve.getPoint(0)
     ballRef.current.position.copy(startPos)
     ballRef.current.visible = true
+
+    // 잔상 초기화: 전부 시작점으로 채우고 표시
+    if (flightTrailRef.current) {
+      const posAttr = flightTrailRef.current.geometry.attributes.position as THREE.BufferAttribute
+      for (let i = 0; i < posAttr.count; i++) {
+        posAttr.setXYZ(i, startPos.x, startPos.y, startPos.z)
+      }
+      posAttr.needsUpdate = true
+      flightTrailRef.current.visible = true
+    }
 
     arrivedRef.current = false
     pitchAnimRef.current = { curve, startTime: performance.now(), duration }
@@ -334,7 +524,7 @@ export default function BaseballScene({
   // ── 피드백 단계에서 궤적 라인 표시 ─────────────────────────────────────────
   useEffect(() => {
     if (pitchPhase !== 'feedback' || !currentPitch || !sceneRef.current) return
-    const curve = buildPitchCurve(currentPitch, currentPitch.pitcherForm as PitcherForm)
+    const curve = getCurve(currentPitch)
     const points = curve.getPoints(50)
     const geo    = new THREE.BufferGeometry().setFromPoints(points)
     const mat    = new THREE.LineBasicMaterial({ color: 0xffaa00, opacity: 0.6, transparent: true })
@@ -347,6 +537,7 @@ export default function BaseballScene({
   useEffect(() => {
     if (pitchPhase === 'judging' || pitchPhase === 'idle' || pitchPhase === 'wind_up') {
       if (ballRef.current) ballRef.current.visible = false
+      if (flightTrailRef.current) flightTrailRef.current.visible = false
     }
     if (pitchPhase === 'idle' || pitchPhase === 'wind_up') {
       if (trailRef.current && sceneRef.current) {
@@ -366,9 +557,21 @@ export default function BaseballScene({
 
     // ── 이전 잔재 정리 ────────────────────────────────────────────────────
     clearTimeout(stageTimerRef.current!)
-    ;[replayTrailRef, replayMarkerRef, replayDropLineRef].forEach(r => {
+    ;[replayTrailRef, replayDropLineRef].forEach(r => {
       if (r.current) { scene.remove(r.current); r.current.geometry.dispose(); r.current = null }
     })
+    if (replayMarkerRef.current) {
+      scene.remove(replayMarkerRef.current)
+      replayMarkerRef.current.traverse(child => {
+        const mesh = child as THREE.Mesh
+        if (mesh.geometry) mesh.geometry.dispose()
+        if (mesh.material) {
+          if (Array.isArray(mesh.material)) mesh.material.forEach(m => m.dispose())
+          else (mesh.material as THREE.Material).dispose()
+        }
+      })
+      replayMarkerRef.current = null
+    }
     if (replayPlaneGroupRef.current) {
       scene.remove(replayPlaneGroupRef.current)
       replayPlaneGroupRef.current = null
@@ -382,7 +585,7 @@ export default function BaseballScene({
     camera.lookAt(CAM_S1.look)
 
     // ── 공 애니메이션 시작 ────────────────────────────────────────────────
-    const curve    = buildPitchCurve(replayPitch, replayPitch.pitcherForm as PitcherForm)
+    const curve    = getCurve(replayPitch)
     const duration = speedToFlightMs(replayPitch.speed) / replaySpeed
 
     if (replayBallRef.current) {
@@ -398,16 +601,38 @@ export default function BaseballScene({
     scene.add(trail)
     replayTrailRef.current = trail
 
-    // ── 홈플레이트 통과 마커 링 (숨김 상태로 생성 → 2단계에서 표시) ──────
-    const markerColor = replayPitch.isStrike ? 0xff4444 : 0x4488ff
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.06, 0.11, 24),
-      new THREE.MeshBasicMaterial({ color: markerColor, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
-    )
-    ring.position.set(replayPitch.plateX, replayPitch.plateY, 0.005)
-    ring.visible = false
-    scene.add(ring)
-    replayMarkerRef.current = ring
+    // ── ABS 3면 공 통과 위치 마커 그룹 (2단계에서 표시) ──────────────────
+    // 각 면에 링+점을 그려 어느 면을 통과했는지 한눈에 확인 가능
+    const markerGroup = new THREE.Group()
+    const planeDefs: { z: number; hit: boolean | undefined }[] = [
+      { z: PLANE_Z.front, hit: replayPitch.frontPlaneHit },
+      { z: PLANE_Z.mid,   hit: replayPitch.midPlaneHit   },
+      { z: PLANE_Z.end,   hit: replayPitch.endPlaneHit   },
+    ]
+    planeDefs.forEach(({ z, hit }) => {
+      const color = hit ? 0xff6633 : 0x6688bb
+      const ringOpa = hit ? 0.95 : 0.40
+      const dotOpa  = hit ? 0.55 : 0.18
+      // 뷰어 방향(z-)으로 살짝 오프셋해 z-fighting 방지
+      const mz = z - 0.008
+
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.055, 0.105, 32),
+        new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: ringOpa, depthWrite: false })
+      )
+      ring.position.set(replayPitch.plateX, replayPitch.plateY, mz)
+      markerGroup.add(ring)
+
+      const dot = new THREE.Mesh(
+        new THREE.CircleGeometry(0.042, 24),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: dotOpa, side: THREE.DoubleSide, depthWrite: false })
+      )
+      dot.position.copy(ring.position)
+      markerGroup.add(dot)
+    })
+    markerGroup.visible = false
+    scene.add(markerGroup)
+    replayMarkerRef.current = markerGroup
 
     // ── ABS 3면 박스 생성 (숨김 상태, 2단계에서 표시) ─────────────────────
     const planeGroup = new THREE.Group()
@@ -464,10 +689,8 @@ export default function BaseballScene({
       replayStageRef.current = 2
       onReplayStageChangeRef.current?.(2)
 
-      // 공 플레이트 위치에 고정
-      if (replayBallRef.current) {
-        replayBallRef.current.position.set(replayPitch.plateX, replayPitch.plateY, 0)
-      }
+      // 공 숨기고 3면 마커로 대체
+      if (replayBallRef.current) replayBallRef.current.visible = false
       // 마커·플레인 표시
       if (replayMarkerRef.current)    replayMarkerRef.current.visible = true
       if (replayPlaneGroupRef.current) replayPlaneGroupRef.current.visible = true
@@ -532,10 +755,7 @@ export default function BaseballScene({
     if (replayMarkerRef.current)     replayMarkerRef.current.visible     = stage >= 2
     if (replayDropLineRef.current)   replayDropLineRef.current.visible   = stage >= 3
     if (replayBallRef.current) {
-      replayBallRef.current.visible = true
-      if (stage >= 2) {
-        replayBallRef.current.position.set(replayPitch.plateX, replayPitch.plateY, 0)
-      }
+      replayBallRef.current.visible = stage < 2
     }
 
     // 이 단계에서 auto-advance 없이 유지 (수동 조작이므로)
@@ -554,9 +774,21 @@ export default function BaseballScene({
     const scene = sceneRef.current
 
     if (replayBallRef.current) replayBallRef.current.visible = false
-    ;[replayTrailRef, replayMarkerRef, replayDropLineRef].forEach(r => {
+    ;[replayTrailRef, replayDropLineRef].forEach(r => {
       if (r.current) { scene.remove(r.current); r.current.geometry.dispose(); r.current = null }
     })
+    if (replayMarkerRef.current) {
+      scene.remove(replayMarkerRef.current)
+      replayMarkerRef.current.traverse(child => {
+        const mesh = child as THREE.Mesh
+        if (mesh.geometry) mesh.geometry.dispose()
+        if (mesh.material) {
+          if (Array.isArray(mesh.material)) mesh.material.forEach(m => m.dispose())
+          else (mesh.material as THREE.Material).dispose()
+        }
+      })
+      replayMarkerRef.current = null
+    }
     if (replayPlaneGroupRef.current) {
       scene.remove(replayPlaneGroupRef.current)
       replayPlaneGroupRef.current = null

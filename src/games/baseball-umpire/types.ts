@@ -106,6 +106,9 @@ export interface PitchParams {
 // ─── 게임 모드 ────────────────────────────────────────────────────────────────
 export type GameMode = 'practice' | 'normal'
 
+// ─── 궤적 모드 ────────────────────────────────────────────────────────────────
+export type TrajectoryMode = 'bezier' | 'physics'
+
 // ─── 판정 결과 피드백 ─────────────────────────────────────────────────────────
 export interface JudgmentFeedback {
   type: 'correct' | 'wrong' | 'borderline' | 'timeout'

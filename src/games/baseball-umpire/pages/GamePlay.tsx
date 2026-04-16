@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   BatterProfile, Difficulty, GameMode, JudgmentFeedback,
-  PitchParams, PitchPhase, PitcherForm, PitchType, DIFFICULTY_CONFIG,
+  PitchParams, PitchPhase, PitcherForm, PitchType, TrajectoryMode, DIFFICULTY_CONFIG,
 } from '../types'
 import { SeededRng, randomSeed } from '../utils/rng'
 import { generateBatters } from '../utils/batter'
@@ -32,6 +32,7 @@ interface MultiRankEntry {
 interface Props {
   mode: GameMode
   difficulty: Difficulty
+  trajectoryMode?: TrajectoryMode   // 궤적 방식 (기본: 'bezier')
   initialSeed?: number   // 멀티 모드: 공통 시드 고정
   multiRankings?: MultiRankEntry[]
   myUid?: string
@@ -47,7 +48,7 @@ interface Props {
 }
 
 export default function GamePlay({
-  mode, difficulty, initialSeed, multiRankings, myUid,
+  mode, difficulty, trajectoryMode = 'bezier', initialSeed, multiRankings, myUid,
   onScoreUpdate, onGameEnd, onBack,
 }: Props) {
   const config = DIFFICULTY_CONFIG[difficulty]
@@ -419,6 +420,7 @@ export default function GamePlay({
         currentPitch={currentPitch}
         pitchPhase={pitchPhase}
         showZone={showZone}
+        trajectoryMode={trajectoryMode}
         onPitchArrived={handlePitchArrived}
         onSceneReady={handleSceneReady}
         replayPitch={replayPitch}

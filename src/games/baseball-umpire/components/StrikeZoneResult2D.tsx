@@ -6,32 +6,46 @@ interface Props {
   visible: boolean
 }
 
-// 2D 뷰 크기 (px)
-const VIEW_W = 240
-const VIEW_H = 290
-const PADDING = 36
+// 2D 뷰 고정 너비 (px) — 높이는 타자 체형 종횡비로 계산
+const VIEW_W  = 240
+const PADDING = 28    // 존 주변 여백
+const ZONE_W  = 168   // 존 박스 고정 픽셀 너비
 
 export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
   if (!visible) return null
 
-  // ── 좌표 매핑 ───────────────────────────────────────────────────────────
-  const zoneW   = batter.zoneHalfWidth * 2
-  const zoneH   = batter.zoneTop - batter.zoneBottom
-  const rangeX  = batter.zoneHalfWidth * 1.7
-  const rangeYb = -0.08
-  const rangeYt = batter.zoneTop + zoneH * 0.45
+  // ── 타자 체형 기반 실제 종횡비 계산 ──────────────────────────────────────
+  const zoneW = batter.zoneHalfWidth * 2           // 실제 존 너비 (Three.js 단위)
+  const zoneH = batter.zoneTop - batter.zoneBottom // 실제 존 높이
+
+  // 존 박스 픽셀 높이 — 너비 고정, 높이는 실제 비율 적용
+  const ZONE_H = ZONE_W * (zoneH / zoneW)
+
+  // 전체 SVG 크기
+  const VIEW_H = ZONE_H + PADDING * 2
+
+  // 존 박스의 SVG 좌표
+  const zoneX1 = PADDING
+  const zoneX2 = PADDING + ZONE_W
+  const zoneY1 = PADDING
+  const zoneY2 = PADDING + ZONE_H
+
+  // 존 밖 공이 표시될 수 있는 실제 범위 (Three.js 단위)
+  const marginX = zoneW * 0.55
+  const marginY = zoneH * 0.30
+  const rangeX  = batter.zoneHalfWidth + marginX
+  const rangeYb = batter.zoneBottom - marginY
+  const rangeYt = batter.zoneTop    + marginY
   const rangeH  = rangeYt - rangeYb
 
-  const drawW = VIEW_W - PADDING * 2
-  const drawH = VIEW_H - PADDING * 2
+  // 좌표 → SVG 픽셀 변환
+  const toSvgX = (x: number) =>
+    PADDING + ((x + rangeX) / (rangeX * 2)) * ZONE_W
+  const toSvgY = (y: number) =>
+    PADDING + (1 - (y - rangeYb) / rangeH) * ZONE_H
 
-  const toSvgX = (x: number) => PADDING + (x + rangeX) / (rangeX * 2) * drawW
-  const toSvgY = (y: number) => PADDING + (1 - (y - rangeYb) / rangeH) * drawH
-
-  const zoneX1 = toSvgX(-batter.zoneHalfWidth)
-  const zoneX2 = toSvgX( batter.zoneHalfWidth)
-  const zoneY1 = toSvgY(batter.zoneTop)
-  const zoneY2 = toSvgY(batter.zoneBottom)
+  const drawW = ZONE_W
+  const drawH = ZONE_H
 
   // 공 위치 — 카메라가 뒤에서 보므로 X 반전
   const ballSvgX = toSvgX(-pitch.plateX)
@@ -63,7 +77,7 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
     <div style={styles.wrap}>
       <div style={styles.title}>투구 결과</div>
 
-      <svg width={VIEW_W} height={VIEW_H} style={{ display: 'block' }}>
+      <svg width={VIEW_W} height={Math.round(VIEW_H)} style={{ display: 'block' }}>
         {/* 보더라인 영역 */}
         <rect
           x={blX1} y={blY1}
@@ -76,12 +90,12 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
 
         {/* 홈플레이트 오각형 */}
         {(() => {
-          const hw  = toSvgX(batter.zoneHalfWidth) - toSvgX(0)
-          const cx  = VIEW_W / 2
-          const top = toSvgY(0)
-          const ph  = 13
-          const ps  = 7
-          const pts = [
+          const cx   = VIEW_W / 2
+          const hw   = ZONE_W / 2         // 존 너비의 절반 = 홈플레이트 절반
+          const top  = zoneY2             // 존 하단 바로 아래
+          const ph   = 12
+          const ps   = 7
+          const pts  = [
             `${cx - hw},${top}`,
             `${cx + hw},${top}`,
             `${cx + hw},${top + ph}`,
@@ -148,7 +162,7 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
         </text>
 
         {/* 존 레이블 */}
-        <text x={zoneX1 + 4} y={zoneY1 - 5}
+        <text x={zoneX1 + 4} y={zoneY1 - 6}
           fontSize={9} fill="rgba(0,229,255,0.65)">ZONE</text>
       </svg>
 
@@ -216,7 +230,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     backdropFilter: 'blur(8px)',
-    minWidth: VIEW_W + 28,
+    minWidth: VIEW_W,
     boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
   },
   title: {

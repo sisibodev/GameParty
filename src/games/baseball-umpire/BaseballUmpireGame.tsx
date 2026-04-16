@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { DatabaseReference } from 'firebase/database'
-import { GameMode, Difficulty, PitchParams } from './types'
+import { GameMode, Difficulty, TrajectoryMode, PitchParams } from './types'
 import { useAuth } from '../../contexts/AuthContext'
 import {
   MultiRoom, submitMultiResult, finishMultiRoom,
@@ -49,10 +49,11 @@ export default function BaseballUmpireGame() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const [phase, setPhase]         = useState<Phase>('select')
-  const [mode, setMode]           = useState<GameMode>('normal')
-  const [difficulty, setDiff]     = useState<Difficulty>('amateur')
-  const [result, setResult]       = useState<GameResult | null>(null)
+  const [phase, setPhase]             = useState<Phase>('select')
+  const [mode, setMode]               = useState<GameMode>('normal')
+  const [difficulty, setDiff]         = useState<Difficulty>('amateur')
+  const [trajectoryMode, setTrajMode] = useState<TrajectoryMode>('bezier')
+  const [result, setResult]           = useState<GameResult | null>(null)
 
   // 멀티 전용
   const [multiRoomId, setMultiRoomId]       = useState<string>('')
@@ -84,9 +85,10 @@ export default function BaseballUmpireGame() {
   }, [phase, multiRoomId])
 
   // ── 싱글플레이 ──────────────────────────────────────────────────────────────
-  const handleStart = (m: GameMode, d: Difficulty) => {
+  const handleStart = (m: GameMode, d: Difficulty, traj: TrajectoryMode) => {
     setMode(m)
     setDiff(d)
+    setTrajMode(traj)
     setPhase('playing')
   }
 
@@ -156,6 +158,7 @@ export default function BaseballUmpireGame() {
       <GamePlay
         mode={mode}
         difficulty={difficulty}
+        trajectoryMode={trajectoryMode}
         onGameEnd={handleGameEnd}
         onBack={() => setPhase('select')}
       />

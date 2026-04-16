@@ -11,12 +11,13 @@ export const MOUND_DISTANCE = 18.44
 // 공 반지름 (MLB 규정: 지름 73~75mm → 반지름 0.037m)
 export const BALL_RADIUS = 0.037
 
-// 투구 시작점 Y (릴리즈 높이)
-const RELEASE_HEIGHT: Record<PitcherForm, number> = {
-  overhand:       1.85,
-  three_quarter:  1.70,
-  sidearm:        1.40,
-  underhand:      0.90,
+// 투구폼별 릴리즈 포인트 (마운드 기준, 오른손 투수 기준)
+// x: 좌우 (+ = 1루측/우투수 팔 방향), y: 높이, z: 앞뒤 오프셋 (MOUND_DISTANCE에서 빼줌)
+const RELEASE_POINT: Record<PitcherForm, { x: number; y: number; z: number }> = {
+  overhand:      { x:  0.30, y: 1.85, z: 1.2 },  // 머리 위, 팔 약간 1루 방향
+  three_quarter: { x:  0.55, y: 1.65, z: 1.0 },  // 귀 옆 대각선, 옆으로 더 벌어짐
+  sidearm:       { x:  0.80, y: 1.25, z: 0.8 },  // 어깨 높이, 많이 옆으로 벌어짐
+  underhand:     { x:  0.40, y: 0.85, z: 0.6 },  // 허리 아래, 약간 바깥쪽
 }
 
 // ── 변화구 풀 (직구 제외 전체 9종) ───────────────────────────────────────────
@@ -200,19 +201,22 @@ export function buildPitchCurve(
   params: PitchParams,
   form: PitcherForm,
 ): THREE.CubicBezierCurve3 {
-  const releaseH = RELEASE_HEIGHT[form]
+  const rp = RELEASE_POINT[form]
   const bp = PITCH_BREAK[params.pitchType]
 
-  const start = new THREE.Vector3(0, releaseH, MOUND_DISTANCE)
+  // 릴리즈 포인트: z는 마운드에서 앞쪽으로 rp.z만큼 이동한 위치
+  const startZ = MOUND_DISTANCE - rp.z
+  const start  = new THREE.Vector3(rp.x, rp.y, startZ)
   // 홈플레이트(z=0)를 지나 포수 미트 위치(z=-0.30)까지 연장
   // → 리플레이에서 front(0.13) · mid(0) · end(-0.13) 판 3개를 모두 통과
-  const end   = new THREE.Vector3(params.plateX, params.plateY, -0.30)
+  const end    = new THREE.Vector3(params.plateX, params.plateY, -0.30)
 
-  // 직선 경로 위 t 위치 보간 헬퍼
+  // 직선 경로 위 t 위치 보간 헬퍼 (릴리즈 포인트 → 미트)
+  const totalZ = startZ - (-0.30)
   const lerpOnLine = (t: number) => new THREE.Vector3(
-    params.plateX * t,
-    releaseH + (params.plateY - releaseH) * t,
-    MOUND_DISTANCE * (1 - t),
+    rp.x + (params.plateX - rp.x) * t,
+    rp.y  + (params.plateY - rp.y)  * t,
+    startZ - totalZ * t,
   )
 
   const base1 = lerpOnLine(bp.t1)
@@ -222,6 +226,114 @@ export function buildPitchCurve(
   const ctrl2 = new THREE.Vector3(base2.x, base2.y + bp.y2, base2.z)
 
   return new THREE.CubicBezierCurve3(start, ctrl1, ctrl2, end)
+}
+
+// ── 구종별 스핀/물리 파라미터 ──────────────────────────────────────────────────
+// spinX: 백스핀(+) / 탑스핀(-) → 마그누스 수직
+// spinZ: 사이드스핀(±) → 마그누스 수평
+// dragCoeff: 공기저항 계수 (높을수록 속도 감소 큼)
+interface SpinProfile { spinX: number; spinZ: number; drag: number }
+const SPIN_PROFILE: Record<PitchType, SpinProfile> = {
+  fastball: { spinX: +2400, spinZ:    0, drag: 0.32 }, // 강한 백스핀 → 뜨는 느낌
+  two_seam: { spinX: +1800, spinZ: +300, drag: 0.33 }, // 약한 백스핀 + 사이드 → 침하
+  sinker:   { spinX: +1200, spinZ: +500, drag: 0.34 }, // 탑스핀 계열 → 급강하
+  cutter:   { spinX: +2000, spinZ: -600, drag: 0.33 }, // 백스핀 + 역사이드 → 짧은 꺾임
+  changeup: { spinX: +1000, spinZ: +200, drag: 0.44 }, // 느린 속도 + 낮은 스핀 → 낙하
+  slider:   { spinX:  +600, spinZ: -1800, drag: 0.35 }, // 세로+가로 복합
+  sweeper:  { spinX:  +200, spinZ: -2400, drag: 0.36 }, // 거의 순수 사이드스핀 → 크게 횡변화
+  curve:    { spinX: -2000, spinZ:  +400, drag: 0.38 }, // 탑스핀 → 크게 하강
+  splitter: { spinX:  +400, spinZ:    0, drag: 0.40 }, // 낮은 스핀 → 후반 급락
+  forkball: { spinX:  +200, spinZ:    0, drag: 0.42 }, // 극저 스핀 → 더 큰 낙차
+}
+
+// 마그누스 계수 (실제 야구공 기준 근사값)
+const MAGNUS_COEFF = 0.00013  // N·s/m 단위 근사
+const GRAVITY      = 9.81     // m/s²
+const BALL_MASS    = 0.145    // kg (공 무게)
+const BALL_AREA    = Math.PI * 0.037 ** 2  // 단면적 m²
+const AIR_DENSITY  = 1.225    // kg/m³
+
+/**
+ * 물리 기반 궤적: 마그누스 효과 + 중력 + 공기저항을 수치 적분하여
+ * N개 샘플 포인트를 생성 후 CatmullRom 곡선으로 반환
+ */
+export function buildPhysicsCurve(
+  params: PitchParams,
+  form: PitcherForm = 'overhand',
+): THREE.CatmullRomCurve3 {
+  const rp    = RELEASE_POINT[form]
+  const sp    = SPIN_PROFILE[params.pitchType]
+  const v0    = params.speed / 3.6           // m/s 변환
+  const startZ = MOUND_DISTANCE - rp.z
+
+  // 초기 속도벡터: 릴리즈 포인트 → 홈플레이트 방향
+  const dx = params.plateX - rp.x
+  const dy = params.plateY - rp.y
+  const dz = -(startZ + 0.30)               // z 이동량 (음수 방향)
+  const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
+
+  // 단위 방향벡터 × 초기 속도
+  let vx = (dx / dist) * v0
+  let vy = (dy / dist) * v0
+  let vz = (dz / dist) * v0
+
+  let px = rp.x
+  let py = rp.y
+  let pz = startZ
+
+  const points: THREE.Vector3[] = [new THREE.Vector3(px, py, pz)]
+
+  // 스핀 → 각속도 (rpm → rad/s)
+  const omegaX = (sp.spinX / 60) * 2 * Math.PI  // 수평 회전축(백/탑스핀)
+  const omegaZ = (sp.spinZ / 60) * 2 * Math.PI  // 수직 회전축(사이드스핀)
+
+  // 수치 적분: 4th-order Runge-Kutta로 N 스텝
+  const N_STEPS  = 120
+  const totalTime = (dist / v0) * 1.05          // 예상 비행시간 × 여유
+  const dt       = totalTime / N_STEPS
+
+  for (let i = 0; i < N_STEPS; i++) {
+    const speed = Math.sqrt(vx * vx + vy * vy + vz * vz)
+
+    // 공기저항 (drag): F = -0.5 * Cd * rho * A * v * v_unit
+    const dragScale = 0.5 * sp.drag * AIR_DENSITY * BALL_AREA * speed / BALL_MASS
+    const fdx = -dragScale * vx
+    const fdy = -dragScale * vy
+    const fdz = -dragScale * vz
+
+    // 마그누스 힘: F = MAGNUS_COEFF * (omega × v)
+    // omega = (omegaX, 0, omegaZ) — 단순화 (Y축 스핀 무시)
+    // omega × v = (omegaZ*vy - 0*vz, 0*vz - omegaX*vz, omegaX*vy - omegaZ*vx)
+    const magScale = MAGNUS_COEFF * (sp.spinX !== 0 || sp.spinZ !== 0 ? 1 : 0)
+    const fmx = magScale * (omegaZ * vy)
+    const fmy = magScale * (-omegaX * vz - omegaZ * vx)
+    const fmz = magScale * (omegaX * vy)
+
+    // 총 가속도
+    const ax = fdx + fmx
+    const ay = fdy + fmy - GRAVITY
+    const az = fdz + fmz
+
+    // 속도/위치 업데이트
+    vx += ax * dt
+    vy += ay * dt
+    vz += az * dt
+    px += vx * dt
+    py += vy * dt
+    pz += vz * dt
+
+    points.push(new THREE.Vector3(px, py, pz))
+
+    // 홈플레이트 뒤까지 통과하면 종료
+    if (pz <= -0.30) break
+  }
+
+  // 마지막 점을 정확히 미트 위치로 보정
+  if (points.length > 1) {
+    points[points.length - 1].set(params.plateX, params.plateY, -0.30)
+  }
+
+  return new THREE.CatmullRomCurve3(points)
 }
 
 /** km/h → 투구 비행 시간(ms) */
