@@ -381,8 +381,9 @@ export async function calculateRoundResult(roomId: string, round: number) {
     if (hasCashBurn) afterTax = Math.floor(afterTax * 0.5)
     // profit_steal 반영
     afterTax = Math.max(0, afterTax + (profitStealCashDelta[player.uid] ?? 0))
-    // 파산 구제
-    if (afterTax < (isFinite(minPrice) ? minPrice : Infinity)) {
+    // 파산 구제: 주식 없음 AND 현금으로 아무 주식도 못 사는 경우
+    const hasStock = Object.values(player.portfolio ?? {}).some(qty => (qty as number) > 0)
+    if (!hasStock && afterTax < (isFinite(minPrice) ? minPrice : Infinity)) {
       refillApplied[player.uid] = 1000000
       cashAfterTax[player.uid] = afterTax + 1000000
     } else {

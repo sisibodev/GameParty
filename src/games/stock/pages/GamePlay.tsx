@@ -29,6 +29,8 @@ export default function GamePlay() {
   // 스캔 정보 패널: 라운드 내내 유지되는 실시간 정보 항목
   const [scanPanel, setScanPanel] = useState<Array<{ cardId: string; type: string; targetId: string; title: string }>>([])
   const [draftTimeLeft, setDraftTimeLeft] = useState(0)  // 드래프트 선택 남은 시간
+  const [showInfoModal, setShowInfoModal] = useState(false)
+  const [infoModalTab, setInfoModalTab] = useState<'company' | 'special' | 'round'>('company')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const draftTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const roomRef = useRef<ReturnType<typeof subscribeRoom> | null>(null)
@@ -386,6 +388,7 @@ export default function GamePlay() {
           보유세 {(getTaxRate(room.currentRound) * 100).toFixed(0)}%
         </span>
         <span className={styles.cashLabel}>{formatKRW(me?.cash ?? 0)}</span>
+        <button className={styles.infoBtn} onClick={() => setShowInfoModal(v => !v)}>?</button>
         {user.uid === room.host && (
           <button
             className={styles.dissolveBtn}
@@ -399,6 +402,65 @@ export default function GamePlay() {
           </button>
         )}
       </div>
+
+      {/* 게임 정보 모달 */}
+      {showInfoModal && (
+        <div className={styles.infoModalOverlay} onClick={() => setShowInfoModal(false)}>
+          <div className={styles.infoModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.infoModalHeader}>
+              <span>게임 정보</span>
+              <button className={styles.infoModalClose} onClick={() => setShowInfoModal(false)}>✕</button>
+            </div>
+            <div className={styles.infoModalTabs}>
+              <button className={`${styles.infoTab} ${infoModalTab === 'company' ? styles.infoTabActive : ''}`} onClick={() => setInfoModalTab('company')}>회사 유형</button>
+              <button className={`${styles.infoTab} ${infoModalTab === 'special' ? styles.infoTabActive : ''}`} onClick={() => setInfoModalTab('special')}>특수 카드</button>
+              <button className={`${styles.infoTab} ${infoModalTab === 'round' ? styles.infoTabActive : ''}`} onClick={() => setInfoModalTab('round')}>라운드 카드</button>
+            </div>
+            <div className={styles.infoModalBody}>
+              {infoModalTab === 'company' && (
+                <table className={styles.infoTable}>
+                  <thead><tr><th>유형</th><th>설명</th><th>도파민 빈도</th></tr></thead>
+                  <tbody>
+                    <tr><td>안정형</td><td>변동성 낮고 완만한 성장</td><td>낮음</td></tr>
+                    <tr><td>성장형</td><td>초반 낮고 후반 급등 가능</td><td>중간</td></tr>
+                    <tr><td>하락형</td><td>전반적으로 우하향 트렌드</td><td>낮음</td></tr>
+                    <tr><td>롤러코스터형</td><td>큰 폭의 상하 반복</td><td>높음</td></tr>
+                    <tr><td>반전형</td><td>초반 하락 후 후반 급반등</td><td>중간</td></tr>
+                  </tbody>
+                </table>
+              )}
+              {infoModalTab === 'special' && (
+                <table className={styles.infoTable}>
+                  <thead><tr><th>카드명</th><th>효과</th></tr></thead>
+                  <tbody>
+                    {(['small_surge','small_drop','surge','drop','boom','crash','reversal',
+                       'card_nullifier','cash_burn','portfolio_snipe','profit_steal',
+                       'focused_snipe','forced_invest','trade_freeze','hand_swap'] as const).map(type => (
+                      <tr key={type}>
+                        <td style={{ color: CARD_COLOR[type] ?? 'inherit', fontWeight: 700 }}>{CARD_LABEL[type]}</td>
+                        <td>{CARD_DESC[type]}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {infoModalTab === 'round' && (
+                <table className={styles.infoTable}>
+                  <thead><tr><th>카드명</th><th>효과</th></tr></thead>
+                  <tbody>
+                    {Object.entries(ROUND_CARD_META).map(([type, meta]) => (
+                      <tr key={type}>
+                        <td style={{ color: meta.color, fontWeight: 700 }}>{meta.label}</td>
+                        <td>{meta.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.main}>
         {/* 종목 패널 */}
