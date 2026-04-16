@@ -8,7 +8,7 @@ interface Props {
 }
 
 export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
-  const [step, setStep] = useState<'mode' | 'difficulty' | 'trajectory'>('mode')
+  const [step, setStep] = useState<'mode' | 'difficulty'>('mode')
   const [selectedMode, setSelectedMode] = useState<GameMode | null>(null)
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty | null>(null)
 
@@ -41,18 +41,17 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
 
   const handleDifficultySelect = (diff: Difficulty) => {
     setSelectedDifficulty(diff)
-    setStep('trajectory')
+    // 물리 시뮬레이션 모드는 숨김 — 베지어 고정으로 바로 시작
+    if (selectedMode) onStart(selectedMode, diff, 'bezier')
   }
 
   const handleBack = () => {
-    if (step === 'trajectory') { setStep('difficulty'); return }
     if (step === 'difficulty') { setStep('mode'); return }
     onBack()
   }
 
   const backLabel =
-    step === 'trajectory' ? '난이도 선택' :
-    step === 'difficulty' ? '모드 선택'   : '로비로'
+    step === 'difficulty' ? '모드 선택' : '로비로'
 
   return (
     <div style={styles.wrap}>
@@ -144,34 +143,7 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
         </>
       )}
 
-      {step === 'trajectory' && selectedMode && selectedDifficulty && (
-        <>
-          <div style={styles.stepLabel}>궤적 방식 선택</div>
-          <div style={styles.modes}>
-            <button style={styles.card} onClick={() => onStart(selectedMode, selectedDifficulty, 'bezier')}>
-              <div style={styles.emoji}>📐</div>
-              <div style={styles.cardTitle}>베지어 곡선</div>
-              <div style={styles.cardDesc}>
-                수학적 베지어 곡선 기반 궤적<br/>
-                안정적이고 깔끔한 공 움직임<br/>
-                <span style={{ color: '#7ec8e3', fontWeight: 700 }}>권장 · 기본값</span>
-              </div>
-            </button>
-            <button
-              style={{ ...styles.card, borderColor: 'rgba(255,152,0,0.5)' }}
-              onClick={() => onStart(selectedMode, selectedDifficulty, 'physics')}
-            >
-              <div style={styles.emoji}>⚙️</div>
-              <div style={styles.cardTitle}>물리 시뮬레이션</div>
-              <div style={styles.cardDesc}>
-                중력 · 공기저항 · 마그누스 효과<br/>
-                구종별 스핀에 따른 실제 궤적<br/>
-                <span style={{ color: '#ffb74d', fontWeight: 700 }}>실험적 · 고급</span>
-              </div>
-            </button>
-          </div>
-        </>
-      )}
+      {/* 물리 시뮬레이션 모드 선택 UI — 추후 공개 예정 */}
     </div>
   )
 }
