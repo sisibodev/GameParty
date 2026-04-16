@@ -10,7 +10,6 @@ interface Props {
 export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
   const [step, setStep] = useState<'mode' | 'difficulty'>('mode')
   const [selectedMode, setSelectedMode] = useState<GameMode | null>(null)
-  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty | null>(null)
 
   const modes: { id: GameMode; label: string; desc: string; emoji: string }[] = [
     {
@@ -40,7 +39,6 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
   }
 
   const handleDifficultySelect = (diff: Difficulty) => {
-    setSelectedDifficulty(diff)
     // 물리 시뮬레이션 모드는 숨김 — 베지어 고정으로 바로 시작
     if (selectedMode) onStart(selectedMode, diff, 'bezier')
   }
