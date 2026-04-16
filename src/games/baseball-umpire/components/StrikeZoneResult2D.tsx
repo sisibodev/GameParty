@@ -52,14 +52,6 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
   const isBorderline = pitch.isBorderline
   const ballColor   = isCorrect ? '#4caf50' : '#f44336'
 
-  // 보더라인 영역
-  const blMarginX = zoneW * 0.05
-  const blMarginY = zoneH * 0.05
-  const blX1 = toSvgX(-batter.zoneHalfWidth - blMarginX)
-  const blX2 = toSvgX( batter.zoneHalfWidth + blMarginX)
-  const blY1 = toSvgY(batter.zoneTop    + blMarginY)
-  const blY2 = toSvgY(batter.zoneBottom - blMarginY)
-
   const callText = pitch.playerCall === 'strike' ? 'S' : 'B'
   const realText = pitch.isStrike ? '스트라이크' : '볼'
 
@@ -75,16 +67,6 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
       <div style={styles.title}>투구 결과</div>
 
       <svg width={VIEW_W} height={Math.round(VIEW_H)} style={{ display: 'block' }}>
-        {/* 보더라인 영역 */}
-        <rect
-          x={blX1} y={blY1}
-          width={blX2 - blX1} height={blY2 - blY1}
-          fill="rgba(255,200,0,0.07)"
-          stroke="rgba(255,200,0,0.3)"
-          strokeWidth={1}
-          strokeDasharray="4 3"
-        />
-
         {/* 홈플레이트 오각형 */}
         {(() => {
           const cx   = VIEW_W / 2
@@ -109,13 +91,14 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
           )
         })()}
 
-        {/* 스트라이크존 박스 */}
+        {/* 스트라이크존 박스 — 보더라인이면 노란 점선 테두리 */}
         <rect
           x={zoneX1} y={zoneY1}
           width={zoneX2 - zoneX1} height={zoneY2 - zoneY1}
           fill={pitch.isStrike ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'}
-          stroke="#00e5ff"
-          strokeWidth={2}
+          stroke={isBorderline ? '#ffcc00' : '#00e5ff'}
+          strokeWidth={isBorderline ? 2 : 2}
+          strokeDasharray={isBorderline ? '6 3' : undefined}
         />
 
         {/* 중심선 */}
