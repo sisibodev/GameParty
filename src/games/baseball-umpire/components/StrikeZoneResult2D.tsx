@@ -62,7 +62,7 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
   const frontHit    = pitch.frontPlaneHit
   const midHit      = pitch.midPlaneHit
   const endHit      = pitch.endPlaneHit
-  const planeCount  = pitch.planeHitCount ?? 0
+  const planeCount  = [frontHit, midHit, endHit].filter(Boolean).length
   const hasPlaneData = frontHit !== undefined
 
   // 홈플레이트 (존 하단과 8px 간격)
@@ -161,9 +161,9 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
               <PlaneChip label="끝" hit={endHit!} />
               <span style={{
                 ...styles.planeCount,
-                color: planeCount >= 2 ? '#ff5722' : '#2196f3',
+                color: midHit ? '#ff5722' : '#2196f3',
               }}>
-                {planeCount}/3면
+                중간면 {midHit ? '통과' : '미통과'}
               </span>
             </div>
           </>

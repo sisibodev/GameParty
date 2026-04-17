@@ -31,6 +31,17 @@ const PLANE_Z = { front: 0.13, mid: 0, end: -0.13 }
 const STAGE_HOLD_MS = 2600   // 각 단계 유지 시간
 const CAM_LERP_DUR  = 1000   // 카메라 전환 시간(ms)
 
+// 2단계 Q/E 궤도 카메라 초기 각도/반경 (CAM_S2 위치 기준)
+const CAM_S2_ORBIT_ANGLE  = Math.atan2(CAM_S2.pos.x, -CAM_S2.pos.z)  // ≈ 1.09 rad
+const CAM_S2_ORBIT_RADIUS = Math.sqrt(CAM_S2.pos.x ** 2 + CAM_S2.pos.z ** 2)  // ≈ 4.29 m
+
+// 리플레이 궤적 튜브 레이어 정의 (공 반지름 = 0.037m 기준)
+const TRAIL_LAYERS = [
+  { radius: 0.037, color: 0xffffff, opacity: 0.85, side: THREE.FrontSide },
+  { radius: 0.060, color: 0xe8e8ff, opacity: 0.30, side: THREE.FrontSide },
+  { radius: 0.095, color: 0xaaaadd, opacity: 0.10, side: THREE.DoubleSide },
+] as const
+
 interface Props {
   batter: BatterProfile | null
   currentPitch: PitchParams | null
@@ -68,7 +79,7 @@ export default function BaseballScene({
   const ballRef      = useRef<THREE.Mesh | null>(null)
   const zoneBoxRef   = useRef<THREE.Mesh | null>(null)
   const trailRef     = useRef<THREE.Line | null>(null)
-  const replayTrailRef   = useRef<THREE.Line | null>(null)
+  const replayTrailRef   = useRef<THREE.Group | null>(null)
   const replayMarkerRef  = useRef<THREE.Group | null>(null)  // 3면 마커 그룹
   const replayDropLineRef = useRef<THREE.Line | null>(null)
   const replayPlaneGroupRef = useRef<THREE.Group | null>(null)
@@ -123,6 +134,10 @@ export default function BaseballScene({
   const stageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // 단계 진행 함수 (render loop에서 호출, stale closure 방지를 위한 ref 패턴)
   const advanceToStage2Ref = useRef<(() => void) | null>(null)
+
+  // Q/E 궤도 카메라 (2단계)
+  const replayOrbitAngleRef  = useRef(CAM_S2_ORBIT_ANGLE)
+  const replayOrbitRadiusRef = useRef(CAM_S2_ORBIT_RADIUS)
 
   // 콜백 ref 최신화
   useEffect(() => { onPitchArrivedRef.current      = onPitchArrived      }, [onPitchArrived])
@@ -408,13 +423,40 @@ export default function BaseballScene({
         }
       }
 
-      // 리플레이 1단계: 공 애니메이션
+      // 리플레이 1단계: 공 애니메이션 + 궤적 리본 실시간 갱신
       if (replayAnimRef.current && replayBallRef.current && !replayAnimRef.current.done) {
         const { curve, startTime, duration } = replayAnimRef.current
         const t = Math.min((now - startTime) / duration, 1)
         replayBallRef.current.position.copy(curve.getPoint(t))
+
+        // 궤적: 공이 지나간 부분(0→t)만 튜브로 그리기
+        if (replayTrailRef.current && t > 0.01) {
+          replayTrailRef.current.visible = true
+          const nSeg = Math.max(2, Math.floor(t * 60))
+          const pts  = curve.getPoints(nSeg)
+          if (pts.length >= 2) {
+            const tc = new THREE.CatmullRomCurve3(pts)
+            replayTrailRef.current.children.forEach((child, i) => {
+              const mesh = child as THREE.Mesh
+              mesh.geometry.dispose()
+              mesh.geometry = new THREE.TubeGeometry(tc, Math.max(1, nSeg - 1), TRAIL_LAYERS[i].radius, 8, false)
+            })
+          }
+        }
+
         if (t >= 1) {
           replayAnimRef.current.done = true
+          // 공 도착 시 전체 궤적으로 최종 확정 (이후 렌더 루프에서 더 갱신 안 함)
+          if (replayTrailRef.current) {
+            const pts = curve.getPoints(60)
+            const tc  = new THREE.CatmullRomCurve3(pts)
+            replayTrailRef.current.visible = true
+            replayTrailRef.current.children.forEach((child, i) => {
+              const mesh = child as THREE.Mesh
+              mesh.geometry.dispose()
+              mesh.geometry = new THREE.TubeGeometry(tc, 60, TRAIL_LAYERS[i].radius, 8, false)
+            })
+          }
           // 단계 1 완료 → 단계 2로 진행
           advanceToStage2Ref.current?.()
         }
@@ -429,6 +471,14 @@ export default function BaseballScene({
         lookAtWork.lerpVectors(fromLook, toLook, t)
         camera.lookAt(lookAtWork)
         if (raw >= 1) cameraTransRef.current = null
+      }
+
+      // Q/E 궤도 카메라: 리플레이 2단계 + 전환 완료 후
+      if (replayStageRef.current === 2 && !cameraTransRef.current) {
+        const angle  = replayOrbitAngleRef.current
+        const radius = replayOrbitRadiusRef.current
+        camera.position.set(Math.sin(angle) * radius, 1.8, -Math.cos(angle) * radius)
+        camera.lookAt(CAM_S2.look)
       }
 
       renderer.render(scene, camera)
@@ -595,9 +645,21 @@ export default function BaseballScene({
 
     // ── 이전 잔재 정리 ────────────────────────────────────────────────────
     clearTimeout(stageTimerRef.current!)
-    ;[replayTrailRef, replayDropLineRef].forEach(r => {
-      if (r.current) { scene.remove(r.current); r.current.geometry.dispose(); r.current = null }
-    })
+    if (replayTrailRef.current) {
+      scene.remove(replayTrailRef.current)
+      replayTrailRef.current.traverse(child => {
+        const mesh = child as THREE.Mesh
+        if (mesh.geometry) mesh.geometry.dispose()
+        if (mesh.material) {
+          if (Array.isArray(mesh.material)) mesh.material.forEach(m => m.dispose())
+          else (mesh.material as THREE.Material).dispose()
+        }
+      })
+      replayTrailRef.current = null
+    }
+    if (replayDropLineRef.current) {
+      scene.remove(replayDropLineRef.current); replayDropLineRef.current.geometry.dispose(); replayDropLineRef.current = null
+    }
     if (replayMarkerRef.current) {
       scene.remove(replayMarkerRef.current)
       replayMarkerRef.current.traverse(child => {
@@ -632,12 +694,26 @@ export default function BaseballScene({
     }
     replayAnimRef.current = { curve, startTime: performance.now(), duration, done: false }
 
-    // ── 궤적 라인 ────────────────────────────────────────────────────────
-    const trailGeo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(60))
-    const trailMat = new THREE.LineBasicMaterial({ color: 0xffee00, opacity: 0.55, transparent: true })
-    const trail    = new THREE.Line(trailGeo, trailMat)
-    scene.add(trail)
-    replayTrailRef.current = trail
+    // ── 궤적 리본 — 공 뒤를 따라오는 동적 Tube (렌더 루프에서 매 프레임 갱신) ──
+    const trailGroup = new THREE.Group()
+    // 초기엔 시작점 2개짜리 더미 geometry로 생성, 렌더 루프에서 실시간 확장
+    const initPt  = curve.getPoint(0)
+    const initPt2 = curve.getPoint(0.001)
+    const initCurve = new THREE.CatmullRomCurve3([initPt, initPt2])
+    TRAIL_LAYERS.forEach(layer => {
+      const mat = new THREE.MeshBasicMaterial({
+        color: layer.color, transparent: true, opacity: layer.opacity,
+        depthWrite: false, side: layer.side,
+      })
+      const mesh = new THREE.Mesh(
+        new THREE.TubeGeometry(initCurve, 1, layer.radius, 8, false),
+        mat,
+      )
+      trailGroup.add(mesh)
+    })
+    trailGroup.visible = false   // 공이 조금 이동한 뒤부터 표시
+    scene.add(trailGroup)
+    replayTrailRef.current = trailGroup
 
     // ── ABS 3면 공 통과 위치 마커 그룹 (2단계에서 표시) ──────────────────
     // 각 면에 링+점을 그려 어느 면을 통과했는지 한눈에 확인 가능
@@ -648,25 +724,18 @@ export default function BaseballScene({
       { z: PLANE_Z.end,   hit: replayPitch.endPlaneHit   },
     ]
     planeDefs.forEach(({ z, hit }) => {
-      const color = hit ? 0xff6633 : 0x6688bb
-      const ringOpa = hit ? 0.95 : 0.40
-      const dotOpa  = hit ? 0.55 : 0.18
+      const color   = hit ? 0xff6633 : 0x6688bb
+      const opacity = hit ? 0.92     : 0.45
       // 뷰어 방향(z-)으로 살짝 오프셋해 z-fighting 방지
       const mz = z - 0.008
 
-      const ring = new THREE.Mesh(
-        new THREE.RingGeometry(0.055, 0.105, 32),
-        new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: ringOpa, depthWrite: false })
+      // 2D ring+dot → 3D 구 로 변경 (hit: 주황, miss: 파랑 반투명)
+      const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.065, 16, 16),
+        new THREE.MeshLambertMaterial({ color, transparent: true, opacity, depthWrite: false })
       )
-      ring.position.set(replayPitch.plateX, replayPitch.plateY, mz)
-      markerGroup.add(ring)
-
-      const dot = new THREE.Mesh(
-        new THREE.CircleGeometry(0.042, 24),
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: dotOpa, side: THREE.DoubleSide, depthWrite: false })
-      )
-      dot.position.copy(ring.position)
-      markerGroup.add(dot)
+      sphere.position.set(replayPitch.plateX, replayPitch.plateY, mz)
+      markerGroup.add(sphere)
     })
     markerGroup.visible = false
     scene.add(markerGroup)
@@ -720,6 +789,10 @@ export default function BaseballScene({
     // ── 단계 1 설정 ──────────────────────────────────────────────────────
     replayStageRef.current = 1
     onReplayStageChangeRef.current?.(1)
+
+    // 2단계 궤도 카메라 초기 각도/반경 리셋 (CAM_S2 위치 기준)
+    replayOrbitAngleRef.current  = CAM_S2_ORBIT_ANGLE
+    replayOrbitRadiusRef.current = CAM_S2_ORBIT_RADIUS
 
     // ── 단계 2 진행 함수 (공 애니메이션 완료 시 render loop에서 호출) ────────
     advanceToStage2Ref.current = () => {
@@ -797,6 +870,8 @@ export default function BaseballScene({
     }
 
     // 이 단계에서 auto-advance 없이 유지 (수동 조작이므로)
+    // stage 2로 진입 시 궤도 카메라 각도 초기화 → CAM_S2 위치에서 시작
+    if (stage === 2) replayOrbitAngleRef.current = CAM_S2_ORBIT_ANGLE
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [replayStageOverride])
 
@@ -805,16 +880,30 @@ export default function BaseballScene({
     if (replayPitch !== null) return
     clearTimeout(stageTimerRef.current!)
     replayAnimRef.current = null
-    cameraTransRef.current = null
     advanceToStage2Ref.current = null
+
+    // 궤도 카메라 비활성화 (stage를 2 이외로 리셋)
+    replayStageRef.current = 1
 
     if (!sceneRef.current) return
     const scene = sceneRef.current
 
     if (replayBallRef.current) replayBallRef.current.visible = false
-    ;[replayTrailRef, replayDropLineRef].forEach(r => {
-      if (r.current) { scene.remove(r.current); r.current.geometry.dispose(); r.current = null }
-    })
+    if (replayTrailRef.current) {
+      scene.remove(replayTrailRef.current)
+      replayTrailRef.current.traverse(child => {
+        const mesh = child as THREE.Mesh
+        if (mesh.geometry) mesh.geometry.dispose()
+        if (mesh.material) {
+          if (Array.isArray(mesh.material)) mesh.material.forEach(m => m.dispose())
+          else (mesh.material as THREE.Material).dispose()
+        }
+      })
+      replayTrailRef.current = null
+    }
+    if (replayDropLineRef.current) {
+      scene.remove(replayDropLineRef.current); replayDropLineRef.current.geometry.dispose(); replayDropLineRef.current = null
+    }
     if (replayMarkerRef.current) {
       scene.remove(replayMarkerRef.current)
       replayMarkerRef.current.traverse(child => {
@@ -832,11 +921,48 @@ export default function BaseballScene({
       replayPlaneGroupRef.current = null
     }
 
-    // 카메라 1단계 위치로 복귀
+    // 카메라를 원래 게임 시점(CAM_S1)으로 부드럽게 복귀
     if (cameraRef.current) {
-      cameraRef.current.position.copy(CAM_S1.pos)
-      cameraRef.current.lookAt(CAM_S1.look)
+      cameraTransRef.current = {
+        startTime: performance.now(), duration: CAM_LERP_DUR,
+        fromPos: cameraRef.current.position.clone(),
+        toPos:   CAM_S1.pos.clone(),
+        fromLook: CAM_S2.look.clone(),   // 리플레이 종료 직전 시선 방향 근사
+        toLook:   CAM_S1.look.clone(),
+      }
     }
+  }, [replayPitch])
+
+  // ── Q/E 궤도 회전 · W/S 줌 · Q/E 입력 시 3단계 자동 전환 억제 ──────────
+  useEffect(() => {
+    if (!replayPitch) return
+    const onKey = (e: KeyboardEvent) => {
+      if (replayStageRef.current !== 2) return
+      const key = e.key.toLowerCase()
+      if (key === 'q') {
+        // Q: 오른쪽으로 회전 (방향 반전)
+        replayOrbitAngleRef.current += 0.1
+        clearTimeout(stageTimerRef.current!)   // 3단계 자동 전환 취소
+        stageTimerRef.current = null
+      } else if (key === 'e') {
+        // E: 왼쪽으로 회전 (방향 반전)
+        replayOrbitAngleRef.current -= 0.1
+        clearTimeout(stageTimerRef.current!)
+        stageTimerRef.current = null
+      } else if (key === 'w') {
+        // W: 줌인 (최소 1.5m)
+        replayOrbitRadiusRef.current = Math.max(1.5, replayOrbitRadiusRef.current - 0.3)
+        clearTimeout(stageTimerRef.current!)
+        stageTimerRef.current = null
+      } else if (key === 's') {
+        // S: 줌아웃 (최대 12m)
+        replayOrbitRadiusRef.current = Math.min(12, replayOrbitRadiusRef.current + 0.3)
+        clearTimeout(stageTimerRef.current!)
+        stageTimerRef.current = null
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [replayPitch])
 
   return (
@@ -885,12 +1011,36 @@ function buildHomePlate(scene: THREE.Scene) {
 
   // 주변 흙 (타석 구역 약간 밝게)
   const boxArea = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.0, 1.5),
+    new THREE.PlaneGeometry(3.4, 2.0),
     new THREE.MeshLambertMaterial({ color: 0xb8956a })
   )
   boxArea.rotation.x = -Math.PI / 2
-  boxArea.position.set(0, 0.011, 0)
+  boxArea.position.set(0, 0.011, 0.04)
   scene.add(boxArea)
+
+  // ── 배터박스 흰 라인 (KBO 규정 근사: 폭 1.22m × 길이 1.83m) ──────────────
+  // 홈플레이트 가장자리(±0.215)에서 0.15m 간격
+  const bbY    = 0.028     // 지면 바로 위
+  const bbW    = 1.22      // 폭 (m)
+  const bbL    = 1.83      // 길이 (m)
+  const bbInner = 0.215 + 0.15          // 내측 X (0.365)
+  const bbCenterX = bbInner + bbW / 2   // 각 박스 중심 X (0.975)
+  const bbCenterZ = 0.04               // 홈플레이트 Z 중심과 대략 일치
+  const bbMat  = new THREE.LineBasicMaterial({ color: 0xffffff })
+
+  ;[1, -1].forEach(side => {
+    const hw = bbW / 2, hl = bbL / 2
+    const pts = [
+      new THREE.Vector3(-hw, 0, -hl),
+      new THREE.Vector3( hw, 0, -hl),
+      new THREE.Vector3( hw, 0,  hl),
+      new THREE.Vector3(-hw, 0,  hl),
+      new THREE.Vector3(-hw, 0, -hl),
+    ]
+    const bbLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), bbMat)
+    bbLine.position.set(side * bbCenterX, bbY, bbCenterZ)
+    scene.add(bbLine)
+  })
 }
 
 // ── 공용 재질 헬퍼 ────────────────────────────────────────────────────────
@@ -1068,19 +1218,74 @@ export function buildBatter(scene: THREE.Scene, profile: BatterProfile): THREE.G
 }
 
 function buildStands(scene: THREE.Scene) {
-  const standMat = new THREE.MeshLambertMaterial({ color: 0x8b7355 })
-  // 좌우 더그아웃 느낌
-  const leftStand = new THREE.Mesh(new THREE.BoxGeometry(10, 4, 20), standMat)
-  leftStand.position.set(-20, 2, 20)
-  scene.add(leftStand)
+  // ── 더그아웃 (좌/우) ────────────────────────────────────────────────────
+  const dugoutWallMat = new THREE.MeshLambertMaterial({ color: 0x5d4037 })
+  const dugoutRoofMat = new THREE.MeshLambertMaterial({ color: 0x3e2723 })
+  ;[-1, 1].forEach(side => {
+    const dg = new THREE.Mesh(new THREE.BoxGeometry(8, 2.4, 14), dugoutWallMat)
+    dg.position.set(side * 18, 1.2, 10)
+    scene.add(dg)
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.3, 14.4), dugoutRoofMat)
+    roof.position.set(side * 18, 2.55, 10)
+    scene.add(roof)
+  })
 
-  const rightStand = new THREE.Mesh(new THREE.BoxGeometry(10, 4, 20), standMat)
-  rightStand.position.set(20, 2, 20)
-  scene.add(rightStand)
+  // ── 외야 잔디 줄무늬 (짙은/연한 교대) ──────────────────────────────────
+  const grassColors = [0x3d7a35, 0x5a9e50]
+  for (let i = 0; i < 8; i++) {
+    const strip = new THREE.Mesh(
+      new THREE.PlaneGeometry(80, 5),
+      new THREE.MeshLambertMaterial({ color: grassColors[i % 2] })
+    )
+    strip.rotation.x = -Math.PI / 2
+    strip.position.set(0, 0.012, 26 + i * 5)
+    scene.add(strip)
+  }
 
-  // 외야 담장
-  const wallMat = new THREE.MeshLambertMaterial({ color: 0x2d5a27 })
-  const wall = new THREE.Mesh(new THREE.BoxGeometry(60, 3, 1), wallMat)
-  wall.position.set(0, 1.5, 50)
-  scene.add(wall)
+  // ── 워닝 트랙 (외야 담장 앞 갈색 띠 4m) ─────────────────────────────────
+  const warnTrack = new THREE.Mesh(
+    new THREE.PlaneGeometry(74, 4),
+    new THREE.MeshLambertMaterial({ color: 0x9e7c50 })
+  )
+  warnTrack.rotation.x = -Math.PI / 2
+  warnTrack.position.set(0, 0.014, 48)
+  scene.add(warnTrack)
+
+  // ── 외야 담장 (청록 계열, 약간 높임) ─────────────────────────────────────
+  const wallBase = new THREE.Mesh(
+    new THREE.BoxGeometry(68, 4, 1),
+    new THREE.MeshLambertMaterial({ color: 0x1a5276 })
+  )
+  wallBase.position.set(0, 2, 51)
+  scene.add(wallBase)
+
+  // 담장 상단 노란 안전 패드 띠
+  const wallPad = new THREE.Mesh(
+    new THREE.BoxGeometry(68, 0.35, 0.6),
+    new THREE.MeshLambertMaterial({ color: 0xe8c300 })
+  )
+  wallPad.position.set(0, 4.2, 50.7)
+  scene.add(wallPad)
+
+  // 담장 광고판 패널
+  const adColors = [0xcc2200, 0xf39c12, 0x1abc9c, 0x8e44ad, 0x2980b9]
+  for (let i = 0; i < 5; i++) {
+    const panel = new THREE.Mesh(
+      new THREE.PlaneGeometry(10, 2.6),
+      new THREE.MeshLambertMaterial({ color: adColors[i] })
+    )
+    panel.position.set(-24 + i * 12, 2.2, 50.55)
+    scene.add(panel)
+  }
+
+  // ── 파울 라인 (홈플레이트 모서리 → 외야 담장) ──────────────────────────
+  const foulMat = new THREE.LineBasicMaterial({ color: 0xffffff })
+  ;[-1, 1].forEach(side => {
+    const pts = [
+      new THREE.Vector3(side * 0.215, 0.022, 0),
+      new THREE.Vector3(side * 38,    0.022, 51),
+    ]
+    const foulLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), foulMat)
+    scene.add(foulLine)
+  })
 }

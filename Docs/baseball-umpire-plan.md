@@ -1,7 +1,7 @@
 # ⚾ 야구 주심 판정 게임 기획서
 
-> 버전: v1.1
-> 작성일: 2026-04-16
+> 버전: v1.2
+> 작성일: 2026-04-17
 > 상태: 싱글플레이 완성 / 멀티플레이 완성 / 리플레이 시스템 완성 / 3D 캐릭터 애니메이션 진행 중
 
 ---
@@ -176,7 +176,9 @@
 ### 6.3 판정 결과 존 표시 (중앙 오버레이)
 - 판정 후 **화면 중앙에** 2D 존 결과 뷰 표시
 - 존 박스 비율은 **타자 체형에 맞는 실제 종횡비** 적용 (정사각형 고정 X)
+- 존 박스 · 공 위치 모두 동일 좌표계(`toSvgX/Y`)로 매핑 — 실제 판정 존과 시각이 정확히 일치
 - 공의 중심점 위치를 존 위에 마커로 표시
+- 보더라인 투구 시 존 테두리가 노란 점선으로 전환
 - 중간면/끝면 체크포인트 통과 여부 색상으로 구분
 
 ### 6.4 게임 종료 화면
@@ -186,6 +188,7 @@
 - 등급 (S/A/B/C/D)
 - **투구 히스토리 테이블**: 구수별 구종/구속/판정/결과 + ▶ 리플레이 버튼
 - Firestore에 기록 저장 후 TOP 10 랭킹 표시
+- **멀티 배틀 결과화면**도 싱글과 동일 UI: 플레이어 순위표 + 내 등급/점수 + 구종별 정확도 + 투구 기록 테이블 + ▶ 리플레이
 
 ### 6.5 키보드 단축키 요약
 
@@ -258,7 +261,7 @@ planeHitCount?: number    // 0~3, 2 이상 = 스트라이크
 | 스트라이크존 | 반투명 박스 (타자 체형 기반 자동 크기 조정) |
 | 타자 | GLB 모델 (`baseball-idle.glb`), BatterProfile 체형(키/체형)에 따른 scale 자동 조정, 좌타/우타 배치 |
 | 투수 | GLB 모델 (`baseball-pitching.glb`), 오버핸드 기반 4종 투구폼 (오버핸드 완성 / 3쿼터·사이드·언더 제작 예정) |
-| 공 | Three.js Sphere, CubicBezierCurve3 궤적 (구종별 고유 무브먼트) |
+| 공 | Three.js Sphere, CubicBezierCurve3 궤적 (구종별 고유 무브먼트), 블롭 그림자(CircleGeometry) — 높이에 따라 크기·불투명도 자동 조절 |
 | 조명 | 낮 경기 기준 Directional Light + Ambient |
 | 배경 | 야구장 외야 스탠드 |
 
@@ -464,11 +467,12 @@ planeHitCount?: number    // 0~3, 2 이상 = 스트라이크
 | 구속 단계 증가 | pages/GamePlay.tsx | 타자 3명마다 +10 km/h (3단계) |
 | 점수 계산 | utils/pitch.ts `calcScore()` | 콤보 배율, 보더라인 보너스, 거리 비례 감점 |
 | 미트 사운드 | utils/sound.ts | Web Audio API (노이즈 + 로우패스 + 오실레이터) |
-| 모드/난이도 선택 | pages/ModeSelect.tsx | 연습/일반/멀티 배틀 카드 UI + 난이도 2단계 선택, 직구+?×N 구종 칩 표시 |
+| 모드/난이도 선택 | pages/ModeSelect.tsx | 연습/일반/멀티 배틀 카드 UI + 난이도 2단계 선택, 직구+?×N 구종 칩 표시 (궤적 선택 단계 제거 — 베지어 고정, 물리모드 추후 공개) |
 | 게임플레이 | pages/GamePlay.tsx | ref 패턴(stale closure 방지), Fisher-Yates shuffle로 activePitchTypes 결정, `↑` 키 리플레이, 리플레이 중 피드백 숨김, `onScoreUpdate` 콜백 |
 | 결과 화면 | pages/ResultScreen.tsx | 등급(S~D), 구종별 정확도 SVG 차트, 투구 히스토리 테이블(▶ 리플레이 버튼), 전체화면 리플레이 모달, TOP 10 랭킹 |
 | Three.js 씬 | components/BaseballScene.tsx | 리플레이 3단계 카메라, CubicBezierCurve3 궤적, 3면 마커(Group, ring+dot per plane, 주황=충돌/회색=미통과), 2단계 공 숨김, GLB 타자(baseball-idle) / 투수(baseball-pitching) 씬 활성화, 체형별 scale 적용 |
 | 공 시인성 개선 | components/BaseballScene.tsx | 볼 반지름 0.037→0.058m, emissive 크림화이트 발광, 비행 중 12포인트 실시간 잔상(flightTrail) BufferGeometry |
+| 공 블롭 그림자 | components/BaseballScene.tsx | CircleGeometry 원형 그림자, 높이에 따라 scale·opacity 자동 조절, 주투구공·리플레이공 모두 적용 |
 | 물리 궤적 엔진 | utils/pitch.ts `buildPhysicsCurve` | RK4 수치적분, 중력·공기저항·마그누스 효과, 구현 완료 / UI 노출 보류 |
 | HUD | components/HUD.tsx | 구수, 점수, 콤보, 카운트다운, `↑ 리플레이` 힌트, 존 토글 |
 | 판정 피드백 | components/JudgmentFeedback.tsx | 구종/구속 표시, STRIKE!/BALL!, BORDERLINE!, 정오답, 점수변화, 10구종 한글명 완비 |
@@ -480,7 +484,7 @@ planeHitCount?: number    // 0~3, 2 이상 = 스트라이크
 | 멀티 배틀 RTDB | utils/umpire-rtdb.ts | 방 생성/참가/준비/시작/결과 제출, `updateLiveScore` (투구별 실시간 점수 갱신) |
 | 멀티 방 생성/참가 | pages/MultiRoomEnter.tsx | 난이도 선택 후 방 생성, 6자리 코드 입력 참가 |
 | 멀티 대기실 | pages/MultiLobby.tsx | 실시간 참가자 목록, 준비 버튼, 방장 시작 버튼 |
-| 멀티 결과 | pages/MultiResult.tsx | 실시간 순위표 (점수/정확도/등급), 완료 인원 집계 |
+| 멀티 결과 | pages/MultiResult.tsx | 싱글 ResultScreen과 동일 UI — 플레이어 순위표 + 내 등급/점수/정확도/콤보 + 구종별 정확도 바 차트 + 투구 히스토리 테이블(▶ 리플레이) + 리플레이 모달 |
 
 ### 11.2 미구현 / 향후 예정
 

@@ -104,7 +104,7 @@ export function generatePitch(
   // 구종별 구속 계산: 직구 기준 속도 × 구종 배율
   const baseSpeed = rng.float(config.speedMin, config.speedMax)
   const speedRatio = rng.float(PITCH_SPEED_RATIO[pitchType][0], PITCH_SPEED_RATIO[pitchType][1])
-  const speed = Math.round(baseSpeed * speedRatio)
+  const speed = Math.min(Math.round(baseSpeed * speedRatio), 170)  // 전체 구속 상한 170km/h
 
   const isBorderline = rng.next() < config.borderlineRatio
 
@@ -162,8 +162,8 @@ export function generatePitch(
     finalPlateY >= (batter.zoneBottom - 0.015) - BALL_RADIUS &&
     finalPlateY <= batter.zoneTop + BALL_RADIUS
 
-  const planeHitCount = [frontPlaneHit, midPlaneHit, endPlaneHit].filter(Boolean).length
-  const isStrike = planeHitCount >= 2
+  // 2026 KBSA ABS 판정: 중간면(mid plane)에 스치기만 해도 스트라이크
+  const isStrike = midPlaneHit
 
   void index
 
@@ -178,7 +178,6 @@ export function generatePitch(
     frontPlaneHit,
     midPlaneHit,
     endPlaneHit,
-    planeHitCount,
     isBorderline,
     playerCall: null,
     correct: undefined,

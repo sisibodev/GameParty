@@ -8,6 +8,8 @@ import {
   subscribeMultiRoom, unsubscribeMultiRoom,
   updateLiveScore,
 } from './utils/umpire-rtdb'
+import { saveUmpireRecord } from './utils/firestore'
+import { getMyTeam } from './utils/kboTeams'
 import ModeSelect from './pages/ModeSelect'
 import GamePlay from './pages/GamePlay'
 import ResultScreen from './pages/ResultScreen'
@@ -139,6 +141,19 @@ export default function BaseballUmpireGame() {
       finishMultiRoom(multiRoomId).catch(() => {})
     }
 
+    // 멀티 결과도 Firestore에 저장 (① 랭킹 반영)
+    saveUmpireRecord({
+      uid:         user.uid,
+      email:       user.email ?? 'anonymous',
+      difficulty:  DIFFICULTY_LABELS[difficulty],
+      totalPitches: r.totalPitches,
+      correctCount: r.correctCount,
+      score:        r.score,
+      maxCombo:     r.maxCombo,
+      pitchHistory: r.pitchHistory,
+      teamId:       getMyTeam()?.id,
+    }).catch(() => {})
+
     setPhase('multi_result')
   }
 
@@ -226,12 +241,14 @@ export default function BaseballUmpireGame() {
       <MultiResult
         roomId={multiRoomId}
         user={user}
+        difficulty={DIFFICULTY_LABELS[difficulty]}
         score={result.score}
         totalPitches={result.totalPitches}
         correctCount={result.correctCount}
         maxCombo={result.maxCombo}
         pitchHistory={result.pitchHistory}
         onRetry={() => setPhase('multi_lobby')}
+        onRetryWithNewSettings={() => setPhase('multi_enter')}
         onLobby={() => navigate('/')}
       />
     )

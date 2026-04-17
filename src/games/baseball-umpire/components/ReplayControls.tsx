@@ -84,14 +84,14 @@ export default function ReplayControls({
             {pitch.correct ? '✓ 정확' : '✗ 오심'}
           </span>
         </div>
-        {pitch.planeHitCount !== undefined && (
+        {pitch.midPlaneHit !== undefined && (
           <div style={styles.resultItem}>
-            <span style={styles.resultLabel}>ABS 통과</span>
+            <span style={styles.resultLabel}>중간면</span>
             <span style={{
               ...styles.resultValue,
-              color: (pitch.planeHitCount ?? 0) >= 2 ? '#ff5722' : '#2196f3',
+              color: pitch.midPlaneHit ? '#ff5722' : '#2196f3',
             }}>
-              {pitch.planeHitCount}/3면
+              {pitch.midPlaneHit ? '통과 ✓' : '미통과 ✗'}
             </span>
           </div>
         )}

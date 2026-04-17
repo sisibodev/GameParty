@@ -3,8 +3,11 @@ import { User } from 'firebase/auth'
 import { Timestamp } from 'firebase/firestore'
 import { BatterProfile, PitchParams, PitchType } from '../types'
 import { saveUmpireRecord, fetchTopRankings, RankEntry } from '../utils/firestore'
+import { getMyTeam, KBO_TEAMS } from '../utils/kboTeams'
 import BaseballScene from '../components/BaseballScene'
 import ReplayControls from '../components/ReplayControls'
+
+const DIFF_TABS = ['루키', '아마추어', '프로', '메이저'] as const
 
 const PITCH_NAMES: Record<PitchType, string> = {
   fastball:  '직구',
@@ -68,10 +71,11 @@ export default function ResultScreen({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [rankings, setRankings] = useState<RankEntry[]>([])
   const [rankLoading, setRankLoading] = useState(false)
+  const [rankTab, setRankTab] = useState(difficulty)  // 현재 플레이한 난이도로 초기화
 
   // 리플레이 모달
   const [replayPitch, setReplayPitch]               = useState<PitchParams | null>(null)
-  const [replaySpeed, setReplaySpeed]               = useState(1)
+  const [replaySpeed, setReplaySpeed]               = useState(0.5)
   const [replayPlaying, setReplayPlaying]           = useState(false)
   const [replayStage, setReplayStage]               = useState(1)
   const [replayStageOverride, setReplayStageOverride] = useState<number | undefined>(undefined)
@@ -90,20 +94,21 @@ export default function ResultScreen({
       score,
       maxCombo,
       pitchHistory,
+      teamId: getMyTeam()?.id,
     })
       .then(() => setSaveStatus('saved'))
       .catch(() => setSaveStatus('error'))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 랭킹 조회
+  // 난이도 탭별 랭킹 조회
   useEffect(() => {
     setRankLoading(true)
-    fetchTopRankings(10)
+    fetchTopRankings(10, rankTab)
       .then(r => setRankings(r))
       .catch(() => setRankings([]))
       .finally(() => setRankLoading(false))
-  }, [])
+  }, [rankTab])
 
   const openReplay = useCallback((pitch: PitchParams) => {
     setReplayStage(1)
@@ -204,7 +209,19 @@ export default function ResultScreen({
 
         {/* 랭킹 */}
         <div style={styles.rankingSection}>
-          <div style={styles.sectionTitle}>TOP 랭킹</div>
+          <div style={styles.sectionTitle}>🏆 TOP 10 랭킹</div>
+          {/* 난이도 탭 */}
+          <div style={styles.rankTabs}>
+            {DIFF_TABS.map(tab => (
+              <button
+                key={tab}
+                style={{ ...styles.rankTabBtn, ...(rankTab === tab ? styles.rankTabActive : {}) }}
+                onClick={() => setRankTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
           {rankLoading ? (
             <div style={{ color: '#aaa', fontSize: 13, textAlign: 'center', padding: '8px 0' }}>로딩 중...</div>
           ) : rankings.length === 0 ? (
@@ -218,7 +235,17 @@ export default function ResultScreen({
                     <span style={styles.rankNum}>{i + 1}</span>
                     <span style={styles.rankGrade}>{r.grade}</span>
                     <span style={styles.rankEmail}>{r.email.split('@')[0]}</span>
-                    <span style={styles.rankDiff}>{r.difficulty}</span>
+                    {r.teamId && (() => {
+                      const tm = KBO_TEAMS.find(t => t.id === r.teamId)
+                      return tm ? (
+                        <img
+                          src={tm.logoUrl}
+                          alt={tm.abbr}
+                          style={styles.rankTeamLogo}
+                          title={tm.name}
+                        />
+                      ) : null
+                    })()}
                     <span style={styles.rankScore}>{r.totalScore.toLocaleString()}</span>
                     <span style={styles.rankAcc}>{r.accuracy.toFixed(0)}%</span>
                     <span style={styles.rankDate}>{formatTs(r.playedAt)}</span>
@@ -408,18 +435,28 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   rankingSection: { marginBottom: 24, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 },
+  rankTabs: { display: 'flex', gap: 6, marginBottom: 10 },
+  rankTabBtn: {
+    flex: 1, padding: '5px 0', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)',
+    background: 'transparent', color: '#aaa', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+  },
+  rankTabActive: {
+    background: 'rgba(0,229,255,0.15)', border: '1px solid rgba(0,229,255,0.5)',
+    color: '#00e5ff', fontWeight: 700,
+  },
   rankList: { display: 'flex', flexDirection: 'column', gap: 4 },
   rankRow: {
     display: 'flex', alignItems: 'center', gap: 6,
     padding: '5px 8px', borderRadius: 6, fontSize: 12,
   },
-  rankNum:   { width: 18, color: '#aaa', fontWeight: 700, textAlign: 'center' },
-  rankGrade: { width: 18, fontWeight: 900, textAlign: 'center', color: '#ffd700' },
-  rankEmail: { flex: 1, color: '#eee', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  rankDiff:  { width: 52, color: '#aaa', fontSize: 11, textAlign: 'center' },
-  rankScore: { width: 62, fontWeight: 700, textAlign: 'right', color: '#fff' },
-  rankAcc:   { width: 38, color: '#9ecaf8', textAlign: 'right' },
-  rankDate:  { width: 60, color: '#777', fontSize: 11, textAlign: 'right' },
+  rankNum:       { width: 18, color: '#aaa', fontWeight: 700, textAlign: 'center' },
+  rankGrade:     { width: 18, fontWeight: 900, textAlign: 'center', color: '#ffd700' },
+  rankEmail:     { flex: 1, color: '#eee', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  rankTeamBadge: { fontSize: 10, fontWeight: 700, color: '#aaa', background: 'rgba(255,255,255,0.1)', borderRadius: 3, padding: '1px 4px', flexShrink: 0 },
+  rankTeamLogo: { width: 20, height: 20, objectFit: 'contain', flexShrink: 0 },
+  rankScore:     { width: 62, fontWeight: 700, textAlign: 'right', color: '#fff' },
+  rankAcc:       { width: 38, color: '#9ecaf8', textAlign: 'right' },
+  rankDate:      { width: 60, color: '#777', fontSize: 11, textAlign: 'right' },
   buttons: { display: 'flex', gap: 12 },
   retryBtn: {
     flex: 1, padding: '12px 0', borderRadius: 10, border: 'none',

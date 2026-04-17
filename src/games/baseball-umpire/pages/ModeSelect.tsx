@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { GameMode, Difficulty, TrajectoryMode, DIFFICULTY_CONFIG } from '../types'
+import { getMyTeam, KBOTeam } from '../utils/kboTeams'
+import TeamSelectModal from '../components/TeamSelectModal'
 
 interface Props {
   onStart: (mode: GameMode, difficulty: Difficulty, trajectoryMode: TrajectoryMode) => void
@@ -10,6 +12,8 @@ interface Props {
 export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
   const [step, setStep] = useState<'mode' | 'difficulty'>('mode')
   const [selectedMode, setSelectedMode] = useState<GameMode | null>(null)
+  const [myTeam, setMyTeam] = useState<KBOTeam | null>(getMyTeam)
+  const [showTeamModal, setShowTeamModal] = useState(false)
 
   const modes: { id: GameMode; label: string; desc: string; emoji: string }[] = [
     {
@@ -55,6 +59,30 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
     <div style={styles.wrap}>
       <button style={styles.backBtn} onClick={handleBack}>
         ← {backLabel}
+      </button>
+
+      {/* 우상단 선호구단 선택 버튼 */}
+      <button
+        style={{
+          ...styles.teamBtn,
+          borderColor: myTeam ? myTeam.color : 'rgba(255,255,255,0.2)',
+          background: myTeam ? `${myTeam.color}22` : 'rgba(255,255,255,0.04)',
+        }}
+        onClick={() => setShowTeamModal(true)}
+      >
+        {myTeam ? (
+          <>
+            <img src={myTeam.logoUrl} alt={myTeam.name} style={{ width: 32, height: 32, objectFit: 'contain' }} />
+            <span style={{ fontSize: 10, color: '#ccc', maxWidth: 68, textAlign: 'center', lineHeight: 1.3 }}>
+              {myTeam.name}
+            </span>
+          </>
+        ) : (
+          <>
+            <span style={{ fontSize: 20 }}>⚾</span>
+            <span style={{ fontSize: 10, color: '#aaa' }}>구단 선택</span>
+          </>
+        )}
       </button>
 
       <div style={styles.title}>⚾ Strike Zone</div>
@@ -142,6 +170,15 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
       )}
 
       {/* 물리 시뮬레이션 모드 선택 UI — 추후 공개 예정 */}
+
+      {/* 선호구단 선택 모달 */}
+      {showTeamModal && (
+        <TeamSelectModal
+          currentTeamId={myTeam?.id}
+          onSelect={team => { setMyTeam(team.id ? team : null); setShowTeamModal(false) }}
+          onClose={() => setShowTeamModal(false)}
+        />
+      )}
     </div>
   )
 }
@@ -154,6 +191,20 @@ const td: React.CSSProperties = {
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  teamBtn: {
+    position: 'absolute',
+    top: 20, right: 20,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+    padding: '8px 12px',
+    borderRadius: 10,
+    border: '1px solid',
+    cursor: 'pointer',
+    minWidth: 76,
+    transition: 'all 0.15s',
+  },
   wrap: {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #0a1628 0%, #1a2e44 100%)',

@@ -1,5 +1,10 @@
 import { PitchPhase } from '../types'
 
+interface TopRecord {
+  email: string
+  score: number
+}
+
 interface Props {
   pitchCount: number     // 현재 구수 (1-based)
   totalPitches: number   // 30
@@ -9,11 +14,12 @@ interface Props {
   countdown: number
   showZone: boolean
   onToggleZone?: () => void
+  topRecord?: TopRecord  // 현재 난이도 1위 기록
 }
 
 export default function HUD({
   pitchCount, totalPitches, score, combo,
-  pitchPhase, countdown, showZone, onToggleZone,
+  pitchPhase, countdown, showZone, onToggleZone, topRecord,
 }: Props) {
   return (
     <div style={styles.hud}>
@@ -34,24 +40,31 @@ export default function HUD({
         )}
       </div>
 
-      {/* 중앙: 판정 중 단축키 안내 */}
+      {/* 중앙: 1위 기록 + 판정 단축키 */}
       <div style={styles.center}>
-        {pitchPhase === 'judging' ? (
-          <div style={styles.keyHint}>
-            <span style={styles.keyItem}><span style={styles.keyBadge}>←</span><span style={styles.keyBadge}>B</span> 볼</span>
-            <span style={styles.keySep}>|</span>
-            <span style={styles.keyItem}>스트라이크 <span style={styles.keyBadge}>S</span><span style={styles.keyBadge}>→</span></span>
-          </div>
-        ) : (
-          <div style={styles.keyHintDim}>
-            <span style={styles.keyBadgeDim}>←</span><span style={styles.keyBadgeDim}>B</span>
-            <span style={styles.dimSep}> 볼 · 스트라이크 </span>
-            <span style={styles.keyBadgeDim}>S</span><span style={styles.keyBadgeDim}>→</span>
-            <span style={styles.dimSep}> · </span>
-            <span style={styles.keyBadgeDim}>↑</span>
-            <span style={styles.dimSep}> 리플레이</span>
-          </div>
-        )}
+        <div style={styles.centerCol}>
+          {pitchPhase === 'judging' ? (
+            <div style={styles.keyHint}>
+              <span style={styles.keyItem}><span style={styles.keyBadge}>←</span><span style={styles.keyBadge}>B</span> 볼</span>
+              <span style={styles.keySep}>|</span>
+              <span style={styles.keyItem}>스트라이크 <span style={styles.keyBadge}>S</span><span style={styles.keyBadge}>→</span></span>
+            </div>
+          ) : (
+            <div style={styles.keyHintDim}>
+              <span style={styles.keyBadgeDim}>←</span><span style={styles.keyBadgeDim}>B</span>
+              <span style={styles.dimSep}> 볼 · 스트라이크 </span>
+              <span style={styles.keyBadgeDim}>S</span><span style={styles.keyBadgeDim}>→</span>
+              <span style={styles.dimSep}> · </span>
+              <span style={styles.keyBadgeDim}>↑</span>
+              <span style={styles.dimSep}> 리플레이</span>
+            </div>
+          )}
+          {topRecord && (
+            <div style={styles.topRecord}>
+              🏆 1위: {topRecord.email.split('@')[0]} {topRecord.score.toLocaleString()}점
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 판정 카운트다운 */}
@@ -87,6 +100,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   left:   { display: 'flex', alignItems: 'center' },
   center: { flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' },
+  centerCol: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
+  topRecord: { fontSize: 11, color: '#ffd700', opacity: 0.8, letterSpacing: 0.3 },
   keyHint: {
     display: 'flex', alignItems: 'center', gap: 8,
     background: 'rgba(255,255,255,0.08)',

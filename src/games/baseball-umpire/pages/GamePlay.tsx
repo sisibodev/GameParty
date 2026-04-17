@@ -6,8 +6,14 @@ import {
 import { SeededRng, randomSeed } from '../utils/rng'
 import { generateBatters } from '../utils/batter'
 import { generatePitch, calcScore, BREAKING_BALL_POOL } from '../utils/pitch'
+import { fetchTopRankings } from '../utils/firestore'
 import BaseballScene from '../components/BaseballScene'
 import HUD from '../components/HUD'
+
+// 난이도 → 한글 레이블 (Firestore 조회용)
+const DIFF_LABEL: Record<Difficulty, string> = {
+  rookie: '루키', amateur: '아마추어', pro: '프로', major: '메이저',
+}
 import LeftPanel from '../components/LeftPanel'
 import JudgmentFeedbackUI from '../components/JudgmentFeedback'
 import PitchKey from '../components/PitchKey'
@@ -69,10 +75,13 @@ export default function GamePlay({
 
   // 리플레이
   const [replayPitch, setReplayPitch]     = useState<PitchParams | null>(null)
-  const [replaySpeed, setReplaySpeed]     = useState(1)
+  const [replaySpeed, setReplaySpeed]     = useState(0.5)
   const [replayPlaying, setReplayPlaying] = useState(false)
   const [replayStage, setReplayStage]     = useState(1)
   const [replayStageOverride, setReplayStageOverride] = useState<number | undefined>(undefined)
+
+  // ② 현재 난이도 1위 기록 (HUD 표시용)
+  const [topRecord, setTopRecord] = useState<{ email: string; score: number } | undefined>(undefined)
 
   // ── Refs (stale closure 방지용 최신값 저장) ──────────────────────────────
   const rngRef            = useRef<SeededRng>(new SeededRng(initialSeed ?? randomSeed()))
@@ -133,6 +142,18 @@ export default function GamePlay({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ② 현재 난이도 1위 기록 조회
+  useEffect(() => {
+    fetchTopRankings(1, DIFF_LABEL[difficulty])
+      .then(records => {
+        if (records.length > 0) {
+          setTopRecord({ email: records[0].email, score: records[0].totalScore })
+        }
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── 존 잠깐 표시 (투구 전) ───────────────────────────────────────────────
   const showZoneTemporarily = useCallback(() => {
     if (mode === 'practice') return   // 연습 모드는 항상 표시
@@ -149,12 +170,13 @@ export default function GamePlay({
     setAndRefPitchPhase('wind_up')
 
     windupTimerRef.current = setTimeout(() => {
-      // 타자 2명마다 구속 10km/h 증가 (0,1→+0 / 2,3→+10 / 4,5→+20)
+      // 타자 2명마다 구속 10km/h 증가 (0,1→+0 / 2,3→+10 / 4,5→+20), 전체 상한 170
+      const GLOBAL_SPEED_CAP = 170
       const speedBonus = Math.floor(bidx / 2) * 10
       const boostedConfig = {
         ...config,
-        speedMin: config.speedMin + speedBonus,
-        speedMax: config.speedMax + speedBonus,
+        speedMin: Math.min(config.speedMin + speedBonus, GLOBAL_SPEED_CAP - 10),
+        speedMax: Math.min(config.speedMax + speedBonus, GLOBAL_SPEED_CAP),
       }
 
       // 10구마다 폼 변경 (세그먼트: 0~9, 10~19, 20~29)
@@ -439,6 +461,7 @@ export default function GamePlay({
         countdown={countdown}
         showZone={showZone}
         onToggleZone={mode === 'practice' ? undefined : () => setShowZone(v => !v)}
+        topRecord={topRecord}
       />
 
       {/* 왼쪽 고정 패널: 타자 정보 + 미니 존 + 멀티 순위 */}
