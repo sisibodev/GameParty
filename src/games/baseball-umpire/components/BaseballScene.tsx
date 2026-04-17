@@ -430,31 +430,36 @@ export default function BaseballScene({
         replayBallRef.current.position.copy(curve.getPoint(t))
 
         // 궤적: 공이 지나간 부분(0→t)만 튜브로 그리기
+        // ※ curve.getPoints(n)은 전체(0→1)를 샘플링하므로,
+        //   직접 getPoint(u * t)로 0→t 구간만 샘플링해야 함
         if (replayTrailRef.current && t > 0.01) {
           replayTrailRef.current.visible = true
-          const nSeg = Math.max(2, Math.floor(t * 60))
-          const pts  = curve.getPoints(nSeg)
-          if (pts.length >= 2) {
-            const tc = new THREE.CatmullRomCurve3(pts)
-            replayTrailRef.current.children.forEach((child, i) => {
-              const mesh = child as THREE.Mesh
-              mesh.geometry.dispose()
-              mesh.geometry = new THREE.TubeGeometry(tc, Math.max(1, nSeg - 1), TRAIL_LAYERS[i].radius, 8, false)
-            })
+          const nShown = Math.max(2, Math.round(t * 60) + 1)
+          const pts: THREE.Vector3[] = []
+          for (let i = 0; i < nShown; i++) {
+            pts.push(curve.getPoint((i / (nShown - 1)) * t))
           }
+          const tc = new THREE.CatmullRomCurve3(pts)
+          replayTrailRef.current.children.forEach((child, i) => {
+            const mesh = child as THREE.Mesh
+            mesh.geometry.dispose()
+            mesh.geometry = new THREE.TubeGeometry(tc, Math.max(1, nShown - 1), TRAIL_LAYERS[i].radius, 8, false)
+          })
         }
 
         if (t >= 1) {
           replayAnimRef.current.done = true
-          // 공 도착 시 전체 궤적으로 최종 확정 (이후 렌더 루프에서 더 갱신 안 함)
+          // 공 도착 시 전체 궤적(0→1)으로 최종 확정
           if (replayTrailRef.current) {
-            const pts = curve.getPoints(60)
-            const tc  = new THREE.CatmullRomCurve3(pts)
+            const nFull = 60
+            const pts: THREE.Vector3[] = []
+            for (let i = 0; i <= nFull; i++) pts.push(curve.getPoint(i / nFull))
+            const tc = new THREE.CatmullRomCurve3(pts)
             replayTrailRef.current.visible = true
             replayTrailRef.current.children.forEach((child, i) => {
               const mesh = child as THREE.Mesh
               mesh.geometry.dispose()
-              mesh.geometry = new THREE.TubeGeometry(tc, 60, TRAIL_LAYERS[i].radius, 8, false)
+              mesh.geometry = new THREE.TubeGeometry(tc, nFull, TRAIL_LAYERS[i].radius, 8, false)
             })
           }
           // 단계 1 완료 → 단계 2로 진행
