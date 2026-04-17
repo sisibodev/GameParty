@@ -62,7 +62,6 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
   const frontHit    = pitch.frontPlaneHit
   const midHit      = pitch.midPlaneHit
   const endHit      = pitch.endPlaneHit
-  const planeCount  = [frontHit, midHit, endHit].filter(Boolean).length
   const hasPlaneData = frontHit !== undefined
 
   // 홈플레이트 (존 하단과 8px 간격)
