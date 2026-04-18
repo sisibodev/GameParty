@@ -8,6 +8,7 @@ import {
   applyPitchConfig,
 } from '../utils/pitch'
 import { loadPitchConfig, savePitchConfig } from '../utils/pitchConfig'
+import PitchPreview3D from '../components/PitchPreview3D'
 
 interface Props {
   onBack: () => void
@@ -128,6 +129,7 @@ export default function PitchEditor({ onBack }: Props) {
   const [selectedForm, setSelectedForm] = useState<PitcherForm>('overhand')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [loading, setLoading] = useState(true)
+  const [showPreview, setShowPreview] = useState(false)
 
   // Firestore에서 현재 설정 로드
   useEffect(() => {
@@ -214,6 +216,12 @@ export default function PitchEditor({ onBack }: Props) {
         <button style={s.backBtn} onClick={onBack}>← 뒤로</button>
         <div style={s.headerTitle}>⚙️ 구종 무브먼트 편집 (관리자)</div>
         <div style={s.headerActions}>
+          <button
+            style={s.previewBtn}
+            onClick={() => setShowPreview(true)}
+          >
+            ⚾ 투구 미리보기
+          </button>
           <button style={s.resetBtn} onClick={handleReset}>초기화</button>
           <button
             style={{ ...s.saveBtn, opacity: saveStatus === 'saving' ? 0.6 : 1 }}
@@ -316,9 +324,28 @@ export default function PitchEditor({ onBack }: Props) {
 
           <div style={s.note}>
             💡 저장하면 Firestore에 반영되어 모든 클라이언트의 다음 게임부터 적용됩니다.
+            <br />⚾ <strong>투구 미리보기</strong>는 현재 편집 중인 값을 즉시 반영합니다 (저장 전에도 확인 가능).
           </div>
+
+          {/* 에디터 내 투구 미리보기 버튼 (우측 패널 하단) */}
+          <button
+            style={s.inlinePrevBtn}
+            onClick={() => setShowPreview(true)}
+          >
+            ⚾ 지금 선택한 설정으로 투구 미리보기
+          </button>
         </div>
       </div>
+
+      {/* 투구 미리보기 모달 */}
+      {showPreview && (
+        <PitchPreview3D
+          pitchType={selectedType}
+          form={selectedForm}
+          config={config}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </div>
   )
 }
@@ -382,6 +409,28 @@ const s: Record<string, React.CSSProperties> = {
   },
   statusOk: { color: '#4caf50', fontSize: 13 },
   statusErr: { color: '#f44336', fontSize: 13 },
+  previewBtn: {
+    background: 'rgba(255,87,34,0.2)',
+    border: '1px solid rgba(255,87,34,0.5)',
+    color: '#ff8a65',
+    padding: '6px 16px',
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 700,
+  },
+  inlinePrevBtn: {
+    marginTop: 20,
+    width: '100%',
+    background: 'rgba(255,87,34,0.15)',
+    border: '1px solid rgba(255,87,34,0.4)',
+    color: '#ff8a65',
+    padding: '10px',
+    borderRadius: 8,
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 700,
+  },
   body: {
     display: 'flex',
     flex: 1,

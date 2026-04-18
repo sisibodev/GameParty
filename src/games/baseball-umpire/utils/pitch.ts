@@ -303,6 +303,39 @@ export function buildPitchCurve(
   return new THREE.CubicBezierCurve3(start, ctrl1, ctrl2, end)
 }
 
+/**
+ * 명시적 FullPitchConfig를 받아 베지어 커브 생성
+ * 관리자 에디터 프리뷰 전용 — 모듈 레벨 override와 독립적으로 동작
+ */
+export function buildPitchCurveWithConfig(
+  params: PitchParams,
+  form: PitcherForm,
+  config: FullPitchConfig,
+): THREE.CubicBezierCurve3 {
+  const rp  = RELEASE_POINT[form]
+  const bp  = config.pitchBreak[params.pitchType]
+  const fb  = config.formBreakMult[form]
+
+  const startZ = MOUND_DISTANCE - rp.z
+  const start  = new THREE.Vector3(rp.x, rp.y, startZ)
+  const end    = new THREE.Vector3(params.plateX, params.plateY, -0.30)
+
+  const totalZ = startZ - (-0.30)
+  const lerpOnLine = (t: number) => new THREE.Vector3(
+    rp.x + (params.plateX - rp.x) * t,
+    rp.y  + (params.plateY - rp.y) * t,
+    startZ - totalZ * t,
+  )
+
+  const base1 = lerpOnLine(bp.t1)
+  const base2 = lerpOnLine(bp.t2)
+
+  const ctrl1 = new THREE.Vector3(base1.x, base1.y + bp.y1 * fb.y1, base1.z)
+  const ctrl2 = new THREE.Vector3(base2.x, base2.y + bp.y2 * fb.y2, base2.z)
+
+  return new THREE.CubicBezierCurve3(start, ctrl1, ctrl2, end)
+}
+
 // ── 구종별 스핀/물리 파라미터 ──────────────────────────────────────────────────
 interface SpinProfile { spinX: number; spinZ: number; drag: number }
 const SPIN_PROFILE: Record<PitchType, SpinProfile> = {
