@@ -9,10 +9,13 @@ import {
   updateLiveScore,
 } from './utils/umpire-rtdb'
 import { saveUmpireRecord } from './utils/firestore'
+import { loadAndApplyPitchConfig } from './utils/pitchConfig'
+import { isAdmin } from './utils/admin'
 import { getMyTeam } from './utils/kboTeams'
 import ModeSelect from './pages/ModeSelect'
 import GamePlay from './pages/GamePlay'
 import ResultScreen from './pages/ResultScreen'
+import PitchEditor from './pages/PitchEditor'
 import MultiRoomEnter from './pages/MultiRoomEnter'
 import MultiLobby from './pages/MultiLobby'
 import MultiResult from './pages/MultiResult'
@@ -21,6 +24,7 @@ type Phase =
   | 'select'
   | 'playing'
   | 'result'
+  | 'pitch_editor'
   | 'multi_enter'
   | 'multi_lobby'
   | 'multi_playing'
@@ -50,6 +54,13 @@ const DIFFICULTY_LABELS: Record<Difficulty, string> = {
 export default function BaseballUmpireGame() {
   const navigate = useNavigate()
   const { user } = useAuth()
+
+  const adminUser = isAdmin(user?.email)
+
+  // 앱 시작 시 Firestore에서 pitch config 로드 & 적용
+  useEffect(() => {
+    loadAndApplyPitchConfig().catch(() => {})
+  }, [])
 
   const [phase, setPhase]             = useState<Phase>('select')
   const [mode, setMode]               = useState<GameMode>('normal')
@@ -163,9 +174,14 @@ export default function BaseballUmpireGame() {
       <ModeSelect
         onStart={handleStart}
         onMultiBattle={handleMultiBattle}
+        onPitchEditor={adminUser ? () => setPhase('pitch_editor') : undefined}
         onBack={() => navigate('/')}
       />
     )
+  }
+
+  if (phase === 'pitch_editor') {
+    return <PitchEditor onBack={() => setPhase('select')} />
   }
 
   if (phase === 'playing') {

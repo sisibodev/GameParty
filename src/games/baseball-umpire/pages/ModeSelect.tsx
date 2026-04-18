@@ -6,10 +6,11 @@ import TeamSelectModal from '../components/TeamSelectModal'
 interface Props {
   onStart: (mode: GameMode, difficulty: Difficulty, trajectoryMode: TrajectoryMode) => void
   onMultiBattle: () => void
+  onPitchEditor?: () => void  // 관리자 전용 (undefined이면 버튼 미표시)
   onBack: () => void
 }
 
-export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
+export default function ModeSelect({ onStart, onMultiBattle, onPitchEditor, onBack }: Props) {
   const [step, setStep] = useState<'mode' | 'difficulty'>('mode')
   const [selectedMode, setSelectedMode] = useState<GameMode | null>(null)
   const [myTeam, setMyTeam] = useState<KBOTeam | null>(getMyTeam)
@@ -60,6 +61,16 @@ export default function ModeSelect({ onStart, onMultiBattle, onBack }: Props) {
       <button style={styles.backBtn} onClick={handleBack}>
         ← {backLabel}
       </button>
+
+      {/* 관리자 버튼 (좌하단) */}
+      {onPitchEditor && (
+        <button
+          style={styles.adminBtn}
+          onClick={onPitchEditor}
+        >
+          ⚙️ 관리자
+        </button>
+      )}
 
       {/* 우상단 선호구단 선택 버튼 */}
       <button
@@ -191,6 +202,18 @@ const td: React.CSSProperties = {
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  adminBtn: {
+    position: 'absolute',
+    bottom: 20, left: 20,
+    background: 'rgba(255,87,34,0.1)',
+    border: '1px solid rgba(255,87,34,0.35)',
+    color: '#ff8a65',
+    padding: '6px 14px',
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontSize: 12,
+    fontWeight: 600,
+  },
   teamBtn: {
     position: 'absolute',
     top: 20, right: 20,

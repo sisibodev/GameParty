@@ -105,6 +105,42 @@ const FORM_BREAK_MULT: Record<PitcherForm, { y1: number; y2: number }> = {
   underhand:     { y1: 0.20, y2: 0.35 },
 }
 
+// ── 관리자 런타임 오버라이드 ──────────────────────────────────────────────────
+export interface DirectionalMovementExport {
+  xBase: number; xRange: number
+  yBase: number; yRange: number
+  forceDown?: boolean
+}
+export interface BreakProfileExport { t1: number; y1: number; t2: number; y2: number }
+export interface FullPitchConfig {
+  pitchMovement:  Record<PitchType, DirectionalMovementExport>
+  formMult:       Record<PitcherForm, { x: number; y: number }>
+  pitchBreak:     Record<PitchType, BreakProfileExport>
+  formBreakMult:  Record<PitcherForm, { y1: number; y2: number }>
+}
+
+let _configOverride: FullPitchConfig | null = null
+
+/** 관리자 에디터에서 저장한 설정을 런타임에 적용 */
+export function applyPitchConfig(config: FullPitchConfig) {
+  _configOverride = config
+}
+
+/** 현재 기본값을 FullPitchConfig 형태로 반환 (에디터 초기값으로 사용) */
+export function getDefaultPitchConfig(): FullPitchConfig {
+  return {
+    pitchMovement:  structuredClone(PITCH_MOVEMENT) as Record<PitchType, DirectionalMovementExport>,
+    formMult:       structuredClone(FORM_MULT),
+    pitchBreak:     structuredClone(PITCH_BREAK) as Record<PitchType, BreakProfileExport>,
+    formBreakMult:  structuredClone(FORM_BREAK_MULT),
+  }
+}
+
+/** 현재 활성 설정 반환 (오버라이드 있으면 오버라이드, 없으면 기본값) */
+export function getActivePitchConfig(): FullPitchConfig {
+  return _configOverride ?? getDefaultPitchConfig()
+}
+
 /** 보더라인 공: 존 경계 ±5% 이내에 의도적으로 위치 */
 function borderlineX(rng: SeededRng, batter: BatterProfile): number {
   const side = rng.next() < 0.5 ? 1 : -1
@@ -134,8 +170,11 @@ export function generatePitch(
   const speed = Math.min(Math.round(baseSpeed * speedRatio), 170)
 
   const isBorderline = rng.next() < config.borderlineRatio
-  const mv = PITCH_MOVEMENT[pitchType]
-  const fm = FORM_MULT[pitcherForm]
+  // 런타임 오버라이드 우선 적용
+  const _pm = _configOverride?.pitchMovement ?? PITCH_MOVEMENT
+  const _fm = _configOverride?.formMult      ?? FORM_MULT
+  const mv = _pm[pitchType]
+  const fm = _fm[pitcherForm]
 
   let plateX: number
   let plateY: number
@@ -240,8 +279,8 @@ export function buildPitchCurve(
   form: PitcherForm,
 ): THREE.CubicBezierCurve3 {
   const rp = RELEASE_POINT[form]
-  const bp = PITCH_BREAK[params.pitchType]
-  const fb = FORM_BREAK_MULT[form]
+  const bp = (_configOverride?.pitchBreak    ?? PITCH_BREAK)[params.pitchType]
+  const fb = (_configOverride?.formBreakMult ?? FORM_BREAK_MULT)[form]
 
   const startZ = MOUND_DISTANCE - rp.z
   const start  = new THREE.Vector3(rp.x, rp.y, startZ)
