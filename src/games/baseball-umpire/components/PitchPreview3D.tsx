@@ -134,7 +134,9 @@ export default function PitchPreview3D({ pitchType, form, config }: Props) {
     const sun = new THREE.DirectionalLight(0xffffff, 1.0)
     sun.position.set(5, 10, 5)
     scene.add(sun)
-    scene.add(Object.assign(new THREE.DirectionalLight(0x4488ff, 0.3), { position: new THREE.Vector3(-5, 3, -5) }))
+    const fill = new THREE.DirectionalLight(0x4488ff, 0.3)
+    fill.position.set(-5, 3, -5)
+    scene.add(fill)
 
     // 잔디
     const ground = new THREE.Mesh(
@@ -145,15 +147,20 @@ export default function PitchPreview3D({ pitchType, form, config }: Props) {
     scene.add(ground)
 
     // 마운드
-    scene.add(Object.assign(
-      new THREE.Mesh(new THREE.CylinderGeometry(2.7, 3.0, 0.25, 32), new THREE.MeshLambertMaterial({ color: 0x8b6914 })),
-      { position: new THREE.Vector3(0, 0.125, MOUND_DISTANCE) },
-    ))
+    const mound = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.7, 3.0, 0.25, 32),
+      new THREE.MeshLambertMaterial({ color: 0x8b6914 }),
+    )
+    mound.position.set(0, 0.125, MOUND_DISTANCE)
+    scene.add(mound)
+
     // 투수판
-    scene.add(Object.assign(
-      new THREE.Mesh(new THREE.BoxGeometry(0.61, 0.06, 0.15), new THREE.MeshLambertMaterial({ color: 0xffffff })),
-      { position: new THREE.Vector3(0, 0.27, MOUND_DISTANCE - 0.3) },
-    ))
+    const rubber = new THREE.Mesh(
+      new THREE.BoxGeometry(0.61, 0.06, 0.15),
+      new THREE.MeshLambertMaterial({ color: 0xffffff }),
+    )
+    rubber.position.set(0, 0.27, MOUND_DISTANCE - 0.3)
+    scene.add(rubber)
 
     // 홈플레이트
     const plateShape = new THREE.Shape()
