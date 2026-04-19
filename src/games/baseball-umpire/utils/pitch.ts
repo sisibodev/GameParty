@@ -225,7 +225,9 @@ export function generatePitch(
       }
     } else {
       // 난이도 높을수록 볼이 존 경계선 근처에만 배치
-      const dir = rng.int(0, 4)
+      // forceDown 구종(포크볼·싱커 등)은 위로 나가는 볼(dir=1) 미생성 → 상승 궤적 버그 방지
+      let dir = rng.int(0, 4)
+      if (dir === 1 && mv.forceDown) dir = 2   // 낙하계는 아래쪽 볼로 대체
       if (dir === 0) {
         plateX = batter.zoneHalfWidth + rng.float(config.ballMarginMin, config.ballMarginMax)
         if (rng.next() < 0.5) plateX = -plateX
@@ -252,9 +254,14 @@ export function generatePitch(
   const mvY = mv.forceDown ? Math.min(rawMvY, -0.05) : rawMvY
 
   // 보더라인 공: 무브먼트를 추가하지 않고 존 경계선 위치 그대로 사용
-  // (무브먼트까지 더하면 실제 도착점이 존 훨씬 밖으로 벗어나는 버그 방지)
-  const finalPlateX = isBorderline ? plateX : plateX + mvX
-  const finalPlateY = isBorderline ? plateY : plateY + mvY
+  // 일반 공: 무브먼트 적용 후 존 경계 최대 0.28m 이내로 클램프 (너무 멀리 벗어나는 버그 방지)
+  const MAX_OUT_X = batter.zoneHalfWidth + 0.28
+  const MAX_OUT_Y_TOP = batter.zoneTop    + 0.25
+  const MAX_OUT_Y_BOT = batter.zoneBottom - 0.25
+  const rawFinalX = isBorderline ? plateX : plateX + mvX
+  const rawFinalY = isBorderline ? plateY : plateY + mvY
+  const finalPlateX = Math.max(-MAX_OUT_X, Math.min(MAX_OUT_X, rawFinalX))
+  const finalPlateY = Math.max(MAX_OUT_Y_BOT, Math.min(MAX_OUT_Y_TOP, rawFinalY))
 
   // KBO ABS 3-plane 판정
   const frontHalfW = batter.zoneHalfWidth + 0.02
@@ -336,11 +343,14 @@ export function buildPitchCurve(
     base1.y + bp.y1 * fb.y1,
     base1.z,
   )
-  // ctrl2.y 안전망: ctrl2가 plateY보다 낮으면 bezier 끝에서 공이 위로 솟는 버그 발생
   const ctrl2RawY = base2.y + bp.y2 * fb.y2
+  // ctrl2.y 안전망: 하강 궤적(릴리즈 > 도달)에서만 클램프 적용
+  // 상승 궤적(언더핸드 → 높은 타깃)에서 클램프하면 오히려 끝에서 튀어오르는 버그 유발
+  const isDescending = rp.y > params.plateY
+  const ctrl2Y = (isDescending && ctrl2RawY < params.plateY) ? params.plateY : ctrl2RawY
   const ctrl2 = new THREE.Vector3(
     base2.x + (bp.x2 ?? 0) * (fb.x2 ?? 1),
-    Math.max(ctrl2RawY, params.plateY),
+    ctrl2Y,
     base2.z,
   )
 
@@ -380,9 +390,11 @@ export function buildPitchCurveWithConfig(
     base1.z,
   )
   const ctrl2RawY = base2.y + bp.y2 * fb.y2
+  const isDescending2 = rp.y > params.plateY
+  const ctrl2Y2 = (isDescending2 && ctrl2RawY < params.plateY) ? params.plateY : ctrl2RawY
   const ctrl2 = new THREE.Vector3(
     base2.x + (bp.x2 ?? 0) * (fb.x2 ?? 1),
-    Math.max(ctrl2RawY, params.plateY),
+    ctrl2Y2,
     base2.z,
   )
 
