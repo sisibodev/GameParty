@@ -300,7 +300,7 @@ export default function GamePlay({
     feedbackTimerRef.current = setTimeout(() => {
       setFeedbackVisible(false)
       setFeedback(null)
-    }, 1800)
+    }, 1000)
 
     const bidx = batterIndexRef.current
     pitchInBatterRef.current++
@@ -308,7 +308,7 @@ export default function GamePlay({
     // 5구 소화 시 타자 교체, 30구 완료 시 게임 종료
     advanceTimerRef.current = setTimeout(() => {
       doAdvanceRef.current(bidx, newScore)
-    }, 2000)
+    }, 1200)
   }
 
   // ── 공 도착 ──────────────────────────────────────────────────────────────

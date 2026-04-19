@@ -62,7 +62,7 @@ const PITCH_MOVEMENT: Record<PitchType, DirectionalMovement> = {
   cutter:   { xBase: -0.13, xRange: 0.04, yBase: -0.07, yRange: 0.03 },              // 3루방향 짧은 컷
   changeup: { xBase: +0.10, xRange: 0.05, yBase: -0.24, yRange: 0.06, forceDown: true }, // 암사이드+낙하
   slider:   { xBase: -0.16, xRange: 0.05, yBase: -0.20, yRange: 0.05 },              // 3루방향 횡변화+낙하
-  sweeper:  { xBase: -0.20, xRange: 0.05, yBase: -0.10, yRange: 0.03 },              // 크게 좌로 스윕
+  sweeper:  { xBase: -0.12, xRange: 0.04, yBase: -0.10, yRange: 0.03 },              // 좌로 스윕
   curve:    { xBase: -0.12, xRange: 0.05, yBase: -0.44, yRange: 0.08 },              // 큰 낙차+약간 좌
   splitter: { xBase:  0.00, xRange: 0.06, yBase: -0.34, yRange: 0.07, forceDown: true }, // 직선 급강하
   forkball: { xBase:  0.00, xRange: 0.05, yBase: -0.44, yRange: 0.09, forceDown: true }, // 더 큰 낙차
@@ -104,7 +104,7 @@ const PITCH_BREAK: Record<PitchType, BreakProfile> = {
   slider:   { t1: 0.30, x1: +0.10, y1: +0.06,  t2: 0.76, x2: -0.06, y2: -0.12 },
 
   // 스위퍼 ─ 초반 직선 → 후반 3루(x-)방향 크게 스윕. 수직변화 작음
-  sweeper:  { t1: 0.28, x1:  0.00, y1: +0.02,  t2: 0.73, x2: -0.16, y2: -0.05 },
+  sweeper:  { t1: 0.28, x1:  0.00, y1: +0.02,  t2: 0.73, x2: -0.08, y2: -0.05 },
 
   // 체인지업 ─ 직구 위장(초반 약상승) → 암사이드로 낙하
   changeup: { t1: 0.33, x1: +0.03, y1: +0.08,  t2: 0.76, x2: +0.06, y2: -0.20 },
