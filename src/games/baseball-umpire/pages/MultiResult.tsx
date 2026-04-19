@@ -217,11 +217,12 @@ export default function MultiResult({
         )}
 
         {/* ── 플레이어별 판정 비교표 ── */}
-        {allDone && players.length > 1 && pitchHistory.length > 0 && (
+        {players.length > 1 && pitchHistory.length > 0 && (
           <PitchCompareTable
             pitchHistory={pitchHistory}
             players={players}
             myUid={user.uid}
+            allDone={allDone}
           />
         )}
 
@@ -371,18 +372,30 @@ function PitchRow({ pitch, index, onReplay }: {
 
 // ── 플레이어별 판정 비교표 ────────────────────────────────────────────────────
 function PitchCompareTable({
-  pitchHistory, players, myUid,
+  pitchHistory, players, myUid, allDone,
 }: {
   pitchHistory: PitchParams[]
   players: Array<{ uid: string; email: string; pitchResults?: PitchResult[]; finished: boolean }>
   myUid: string
+  allDone: boolean
 }) {
-  const finishedPlayers = players.filter(p => p.finished && p.pitchResults)
-  if (finishedPlayers.length === 0) return null
+  // 나를 먼저, 그 다음 완료된 플레이어, 마지막에 진행 중인 플레이어
+  const sorted = [...players].sort((a, b) => {
+    if (a.uid === myUid) return -1
+    if (b.uid === myUid) return 1
+    if (a.finished && !b.finished) return -1
+    if (!a.finished && b.finished) return 1
+    return 0
+  })
 
   return (
     <div style={cmpStyles.section}>
-      <div style={styles.sectionTitle}>👥 플레이어별 판정 비교</div>
+      <div style={styles.sectionTitle}>
+        👥 플레이어별 판정 비교
+        {!allDone && (
+          <span style={cmpStyles.liveTag}>● 실시간</span>
+        )}
+      </div>
       <div style={cmpStyles.scrollWrap}>
         <table style={cmpStyles.table}>
           <thead>
@@ -390,13 +403,14 @@ function PitchCompareTable({
               <th style={cmpStyles.thIdx}>#</th>
               <th style={cmpStyles.thPitch}>구종</th>
               <th style={cmpStyles.thAnswer}>정답</th>
-              {finishedPlayers.map(p => (
+              {sorted.map(p => (
                 <th key={p.uid} style={{
                   ...cmpStyles.thPlayer,
-                  color: p.uid === myUid ? '#00e5ff' : '#bbb',
+                  color: p.uid === myUid ? '#00e5ff' : p.finished ? '#bbb' : '#666',
                 }}>
                   {p.email.split('@')[0].slice(0, 5)}
                   {p.uid === myUid && <span style={cmpStyles.meMark}>나</span>}
+                  {!p.finished && <span style={cmpStyles.playingMark}>⏳</span>}
                 </th>
               ))}
             </tr>
@@ -411,7 +425,12 @@ function PitchCompareTable({
                   <td style={{ ...cmpStyles.tdAnswer, color: isStrike ? '#ff7043' : '#42a5f5' }}>
                     {isStrike ? 'S' : 'B'}
                   </td>
-                  {finishedPlayers.map(p => {
+                  {sorted.map(p => {
+                    if (!p.finished) {
+                      return (
+                        <td key={p.uid} style={{ ...cmpStyles.tdCell, color: '#444' }}>—</td>
+                      )
+                    }
                     const pr = p.pitchResults?.[i]
                     if (!pr) return <td key={p.uid} style={cmpStyles.tdCell}>—</td>
                     const isMe = p.uid === myUid
@@ -456,7 +475,9 @@ const cmpStyles: Record<string, React.CSSProperties> = {
   tdPitch:  { padding: '4px 4px', color: '#ccc' },
   tdAnswer: { padding: '4px 4px', fontWeight: 900, textAlign: 'center' },
   tdCell:   { padding: '4px 4px', textAlign: 'center', borderRadius: 3 },
-  meMark:   { fontSize: 9, color: '#00e5ff', background: 'rgba(0,229,255,0.15)', borderRadius: 3, padding: '1px 3px', marginLeft: 3 },
+  meMark:      { fontSize: 9, color: '#00e5ff', background: 'rgba(0,229,255,0.15)', borderRadius: 3, padding: '1px 3px', marginLeft: 3 },
+  playingMark: { fontSize: 10, marginLeft: 2 },
+  liveTag:     { fontSize: 10, color: '#4caf50', marginLeft: 8, fontWeight: 700, letterSpacing: 0.5 },
 }
 
 function formatTs(ts: Timestamp | null | undefined): string {
