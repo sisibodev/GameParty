@@ -61,8 +61,8 @@ const PITCH_MOVEMENT: Record<PitchType, DirectionalMovement> = {
   sinker:   { xBase: +0.18, xRange: 0.04, yBase: -0.24, yRange: 0.05, forceDown: true }, // 강한 런+침하
   cutter:   { xBase: -0.13, xRange: 0.04, yBase: -0.07, yRange: 0.03 },              // 3루방향 짧은 컷
   changeup: { xBase: +0.10, xRange: 0.05, yBase: -0.24, yRange: 0.06, forceDown: true }, // 암사이드+낙하
-  slider:   { xBase: -0.28, xRange: 0.06, yBase: -0.20, yRange: 0.05 },              // 3루방향 횡변화+낙하
-  sweeper:  { xBase: -0.38, xRange: 0.07, yBase: -0.12, yRange: 0.04 },              // 크게 좌로 스윕
+  slider:   { xBase: -0.16, xRange: 0.05, yBase: -0.20, yRange: 0.05 },              // 3루방향 횡변화+낙하
+  sweeper:  { xBase: -0.20, xRange: 0.05, yBase: -0.10, yRange: 0.03 },              // 크게 좌로 스윕
   curve:    { xBase: -0.12, xRange: 0.05, yBase: -0.44, yRange: 0.08 },              // 큰 낙차+약간 좌
   splitter: { xBase:  0.00, xRange: 0.06, yBase: -0.34, yRange: 0.07, forceDown: true }, // 직선 급강하
   forkball: { xBase:  0.00, xRange: 0.05, yBase: -0.44, yRange: 0.09, forceDown: true }, // 더 큰 낙차
@@ -73,36 +73,61 @@ const PITCH_MOVEMENT: Record<PitchType, DirectionalMovement> = {
 const FORM_MULT: Record<PitcherForm, { x: number; y: number }> = {
   overhand:      { x: 0.75, y: 1.30 },
   three_quarter: { x: 1.00, y: 1.00 },
-  sidearm:       { x: 1.55, y: 0.60 },
-  underhand:     { x: 1.80, y: 0.45 },
+  sidearm:       { x: 1.20, y: 0.65 },
+  underhand:     { x: 1.35, y: 0.50 },
 }
 
 // ── 구종별 베지어 궤적 파라미터 ───────────────────────────────────────────────
 // t1/t2: 직선 경로 위 제어점 위치 (0=마운드, 1=홈플레이트)
-// y1/y2: 직선 경로 대비 Y 오프셋 (양수=위, 음수=아래)
-// ※ forceDown 구종은 y1=0 으로 설정 → 릴리즈포인트 낮은 폼에서도 위로 안 뜸
-interface BreakProfile { t1: number; y1: number; t2: number; y2: number }
+// x1/x2: 직선 경로 대비 X 오프셋 (+= 1루/포수시점 오른쪽, -= 3루/포수시점 왼쪽)
+// y1/y2: 직선 경로 대비 Y 오프셋 (+= 위, -= 아래)
+// ※ 폼별 배율(FORM_BREAK_MULT)이 추가 적용됨
+interface BreakProfile {
+  t1: number; x1: number; y1: number   // 제어점1
+  t2: number; x2: number; y2: number   // 제어점2
+}
 const PITCH_BREAK: Record<PitchType, BreakProfile> = {
-  //            early                    late
-  fastball: { t1: 0.33, y1: +0.10,  t2: 0.72, y2: +0.06 },  // 백스핀 상승감
-  two_seam: { t1: 0.33, y1: +0.03,  t2: 0.72, y2: -0.09 },  // 초반 직구 → 후반 침하
-  sinker:   { t1: 0.33, y1:  0.00,  t2: 0.73, y2: -0.15 },  // 처음부터 침하 (위로 안 뜸)
-  cutter:   { t1: 0.28, y1: +0.08,  t2: 0.82, y2: -0.05 },  // 직구 유사 → 극후반 컷
-  changeup: { t1: 0.33, y1: +0.05,  t2: 0.76, y2: -0.18 },  // 초반 직구 위장 → 후반 낙하
-  slider:   { t1: 0.30, y1: +0.05,  t2: 0.78, y2: -0.09 },  // 직구 유사 → 후반 횡+낙하
-  sweeper:  { t1: 0.28, y1: +0.02,  t2: 0.74, y2: -0.05 },  // 완만 → 후반 크게 스윕
-  curve:    { t1: 0.28, y1: +0.22,  t2: 0.67, y2: -0.18 },  // 큰 포물선 (12-6)
-  splitter: { t1: 0.35, y1:  0.00,  t2: 0.83, y2: -0.28 },  // 직구 위장 → 극후반 급락
-  forkball: { t1: 0.35, y1:  0.00,  t2: 0.80, y2: -0.34 },  // 처음부터 낙하, 큰 낙차
+  // 직구 ─ 백스핀 상승감, X 이탈 없음. y2=0으로 "위로 뜨는 버그" 방지
+  fastball: { t1: 0.30, x1:  0.00, y1: +0.22,  t2: 0.70, x2:  0.00, y2:  0.00 },
+
+  // 투심 ─ 암사이드(x+) 런: 비행 중 1루방향으로 흘러옴 + 후반 침하
+  two_seam: { t1: 0.33, x1: +0.04, y1: +0.04,  t2: 0.72, x2: +0.07, y2: -0.12 },
+
+  // 싱커 ─ 처음부터 암사이드, 상승 없이 강한 침하
+  sinker:   { t1: 0.33, x1: +0.05, y1:  0.00,  t2: 0.73, x2: +0.08, y2: -0.20 },
+
+  // 커터 ─ 직구처럼 진입 → 극후반 글러브사이드(x-)로 칼컷
+  cutter:   { t1: 0.28, x1: -0.02, y1: +0.09,  t2: 0.84, x2: -0.08, y2: -0.05 },
+
+  // 슬라이더 ─ ★초반 1루(x+)쪽 drift → 후반 3루(x-)방향으로 꺾임
+  //            포수 시점: "바깥으로 빠졌다가 안으로 들어오는" 특성 구현
+  slider:   { t1: 0.30, x1: +0.10, y1: +0.06,  t2: 0.76, x2: -0.06, y2: -0.12 },
+
+  // 스위퍼 ─ 초반 직선 → 후반 3루(x-)방향 크게 스윕. 수직변화 작음
+  sweeper:  { t1: 0.28, x1:  0.00, y1: +0.02,  t2: 0.73, x2: -0.16, y2: -0.05 },
+
+  // 체인지업 ─ 직구 위장(초반 약상승) → 암사이드로 낙하
+  changeup: { t1: 0.33, x1: +0.03, y1: +0.08,  t2: 0.76, x2: +0.06, y2: -0.20 },
+
+  // 커브 ─ ★y1=+0.34 × 오버핸드 배율 1.20 → ctrl1.y가 릴리즈 높이 초과
+  //         → 공이 릴리즈 지점보다 위로 솟았다가 급강하 (12-6 시각효과)
+  //         사이드암(배율 0.45): 솟지 않음 → 가로 커브로 자동 전환
+  curve:    { t1: 0.26, x1:  0.00, y1: +0.34,  t2: 0.65, x2:  0.00, y2: -0.28 },
+
+  // 스플리터 ─ 직구와 동일 궤적으로 진입 → 극후반(86%) 갑작스러운 급락
+  splitter: { t1: 0.35, x1:  0.00, y1:  0.00,  t2: 0.86, x2:  0.00, y2: -0.32 },
+
+  // 포크볼 ─ 스플리터보다 더 큰 낙차 + 미세한 암사이드
+  forkball: { t1: 0.35, x1: +0.02, y1:  0.00,  t2: 0.81, x2: +0.02, y2: -0.40 },
 }
 
 // ── 투구폼별 궤적 아크 배율 ───────────────────────────────────────────────────
-// 오버핸드: 수직 아크 강조 / 사이드암·언더핸드: 수직 아크 감소(수평 느낌)
-const FORM_BREAK_MULT: Record<PitcherForm, { y1: number; y2: number }> = {
-  overhand:      { y1: 1.20, y2: 1.20 },
-  three_quarter: { y1: 1.00, y2: 1.00 },
-  sidearm:       { y1: 0.45, y2: 0.55 },
-  underhand:     { y1: 0.20, y2: 0.35 },
+// 오버핸드: 수직 아크 강조 / 사이드암·언더핸드: 수평 아크 강조
+const FORM_BREAK_MULT: Record<PitcherForm, { x1: number; x2: number; y1: number; y2: number }> = {
+  overhand:      { x1: 0.60, x2: 0.60, y1: 1.20, y2: 1.20 },
+  three_quarter: { x1: 1.00, x2: 1.00, y1: 1.00, y2: 1.00 },
+  sidearm:       { x1: 1.40, x2: 1.40, y1: 0.45, y2: 0.55 },
+  underhand:     { x1: 1.60, x2: 1.60, y1: 0.20, y2: 0.35 },
 }
 
 // ── 관리자 런타임 오버라이드 ──────────────────────────────────────────────────
@@ -111,12 +136,15 @@ export interface DirectionalMovementExport {
   yBase: number; yRange: number
   forceDown?: boolean
 }
-export interface BreakProfileExport { t1: number; y1: number; t2: number; y2: number }
+export interface BreakProfileExport {
+  t1: number; x1: number; y1: number
+  t2: number; x2: number; y2: number
+}
 export interface FullPitchConfig {
   pitchMovement:  Record<PitchType, DirectionalMovementExport>
   formMult:       Record<PitcherForm, { x: number; y: number }>
   pitchBreak:     Record<PitchType, BreakProfileExport>
-  formBreakMult:  Record<PitcherForm, { y1: number; y2: number }>
+  formBreakMult:  Record<PitcherForm, { x1: number; x2: number; y1: number; y2: number }>
 }
 
 let _configOverride: FullPitchConfig | null = null
@@ -185,26 +213,29 @@ export function generatePitch(
   } else {
     const shouldBeStrike = rng.next() < 0.5
     if (shouldBeStrike) {
-      plateX = rng.float(-batter.zoneHalfWidth * 0.85, batter.zoneHalfWidth * 0.85)
+      // 난이도 높을수록 존 중앙이 아닌 경계선 가까이에 배치
+      plateX = rng.float(-batter.zoneHalfWidth * config.strikeZoneUsage, batter.zoneHalfWidth * config.strikeZoneUsage)
       // forceDown 구종은 하단 60% 이내를 타깃으로 (낙하계가 높은 공이 되지 않도록)
       if (mv.forceDown) {
         const maxY = batter.zoneBottom + (batter.zoneTop - batter.zoneBottom) * 0.6
         plateY = rng.float(batter.zoneBottom + 0.05, maxY)
       } else {
-        plateY = rng.float(batter.zoneBottom + 0.05, batter.zoneTop - 0.05)
+        const yMargin = (batter.zoneTop - batter.zoneBottom) * (1 - config.strikeZoneUsage) / 2
+        plateY = rng.float(batter.zoneBottom + yMargin + 0.02, batter.zoneTop - yMargin - 0.02)
       }
     } else {
+      // 난이도 높을수록 볼이 존 경계선 근처에만 배치
       const dir = rng.int(0, 4)
       if (dir === 0) {
-        plateX = batter.zoneHalfWidth + rng.float(0.05, 0.35)
+        plateX = batter.zoneHalfWidth + rng.float(config.ballMarginMin, config.ballMarginMax)
         if (rng.next() < 0.5) plateX = -plateX
         plateY = rng.float(batter.zoneBottom, batter.zoneTop)
       } else if (dir === 1) {
         plateX = rng.float(-batter.zoneHalfWidth * 1.2, batter.zoneHalfWidth * 1.2)
-        plateY = batter.zoneTop + rng.float(0.05, 0.40)
+        plateY = batter.zoneTop + rng.float(config.ballMarginMin, config.ballMarginMax)
       } else {
         plateX = rng.float(-batter.zoneHalfWidth * 1.2, batter.zoneHalfWidth * 1.2)
-        plateY = batter.zoneBottom - rng.float(0.05, 0.35)
+        plateY = batter.zoneBottom - rng.float(config.ballMarginMin, config.ballMarginMax)
       }
     }
   }
@@ -220,8 +251,10 @@ export function generatePitch(
   // forceDown 구종: 항상 낙하 방향 보장 (최소 -5cm 낙하)
   const mvY = mv.forceDown ? Math.min(rawMvY, -0.05) : rawMvY
 
-  const finalPlateX = plateX + mvX
-  const finalPlateY = plateY + mvY
+  // 보더라인 공: 무브먼트를 추가하지 않고 존 경계선 위치 그대로 사용
+  // (무브먼트까지 더하면 실제 도착점이 존 훨씬 밖으로 벗어나는 버그 방지)
+  const finalPlateX = isBorderline ? plateX : plateX + mvX
+  const finalPlateY = isBorderline ? plateY : plateY + mvY
 
   // KBO ABS 3-plane 판정
   const frontHalfW = batter.zoneHalfWidth + 0.02
@@ -296,9 +329,20 @@ export function buildPitchCurve(
   const base1 = lerpOnLine(bp.t1)
   const base2 = lerpOnLine(bp.t2)
 
-  // 폼별 배율로 수직 아크 조정
-  const ctrl1 = new THREE.Vector3(base1.x, base1.y + bp.y1 * fb.y1, base1.z)
-  const ctrl2 = new THREE.Vector3(base2.x, base2.y + bp.y2 * fb.y2, base2.z)
+  // 폼별 배율로 X·Y 아크 조정
+  // ?? 0 / ?? 1 : 구버전 Firestore 설정에 x1/x2 필드 없을 때 NaN 방지
+  const ctrl1 = new THREE.Vector3(
+    base1.x + (bp.x1 ?? 0) * (fb.x1 ?? 1),
+    base1.y + bp.y1 * fb.y1,
+    base1.z,
+  )
+  // ctrl2.y 안전망: ctrl2가 plateY보다 낮으면 bezier 끝에서 공이 위로 솟는 버그 발생
+  const ctrl2RawY = base2.y + bp.y2 * fb.y2
+  const ctrl2 = new THREE.Vector3(
+    base2.x + (bp.x2 ?? 0) * (fb.x2 ?? 1),
+    Math.max(ctrl2RawY, params.plateY),
+    base2.z,
+  )
 
   return new THREE.CubicBezierCurve3(start, ctrl1, ctrl2, end)
 }
@@ -330,8 +374,17 @@ export function buildPitchCurveWithConfig(
   const base1 = lerpOnLine(bp.t1)
   const base2 = lerpOnLine(bp.t2)
 
-  const ctrl1 = new THREE.Vector3(base1.x, base1.y + bp.y1 * fb.y1, base1.z)
-  const ctrl2 = new THREE.Vector3(base2.x, base2.y + bp.y2 * fb.y2, base2.z)
+  const ctrl1 = new THREE.Vector3(
+    base1.x + (bp.x1 ?? 0) * (fb.x1 ?? 1),
+    base1.y + bp.y1 * fb.y1,
+    base1.z,
+  )
+  const ctrl2RawY = base2.y + bp.y2 * fb.y2
+  const ctrl2 = new THREE.Vector3(
+    base2.x + (bp.x2 ?? 0) * (fb.x2 ?? 1),
+    Math.max(ctrl2RawY, params.plateY),
+    base2.z,
+  )
 
   return new THREE.CubicBezierCurve3(start, ctrl1, ctrl2, end)
 }

@@ -43,6 +43,11 @@ export interface DifficultyConfig {
   breakingBallCount: number // 변화구 랜덤 선택 개수 (직구 제외)
   borderlineRatio: number   // 0~1
   zoneShowTime: number      // ms — 투구 전 존 표시 시간
+  /** 볼 판정 공이 존 경계에서 더 벗어나는 거리 범위 (m). 낮을수록 경계선 근처 */
+  ballMarginMin: number
+  ballMarginMax: number
+  /** 명확한 스트라이크 공이 생성되는 존 너비 비율 (1.0=전체, 0.5=중앙 절반만) */
+  strikeZoneUsage: number
 }
 
 export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
@@ -52,6 +57,8 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
     breakingBallCount: 2,   // 직구 + 변화구 2종 = 총 3종
     borderlineRatio: 0.1,
     zoneShowTime: 3000,
+    // 볼: 존 밖 12~35cm (쉬운 판단), 스트라이크: 존 중앙 85% 이내
+    ballMarginMin: 0.12, ballMarginMax: 0.35, strikeZoneUsage: 0.85,
   },
   amateur: {
     label: '아마추어',
@@ -59,6 +66,7 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
     breakingBallCount: 3,   // 직구 + 변화구 3종 = 총 4종
     borderlineRatio: 0.2,
     zoneShowTime: 2000,
+    ballMarginMin: 0.08, ballMarginMax: 0.25, strikeZoneUsage: 0.75,
   },
   pro: {
     label: '프로',
@@ -66,6 +74,7 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
     breakingBallCount: 4,   // 직구 + 변화구 4종 = 총 5종
     borderlineRatio: 0.35,
     zoneShowTime: 1000,
+    ballMarginMin: 0.04, ballMarginMax: 0.15, strikeZoneUsage: 0.65,
   },
   major: {
     label: '메이저',
@@ -73,6 +82,8 @@ export const DIFFICULTY_CONFIG: Record<Difficulty, DifficultyConfig> = {
     breakingBallCount: 5,   // 직구 + 변화구 5종 = 총 6종
     borderlineRatio: 0.5,
     zoneShowTime: 500,
+    // 볼: 존 밖 2~10cm (경계 근처), 스트라이크: 존 중앙 55% 이내
+    ballMarginMin: 0.02, ballMarginMax: 0.10, strikeZoneUsage: 0.55,
   },
 }
 

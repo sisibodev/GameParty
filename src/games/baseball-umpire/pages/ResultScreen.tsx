@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { User } from 'firebase/auth'
 import { Timestamp } from 'firebase/firestore'
 import { BatterProfile, PitchParams, PitchType } from '../types'
@@ -69,6 +69,7 @@ export default function ResultScreen({
   const wrongCount = totalPitches - correctCount
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const savedRef = useRef(false)
   const [rankings, setRankings] = useState<RankEntry[]>([])
   const [rankLoading, setRankLoading] = useState(false)
   const [rankTab, setRankTab] = useState(difficulty)  // 현재 플레이한 난이도로 초기화
@@ -80,9 +81,10 @@ export default function ResultScreen({
   const [replayStage, setReplayStage]               = useState(1)
   const [replayStageOverride, setReplayStageOverride] = useState<number | undefined>(undefined)
 
-  // 일반 모드 + 로그인 시 자동 저장
+  // 일반 모드 + 로그인 시 자동 저장 (React StrictMode 이중 실행 방지)
   useEffect(() => {
-    if (mode !== 'normal' || !user) return
+    if (mode !== 'normal' || !user || savedRef.current) return
+    savedRef.current = true
 
     setSaveStatus('saving')
     saveUmpireRecord({

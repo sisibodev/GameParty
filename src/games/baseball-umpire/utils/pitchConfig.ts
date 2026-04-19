@@ -12,11 +12,32 @@ export async function loadPitchConfig(): Promise<FullPitchConfig | null> {
     if (!snap.exists()) return null
     const data = snap.data() as Partial<FullPitchConfig>
     const defaults = getDefaultPitchConfig()
+
+    // 구버전 Firestore 저장값에 누락된 필드(x1/x2 등)를 기본값으로 보완
+    // 최상위 섹션이 없으면 defaults 전체를 쓰고, 있으면 구종/폼별 필드를 deep merge
+    const pitchBreak = data.pitchBreak
+      ? Object.fromEntries(
+          Object.entries(defaults.pitchBreak).map(([type, defBp]) => {
+            const saved = (data.pitchBreak as Record<string, typeof defBp>)[type] ?? {}
+            return [type, { ...defBp, ...saved }]  // 기본값 위에 저장값 덮어씀 (누락 필드는 기본값 유지)
+          })
+        ) as typeof defaults.pitchBreak
+      : defaults.pitchBreak
+
+    const formBreakMult = data.formBreakMult
+      ? Object.fromEntries(
+          Object.entries(defaults.formBreakMult).map(([form, defFbm]) => {
+            const saved = (data.formBreakMult as Record<string, typeof defFbm>)[form] ?? {}
+            return [form, { ...defFbm, ...saved }]
+          })
+        ) as typeof defaults.formBreakMult
+      : defaults.formBreakMult
+
     return {
       pitchMovement:  data.pitchMovement  ?? defaults.pitchMovement,
       formMult:       data.formMult       ?? defaults.formMult,
-      pitchBreak:     data.pitchBreak     ?? defaults.pitchBreak,
-      formBreakMult:  data.formBreakMult  ?? defaults.formBreakMult,
+      pitchBreak,
+      formBreakMult,
     }
   } catch {
     return null

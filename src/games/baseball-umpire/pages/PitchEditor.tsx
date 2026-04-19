@@ -88,6 +88,7 @@ export default function PitchEditor({ onBack }: Props) {
   const [selectedForm, setSelectedForm] = useState<PitcherForm>('overhand')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [loading, setLoading] = useState(true)
+  const [previewSeed, setPreviewSeed] = useState(0)
 
   useEffect(() => {
     loadPitchConfig().then(c => { if (c) setConfig(c) }).finally(() => setLoading(false))
@@ -105,8 +106,14 @@ export default function PitchEditor({ onBack }: Props) {
 
   async function handleSave() {
     setSaveStatus('saving')
-    try { await savePitchConfig(config); applyPitchConfig(config); setSaveStatus('saved') }
-    catch { setSaveStatus('error') }
+    try {
+      await savePitchConfig(config)
+      applyPitchConfig(config)
+      setSaveStatus('saved')
+    } catch (e) {
+      console.error('[PitchEditor] 저장 실패:', e)
+      setSaveStatus('error')
+    }
   }
 
   if (loading) return <div style={s.wrap}><div style={{ color: '#aaa', margin: 'auto' }}>설정 로드 중...</div></div>
@@ -165,33 +172,39 @@ export default function PitchEditor({ onBack }: Props) {
           <BoolField label="forceDown (낙하 강제)" value={!!mv.forceDown} onChange={v => updateMv('forceDown', v)} />
 
           <SecTitle>🌀 궤적 아크 (베지어 제어점)</SecTitle>
-          <div style={s.desc}>t=0 마운드 · t=1 홈플레이트 / y는 직선 대비 Y 오프셋</div>
+          <div style={s.desc}>t=0 마운드 · t=1 홈플레이트 / x=횡 이탈, y=수직 오프셋 (직선 대비)</div>
           <div style={{ marginBottom: 10 }}>
             <ArcPreview y1={bp.y1 * fbm.y1} y2={bp.y2 * fbm.y2} t1={bp.t1} t2={bp.t2} />
             <div style={{ fontSize: 9, color: '#555', marginTop: 3 }}>🟡 제어점1 &nbsp; 🟠 제어점2</div>
           </div>
           <NumField label="t1 (제어점1 위치)" value={bp.t1} min={0.1} max={0.6}  step={0.01} onChange={v => updateBp('t1', v)} hint="0~1" />
+          <NumField label="x1 (제어점1 횡)"   value={bp.x1} min={-0.3} max={0.3} step={0.01} onChange={v => updateBp('x1', v)} hint="(-)좌 ← → (+)우" />
           <NumField label="y1 (제어점1 높이)" value={bp.y1} min={-0.4} max={0.4} step={0.01} onChange={v => updateBp('y1', v)} hint="(-)아래 ← → (+)위" />
           <NumField label="t2 (제어점2 위치)" value={bp.t2} min={0.4} max={0.95} step={0.01} onChange={v => updateBp('t2', v)} hint="0~1" />
+          <NumField label="x2 (제어점2 횡)"   value={bp.x2} min={-0.3} max={0.3} step={0.01} onChange={v => updateBp('x2', v)} hint="(-)좌 ← → (+)우" />
           <NumField label="y2 (제어점2 높이)" value={bp.y2} min={-0.5} max={0.2} step={0.01} onChange={v => updateBp('y2', v)} hint="(-)아래 ← → (+)위" />
 
           <SecTitle>✖️ 폼 배율 ({PITCHER_FORMS.find(f => f.id === selectedForm)?.label})</SecTitle>
           <div style={s.desc}>이 폼의 무브먼트 배율. 폼이 다르면 같은 구종도 다르게 움직임.</div>
-          <NumField label="무브먼트 x 배율" value={fm.x}   min={0.1} max={3.0} step={0.05} onChange={v => updateFm('x', v)}   hint="횡 강도" />
-          <NumField label="무브먼트 y 배율" value={fm.y}   min={0.1} max={2.0} step={0.05} onChange={v => updateFm('y', v)}   hint="수직 강도" />
-          <NumField label="아크 y1 배율"    value={fbm.y1} min={0.0} max={2.0} step={0.05} onChange={v => updateFbm('y1', v)} hint="제어점1 배율" />
-          <NumField label="아크 y2 배율"    value={fbm.y2} min={0.0} max={2.0} step={0.05} onChange={v => updateFbm('y2', v)} hint="제어점2 배율" />
+          <NumField label="무브먼트 x 배율" value={fm.x}    min={0.1} max={3.0} step={0.05} onChange={v => updateFm('x', v)}    hint="횡 강도" />
+          <NumField label="무브먼트 y 배율" value={fm.y}    min={0.1} max={2.0} step={0.05} onChange={v => updateFm('y', v)}    hint="수직 강도" />
+          <NumField label="아크 x1 배율"    value={fbm.x1}  min={0.0} max={2.5} step={0.05} onChange={v => updateFbm('x1', v)} hint="제어점1 횡 배율" />
+          <NumField label="아크 x2 배율"    value={fbm.x2}  min={0.0} max={2.5} step={0.05} onChange={v => updateFbm('x2', v)} hint="제어점2 횡 배율" />
+          <NumField label="아크 y1 배율"    value={fbm.y1}  min={0.0} max={2.0} step={0.05} onChange={v => updateFbm('y1', v)} hint="제어점1 수직 배율" />
+          <NumField label="아크 y2 배율"    value={fbm.y2}  min={0.0} max={2.0} step={0.05} onChange={v => updateFbm('y2', v)} hint="제어점2 수직 배율" />
 
           <div style={s.note}>
             💡 오른쪽 미리보기에서 슬라이더 값이 즉시 반영됩니다. 저장하면 모든 클라이언트에 적용됩니다.
           </div>
         </div>
 
-        {/* ── 열3: 3D 투구 미리보기 (항상 표시) ── */}
+        {/* ── 열3: 3D 투구 미리보기 ── */}
         <PitchPreview3D
           pitchType={selectedType}
           form={selectedForm}
           config={config}
+          randomSeed={previewSeed}
+          onRethrow={() => setPreviewSeed(s => s + 1)}
         />
 
       </div>

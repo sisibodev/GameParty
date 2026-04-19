@@ -7,6 +7,8 @@ interface Props {
   pitchType: PitchType
   form: PitcherForm
   config: FullPitchConfig
+  randomSeed?: number       // 변경 시 새 랜덤 착지점으로 재투구
+  onRethrow?: () => void    // 부모에서 seed를 올려달라는 콜백 (선택)
 }
 
 // 프리뷰용 기본 타자 (평균 체형)
@@ -42,17 +44,27 @@ const CAM_LABELS: Record<CamView, string> = {
   catcher: '📸 포수', side: '📐 측면', top: '🔭 위',
 }
 
+/** seed 기반 결정론적 난수 (0~1) — slot은 서로 다른 값을 얻기 위한 인덱스 */
+function seededFloat(seed: number, slot: number): number {
+  return Math.abs(Math.sin(seed * 127.1 + slot * 311.7)) % 1
+}
+
 function buildPreviewPitch(
   pitchType: PitchType,
   form: PitcherForm,
   config: FullPitchConfig,
+  seed = 0,
 ): PitchParams {
   const mv = config.pitchMovement[pitchType]
   const fm = config.formMult[form]
   const zoneCenter = (PREVIEW_BATTER.zoneBottom + PREVIEW_BATTER.zoneTop) / 2
 
-  const mvX = mv.xBase * fm.x
-  const rawMvY = mv.yBase * fm.y
+  // seed 기반 xRange / yRange 랜덤 적용 (seed=0이면 기준값 그대로)
+  const randX = seed === 0 ? 0 : (seededFloat(seed, 0) * 2 - 1) * mv.xRange
+  const randY = seed === 0 ? 0 : (seededFloat(seed, 1) * 2 - 1) * mv.yRange
+
+  const mvX = (mv.xBase + randX) * fm.x
+  const rawMvY = (mv.yBase + randY) * fm.y
   const mvY = mv.forceDown ? Math.min(rawMvY, -0.05) : rawMvY
 
   let targetY = zoneCenter + mvY
@@ -100,7 +112,7 @@ interface SceneState {
   midZ: number
 }
 
-export default function PitchPreview3D({ pitchType, form, config }: Props) {
+export default function PitchPreview3D({ pitchType, form, config, randomSeed = 0, onRethrow }: Props) {
   const mountRef = useRef<HTMLDivElement>(null)
   const stateRef = useRef<SceneState | null>(null)
 
@@ -207,7 +219,7 @@ export default function PitchPreview3D({ pitchType, form, config }: Props) {
     })
 
     // 초기 커브
-    const pitch = buildPreviewPitch(pitchType, form, config)
+    const pitch = buildPreviewPitch(pitchType, form, config, randomSeed)
     const curve = buildPitchCurveWithConfig(pitch, form, config)
     const startPt = curve.getPoint(0)
     ball.position.copy(startPt)
@@ -277,11 +289,11 @@ export default function PitchPreview3D({ pitchType, form, config }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])  // 마운트 1회만
 
-  // ── ② 커브만 업데이트 (pitchType/form/config 변경 시) ─────────────────────
+  // ── ② 커브만 업데이트 (pitchType/form/config/randomSeed 변경 시) ─────────
   useEffect(() => {
     const st = stateRef.current
     if (!st) return
-    const pitch = buildPreviewPitch(pitchType, form, config)
+    const pitch = buildPreviewPitch(pitchType, form, config, randomSeed)
     const curve = buildPitchCurveWithConfig(pitch, form, config)
     st.curve = curve; st.pitch = pitch
     st.t = 0; st.playing = false; st.arrived = false
@@ -289,7 +301,7 @@ export default function PitchPreview3D({ pitchType, form, config }: Props) {
     st.ball.position.copy(curve.getPoint(0))
     setPitchInfo({ x: pitch.plateX, y: pitch.plateY, strike: pitch.isStrike })
     setPlaying(false); setArrived(false)
-  }, [pitchType, form, config])
+  }, [pitchType, form, config, randomSeed])
 
   // ── 카메라 전환 ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -359,6 +371,15 @@ export default function PitchPreview3D({ pitchType, form, config }: Props) {
         >
           ⚾ {arrived ? '다시 투구' : '투구!'}
         </button>
+        {onRethrow && (
+          <button
+            style={{ ...s.throwBtn, background: 'rgba(255,152,0,0.2)', borderColor: 'rgba(255,152,0,0.5)', color: '#ffcc80', fontSize: 12, padding: '5px 12px' }}
+            onClick={() => { onRethrow(); }}
+            title="랜덤 착지점으로 새 투구"
+          >
+            🔀 랜덤 투구
+          </button>
+        )}
 
         <div style={s.group}>
           {[0.25, 0.5, 1.0].map(sp => (
