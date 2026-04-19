@@ -15,6 +15,11 @@ export function generateRoomCode(): string {
 }
 
 // ── 타입 ─────────────────────────────────────────────────────────────────────
+export interface PitchResult {
+  call: 'strike' | 'ball' | null
+  correct: boolean
+}
+
 export interface MultiPlayer {
   uid: string
   email: string
@@ -26,6 +31,7 @@ export interface MultiPlayer {
   maxCombo: number
   grade: string
   accuracy: number
+  pitchResults?: PitchResult[]
 }
 
 export interface MultiRoom {
@@ -132,6 +138,7 @@ export async function submitMultiResult(
     correctCount: number
     totalPitches: number
     maxCombo: number
+    pitchResults?: PitchResult[]
   },
 ): Promise<void> {
   const accuracy = result.totalPitches > 0
@@ -147,6 +154,7 @@ export async function submitMultiResult(
     maxCombo: result.maxCombo,
     accuracy,
     grade,
+    ...(result.pitchResults ? { pitchResults: result.pitchResults } : {}),
   })
 }
 

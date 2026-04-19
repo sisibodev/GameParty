@@ -146,6 +146,10 @@ export default function BaseballUmpireGame() {
       correctCount: r.correctCount,
       totalPitches: r.totalPitches,
       maxCombo:     r.maxCombo,
+      pitchResults: r.pitchHistory.map(p => ({
+        call:    p.playerCall ?? null,
+        correct: p.correct ?? false,
+      })),
     })
 
     if (multiRoom?.hostUid === user.uid) {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { User } from 'firebase/auth'
 import { Timestamp } from 'firebase/firestore'
 import { BatterProfile, PitchParams, PitchType } from '../types'
-import { MultiRoom, subscribeMultiRoom, unsubscribeMultiRoom } from '../utils/umpire-rtdb'
+import { MultiRoom, PitchResult, subscribeMultiRoom, unsubscribeMultiRoom } from '../utils/umpire-rtdb'
 import { fetchTopRankings, RankEntry } from '../utils/firestore'
 import { KBO_TEAMS } from '../utils/kboTeams'
 import BaseballScene from '../components/BaseballScene'
@@ -216,6 +216,15 @@ export default function MultiResult({
           </div>
         )}
 
+        {/* ── 플레이어별 판정 비교표 ── */}
+        {allDone && players.length > 1 && pitchHistory.length > 0 && (
+          <PitchCompareTable
+            pitchHistory={pitchHistory}
+            players={players}
+            myUid={user.uid}
+          />
+        )}
+
         {/* ── 투구 기록 + 리플레이 ── */}
         {pitchHistory.length > 0 && (
           <div style={styles.historySection}>
@@ -358,6 +367,96 @@ function PitchRow({ pitch, index, onReplay }: {
       <button style={styles.replayBtn} onClick={() => onReplay(pitch)}>▶</button>
     </div>
   )
+}
+
+// ── 플레이어별 판정 비교표 ────────────────────────────────────────────────────
+function PitchCompareTable({
+  pitchHistory, players, myUid,
+}: {
+  pitchHistory: PitchParams[]
+  players: Array<{ uid: string; email: string; pitchResults?: PitchResult[]; finished: boolean }>
+  myUid: string
+}) {
+  const finishedPlayers = players.filter(p => p.finished && p.pitchResults)
+  if (finishedPlayers.length === 0) return null
+
+  return (
+    <div style={cmpStyles.section}>
+      <div style={styles.sectionTitle}>👥 플레이어별 판정 비교</div>
+      <div style={cmpStyles.scrollWrap}>
+        <table style={cmpStyles.table}>
+          <thead>
+            <tr>
+              <th style={cmpStyles.thIdx}>#</th>
+              <th style={cmpStyles.thPitch}>구종</th>
+              <th style={cmpStyles.thAnswer}>정답</th>
+              {finishedPlayers.map(p => (
+                <th key={p.uid} style={{
+                  ...cmpStyles.thPlayer,
+                  color: p.uid === myUid ? '#00e5ff' : '#bbb',
+                }}>
+                  {p.email.split('@')[0].slice(0, 5)}
+                  {p.uid === myUid && <span style={cmpStyles.meMark}>나</span>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {pitchHistory.map((pitch, i) => {
+              const isStrike = pitch.isStrike
+              return (
+                <tr key={i} style={{ background: i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent' }}>
+                  <td style={cmpStyles.tdIdx}>{i + 1}</td>
+                  <td style={cmpStyles.tdPitch}>{PITCH_NAMES[pitch.pitchType]}</td>
+                  <td style={{ ...cmpStyles.tdAnswer, color: isStrike ? '#ff7043' : '#42a5f5' }}>
+                    {isStrike ? 'S' : 'B'}
+                  </td>
+                  {finishedPlayers.map(p => {
+                    const pr = p.pitchResults?.[i]
+                    if (!pr) return <td key={p.uid} style={cmpStyles.tdCell}>—</td>
+                    const isMe = p.uid === myUid
+                    const callLabel = pr.call === 'strike' ? 'S' : pr.call === 'ball' ? 'B' : '—'
+                    return (
+                      <td key={p.uid} style={{
+                        ...cmpStyles.tdCell,
+                        background: isMe
+                          ? pr.correct ? 'rgba(76,175,80,0.15)' : 'rgba(244,67,54,0.15)'
+                          : undefined,
+                      }}>
+                        <span style={{
+                          color: pr.correct ? '#4caf50' : '#f44336',
+                          fontWeight: 700,
+                          fontSize: 12,
+                        }}>
+                          {pr.correct ? '✓' : '✗'}
+                        </span>
+                        <span style={{ fontSize: 10, color: '#888', marginLeft: 2 }}>{callLabel}</span>
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+const cmpStyles: Record<string, React.CSSProperties> = {
+  section: { marginBottom: 20, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 },
+  scrollWrap: { overflowX: 'auto', maxHeight: 300, overflowY: 'auto', borderRadius: 6 },
+  table: { width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 320 },
+  thIdx:    { width: 28, padding: '5px 4px', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textAlign: 'center', position: 'sticky', top: 0, background: '#0d1f33', zIndex: 1 },
+  thPitch:  { width: 64, padding: '5px 4px', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textAlign: 'left', position: 'sticky', top: 0, background: '#0d1f33', zIndex: 1 },
+  thAnswer: { width: 36, padding: '5px 4px', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textAlign: 'center', position: 'sticky', top: 0, background: '#0d1f33', zIndex: 1 },
+  thPlayer: { minWidth: 52, padding: '5px 4px', fontWeight: 700, textAlign: 'center', position: 'sticky', top: 0, background: '#0d1f33', zIndex: 1, fontSize: 11 },
+  tdIdx:    { padding: '4px 4px', color: 'rgba(255,255,255,0.35)', textAlign: 'center', fontWeight: 700 },
+  tdPitch:  { padding: '4px 4px', color: '#ccc' },
+  tdAnswer: { padding: '4px 4px', fontWeight: 900, textAlign: 'center' },
+  tdCell:   { padding: '4px 4px', textAlign: 'center', borderRadius: 3 },
+  meMark:   { fontSize: 9, color: '#00e5ff', background: 'rgba(0,229,255,0.15)', borderRadius: 3, padding: '1px 3px', marginLeft: 3 },
 }
 
 function formatTs(ts: Timestamp | null | undefined): string {
