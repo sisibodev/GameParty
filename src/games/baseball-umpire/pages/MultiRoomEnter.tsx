@@ -88,23 +88,30 @@ export default function MultiRoomEnter({ user, onRoomCreated, onRoomJoined, onBa
         {tab === 'create' && (
           <>
             <div style={styles.label}>난이도 선택</div>
-            <div style={styles.diffRow}>
+            <div style={styles.diffCards}>
               {difficulties.map(({ id, emoji }) => {
                 const c = DIFFICULTY_CONFIG[id]
                 return (
                   <button
                     key={id}
                     style={{
-                      ...styles.diffBtn,
-                      background: difficulty === id ? 'rgba(0,229,255,0.15)' : 'rgba(255,255,255,0.05)',
+                      ...styles.diffCard,
                       borderColor: difficulty === id ? '#00e5ff' : 'rgba(255,255,255,0.15)',
-                      color: difficulty === id ? '#00e5ff' : '#ddd',
+                      background:  difficulty === id ? 'rgba(0,229,255,0.12)' : 'rgba(255,255,255,0.05)',
                     }}
                     onClick={() => setDiff(id)}
                   >
                     <div style={styles.diffEmoji}>{emoji}</div>
-                    <div style={styles.diffName}>{c.label}</div>
-                    <div style={styles.diffSub}>{c.speedMin}~{c.speedMax}km/h</div>
+                    <div style={styles.diffLabel}>{c.label}</div>
+                    <div style={styles.diffDetail}>{c.speedMin}~{c.speedMax} km/h</div>
+                    <div style={styles.diffDetail}>직구 + 변화구 {c.breakingBallCount}종</div>
+                    <div style={styles.pitchChips}>
+                      <span style={styles.pitchChipFixed}>직구</span>
+                      {Array.from({ length: c.breakingBallCount }, (_, i) => (
+                        <span key={i} style={styles.pitchChipRandom}>?</span>
+                      ))}
+                    </div>
+                    <div style={styles.randomNote}>매 게임 랜덤 선택</div>
                   </button>
                 )
               })}
@@ -183,14 +190,32 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 16,
   },
   label: { fontSize: 13, color: '#9ecaf8', fontWeight: 700 },
-  diffRow: { display: 'flex', gap: 10 },
-  diffBtn: {
-    flex: 1, border: '1px solid', borderRadius: 10,
-    padding: '12px 6px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s',
+  diffCards: { display: 'flex', gap: 10, flexWrap: 'wrap' as const, justifyContent: 'center' },
+  diffCard: {
+    flex: '1 1 110px', border: '2px solid', borderRadius: 12,
+    padding: '16px 10px', cursor: 'pointer', textAlign: 'center' as const,
+    transition: 'all 0.15s', color: '#fff',
   },
-  diffEmoji: { fontSize: 18, marginBottom: 4 },
-  diffName: { fontSize: 13, fontWeight: 700 },
-  diffSub: { fontSize: 10, color: '#aaa', marginTop: 2 },
+  diffEmoji:  { fontSize: 24, marginBottom: 6 },
+  diffLabel:  { fontSize: 15, fontWeight: 700, marginBottom: 8 },
+  diffDetail: { fontSize: 11, color: '#aac', lineHeight: 1.8 },
+  pitchChips: {
+    display: 'flex', flexWrap: 'wrap' as const, justifyContent: 'center',
+    gap: 3, marginTop: 8,
+  },
+  pitchChipFixed: {
+    fontSize: 9, color: '#fff',
+    background: 'rgba(255,255,255,0.15)',
+    border: '1px solid rgba(255,255,255,0.3)',
+    borderRadius: 4, padding: '1px 5px', fontWeight: 700,
+  },
+  pitchChipRandom: {
+    fontSize: 9, color: '#ffcc00',
+    background: 'rgba(255,204,0,0.12)',
+    border: '1px solid rgba(255,204,0,0.35)',
+    borderRadius: 4, padding: '1px 6px', fontWeight: 700,
+  },
+  randomNote: { fontSize: 9, color: 'rgba(255,204,0,0.7)', marginTop: 4 },
   codeInput: {
     background: 'rgba(255,255,255,0.08)',
     border: '1px solid rgba(0,229,255,0.4)',

@@ -180,6 +180,7 @@ export default function BaseballUmpireGame() {
         onMultiBattle={handleMultiBattle}
         onPitchEditor={adminUser ? () => setPhase('pitch_editor') : undefined}
         onBack={() => navigate('/')}
+        user={user ?? undefined}
       />
     )
   }

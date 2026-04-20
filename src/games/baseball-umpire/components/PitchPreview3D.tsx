@@ -115,6 +115,7 @@ interface SceneState {
 export default function PitchPreview3D({ pitchType, form, config, randomSeed = 0, onRethrow }: Props) {
   const mountRef = useRef<HTMLDivElement>(null)
   const stateRef = useRef<SceneState | null>(null)
+  const prevRandomSeedRef = useRef<number | undefined>(undefined)
 
   const [playing, setPlaying] = useState(false)
   const [arrived, setArrived] = useState(false)
@@ -296,11 +297,24 @@ export default function PitchPreview3D({ pitchType, form, config, randomSeed = 0
     const pitch = buildPreviewPitch(pitchType, form, config, randomSeed)
     const curve = buildPitchCurveWithConfig(pitch, form, config)
     st.curve = curve; st.pitch = pitch
-    st.t = 0; st.playing = false; st.arrived = false
+    st.t = 0; st.arrived = false
     st.trailGroup.visible = false
     st.ball.position.copy(curve.getPoint(0))
     setPitchInfo({ x: pitch.plateX, y: pitch.plateY, strike: pitch.isStrike })
-    setPlaying(false); setArrived(false)
+    setArrived(false)
+
+    // randomSeed가 실제로 변경된 경우 → 자동 투구 시작 (랜덤 투구 버튼 클릭 시)
+    const seedChanged = prevRandomSeedRef.current !== undefined
+      && prevRandomSeedRef.current !== randomSeed
+    prevRandomSeedRef.current = randomSeed
+
+    if (seedChanged) {
+      st.playing = true
+      setPlaying(true)
+    } else {
+      st.playing = false
+      setPlaying(false)
+    }
   }, [pitchType, form, config, randomSeed])
 
   // ── 카메라 전환 ──────────────────────────────────────────────────────────────

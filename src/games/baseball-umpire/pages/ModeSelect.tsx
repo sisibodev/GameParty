@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { User } from 'firebase/auth'
+import { Timestamp } from 'firebase/firestore'
 import { GameMode, Difficulty, TrajectoryMode, DIFFICULTY_CONFIG } from '../types'
-import { getMyTeam, KBOTeam } from '../utils/kboTeams'
+import { fetchTopRankings, RankEntry } from '../utils/firestore'
+import { getMyTeam, KBOTeam, KBO_TEAMS } from '../utils/kboTeams'
 import TeamSelectModal from '../components/TeamSelectModal'
 
 interface Props {
@@ -8,13 +11,15 @@ interface Props {
   onMultiBattle: () => void
   onPitchEditor?: () => void  // 관리자 전용 (undefined이면 버튼 미표시)
   onBack: () => void
+  user?: User
 }
 
-export default function ModeSelect({ onStart, onMultiBattle, onPitchEditor, onBack }: Props) {
+export default function ModeSelect({ onStart, onMultiBattle, onPitchEditor, onBack, user }: Props) {
   const [step, setStep] = useState<'mode' | 'difficulty'>('mode')
   const [selectedMode, setSelectedMode] = useState<GameMode | null>(null)
   const [myTeam, setMyTeam] = useState<KBOTeam | null>(getMyTeam)
   const [showTeamModal, setShowTeamModal] = useState(false)
+  const [showRanking, setShowRanking] = useState(false)
 
   const modes: { id: GameMode; label: string; desc: string; emoji: string }[] = [
     {
@@ -26,7 +31,7 @@ export default function ModeSelect({ onStart, onMultiBattle, onPitchEditor, onBa
     {
       id: 'normal',
       label: '일반 모드',
-      desc: '9타자 정규 진행 · 기록 Firestore 저장',
+      desc: '실전 심판 판정 · 기록 저장 · 랭킹 반영',
       emoji: '⚾',
     },
   ]
@@ -117,6 +122,10 @@ export default function ModeSelect({ onStart, onMultiBattle, onPitchEditor, onBa
             </button>
           </div>
 
+          <button style={styles.rankingBtn} onClick={() => setShowRanking(true)}>
+            🏆 랭킹 보기
+          </button>
+
           <div style={styles.diffTable}>
             <div style={styles.sectionTitle}>난이도 안내</div>
             <table style={{ borderCollapse: 'collapse', color: '#eee', fontSize: 13, width: '100%' }}>
@@ -190,8 +199,149 @@ export default function ModeSelect({ onStart, onMultiBattle, onPitchEditor, onBa
           onClose={() => setShowTeamModal(false)}
         />
       )}
+
+      {/* 랭킹 모달 */}
+      {showRanking && (
+        <RankingModal user={user} onClose={() => setShowRanking(false)} />
+      )}
     </div>
   )
+}
+
+// ── 랭킹 모달 ────────────────────────────────────────────────────────────────
+const DIFF_TABS = ['루키', '아마추어', '프로', '메이저'] as const
+
+const GRADE_COLOR: Record<string, string> = {
+  S: '#ffd700', A: '#4fc3f7', B: '#81c784', C: '#ffb74d', D: '#ef5350', '-': '#888',
+}
+
+function formatTs(ts: Timestamp | null | undefined): string {
+  if (!ts) return '-'
+  const d = ts.toDate()
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function RankingModal({ user, onClose }: { user?: User; onClose: () => void }) {
+  const [rankTab, setRankTab] = useState<string>('루키')
+  const [rankings, setRankings] = useState<RankEntry[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    setLoading(true)
+    fetchTopRankings(10, rankTab)
+      .then(r => setRankings(r))
+      .catch(() => setRankings([]))
+      .finally(() => setLoading(false))
+  }, [rankTab])
+
+  return (
+    <div style={rm.overlay} onClick={onClose}>
+      <div style={rm.modal} onClick={e => e.stopPropagation()}>
+        <div style={rm.header}>
+          <span style={rm.title}>🏆 TOP 10 랭킹</span>
+          <button style={rm.closeBtn} onClick={onClose}>✕</button>
+        </div>
+
+        {/* 난이도 탭 */}
+        <div style={rm.tabs}>
+          {DIFF_TABS.map(tab => (
+            <button
+              key={tab}
+              style={{ ...rm.tab, ...(rankTab === tab ? rm.tabActive : {}) }}
+              onClick={() => setRankTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* 랭킹 리스트 */}
+        {loading ? (
+          <div style={rm.empty}>로딩 중...</div>
+        ) : rankings.length === 0 ? (
+          <div style={rm.empty}>기록 없음</div>
+        ) : (
+          <div style={rm.list}>
+            {rankings.map((r, i) => {
+              const isMe = user && r.email === user.email
+              return (
+                <div key={r.id} style={{
+                  ...rm.row,
+                  background: isMe ? 'rgba(255,204,0,0.10)' : i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent',
+                  border: isMe ? '1px solid rgba(255,204,0,0.4)' : '1px solid transparent',
+                }}>
+                  <span style={{ ...rm.num, color: i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : '#888' }}>
+                    {i + 1}
+                  </span>
+                  <span style={{ ...rm.grade, color: GRADE_COLOR[r.grade] ?? '#888' }}>{r.grade}</span>
+                  <span style={{ ...rm.email, color: isMe ? '#ffcc00' : '#eee', fontWeight: isMe ? 700 : 400 }}>
+                    {r.email.split('@')[0]}
+                  </span>
+                  {r.teamId && (() => {
+                    const tm = KBO_TEAMS.find(t => t.id === r.teamId)
+                    return tm ? <img src={tm.logoUrl} alt={tm.abbr} style={rm.logo} title={tm.name} /> : null
+                  })()}
+                  <span style={rm.score}>{r.totalScore.toLocaleString()}</span>
+                  <span style={rm.acc}>{r.accuracy.toFixed(0)}%</span>
+                  <span style={rm.date}>{formatTs(r.playedAt)}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const rm: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: 'fixed', inset: 0, zIndex: 50,
+    background: 'rgba(0,0,0,0.7)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: '20px',
+  },
+  modal: {
+    background: 'linear-gradient(135deg, #0d1f33 0%, #1a2e44 100%)',
+    border: '1px solid rgba(255,255,255,0.15)',
+    borderRadius: 16,
+    padding: '24px 28px',
+    width: '100%', maxWidth: 560,
+    color: '#fff', fontFamily: 'sans-serif',
+    maxHeight: '80vh', overflowY: 'auto',
+  },
+  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  title: { fontSize: 18, fontWeight: 900, letterSpacing: 1 },
+  closeBtn: {
+    background: 'none', border: '1px solid rgba(255,255,255,0.2)',
+    color: '#aaa', borderRadius: 6, padding: '4px 10px',
+    cursor: 'pointer', fontSize: 14,
+  },
+  tabs: { display: 'flex', gap: 6, marginBottom: 14 },
+  tab: {
+    flex: 1, padding: '6px 0', borderRadius: 6,
+    border: '1px solid rgba(255,255,255,0.15)',
+    background: 'transparent', color: '#aaa',
+    fontSize: 12, fontWeight: 600, cursor: 'pointer',
+  },
+  tabActive: {
+    background: 'rgba(0,229,255,0.15)',
+    border: '1px solid rgba(0,229,255,0.5)',
+    color: '#00e5ff', fontWeight: 700,
+  },
+  empty: { color: '#aaa', fontSize: 13, textAlign: 'center', padding: '16px 0' },
+  list: { display: 'flex', flexDirection: 'column', gap: 4 },
+  row: {
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '7px 10px', borderRadius: 6, fontSize: 13,
+  },
+  num:   { width: 20, color: '#aaa', fontWeight: 700, textAlign: 'center' as const },
+  grade: { width: 20, fontWeight: 900, textAlign: 'center' as const },
+  email: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  logo:  { width: 20, height: 20, objectFit: 'contain' as const, flexShrink: 0 },
+  score: { width: 70, fontWeight: 700, textAlign: 'right' as const },
+  acc:   { width: 38, color: '#9ecaf8', textAlign: 'right' as const },
+  date:  { width: 60, color: '#777', fontSize: 11, textAlign: 'right' as const },
 }
 
 const th: React.CSSProperties = { padding: '5px 14px', textAlign: 'center', fontWeight: 600 }
@@ -268,6 +418,18 @@ const styles: Record<string, React.CSSProperties> = {
   emoji: { fontSize: 40, marginBottom: 10 },
   cardTitle: { fontSize: 20, fontWeight: 700, marginBottom: 8 },
   cardDesc: { fontSize: 13, color: '#aac', lineHeight: 1.6, maxWidth: 220 },
+  rankingBtn: {
+    background: 'rgba(255,215,0,0.08)',
+    border: '1px solid rgba(255,215,0,0.35)',
+    color: '#ffd700',
+    padding: '8px 24px',
+    borderRadius: 8,
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 700,
+    marginBottom: 16,
+    letterSpacing: 0.5,
+  },
   diffTable: {
     background: 'rgba(0,0,0,0.3)',
     borderRadius: 12,

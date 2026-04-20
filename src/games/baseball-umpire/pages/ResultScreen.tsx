@@ -232,19 +232,15 @@ export default function ResultScreen({
             <div style={styles.rankList}>
               {rankings.map((r, i) => {
                 const isMe = user && r.email === user.email
-                // 현재 게임 점수와 일치하는 내 기록만 강하게 하이라이트
+                // 현재 게임 점수와 일치하는 내 기록만 금색 하이라이트
                 const isMyCurrentScore = isMe && r.totalScore === score && rankTab === difficulty
-                const rowBg = isMyCurrentScore
-                  ? 'rgba(255,204,0,0.14)'
-                  : isMe ? 'rgba(0,229,255,0.06)' : 'transparent'
-                const rowBorder = isMyCurrentScore
-                  ? '1px solid rgba(255,204,0,0.55)'
-                  : isMe ? '1px solid rgba(0,229,255,0.18)' : '1px solid transparent'
+                const rowBg     = isMyCurrentScore ? 'rgba(255,204,0,0.14)' : 'transparent'
+                const rowBorder = isMyCurrentScore ? '1px solid rgba(255,204,0,0.55)' : '1px solid transparent'
                 return (
                   <div key={r.id} style={{ ...styles.rankRow, background: rowBg, border: rowBorder, borderRadius: 6 }}>
                     <span style={{ ...styles.rankNum, color: isMyCurrentScore ? '#ffcc00' : undefined }}>{i + 1}</span>
                     <span style={styles.rankGrade}>{r.grade}</span>
-                    <span style={{ ...styles.rankEmail, color: isMyCurrentScore ? '#ffcc00' : isMe ? '#00e5ff' : undefined, fontWeight: isMe ? 700 : 400 }}>{r.email.split('@')[0]}</span>
+                    <span style={{ ...styles.rankEmail, color: isMyCurrentScore ? '#ffcc00' : undefined, fontWeight: isMyCurrentScore ? 700 : 400 }}>{r.email.split('@')[0]}</span>
                     {r.teamId && (() => {
                       const tm = KBO_TEAMS.find(t => t.id === r.teamId)
                       return tm ? (
