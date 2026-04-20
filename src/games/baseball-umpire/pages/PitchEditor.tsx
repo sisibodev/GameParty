@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { PitchType, PitcherForm } from '../types'
 import { FullPitchConfig, getDefaultPitchConfig, applyPitchConfig } from '../utils/pitch'
 import { loadPitchConfig, savePitchConfig } from '../utils/pitchConfig'
+import { clearRankings } from '../utils/firestore'
 import PitchPreview3D from '../components/PitchPreview3D'
 
 interface Props { onBack: () => void }
@@ -90,6 +91,26 @@ export default function PitchEditor({ onBack }: Props) {
   const [loading, setLoading] = useState(true)
   const [previewSeed, setPreviewSeed] = useState(0)
 
+  // 랭킹 초기화
+  const [clearDiff, setClearDiff]     = useState<string>('전체')
+  const [clearStatus, setClearStatus] = useState<'idle' | 'clearing' | 'done' | 'error'>('idle')
+  const [clearCount, setClearCount]   = useState<number>(0)
+
+  async function handleClearRankings() {
+    const target = clearDiff === '전체' ? undefined : clearDiff
+    const label  = clearDiff === '전체' ? '전체 랭킹' : `${clearDiff} 랭킹`
+    if (!confirm(`⚠️ ${label}을 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return
+    setClearStatus('clearing')
+    try {
+      const n = await clearRankings(target)
+      setClearCount(n)
+      setClearStatus('done')
+    } catch (e) {
+      console.error('[PitchEditor] 랭킹 초기화 실패:', e)
+      setClearStatus('error')
+    }
+  }
+
   useEffect(() => {
     loadPitchConfig().then(c => { if (c) setConfig(c) }).finally(() => setLoading(false))
   }, [])
@@ -132,6 +153,29 @@ export default function PitchEditor({ onBack }: Props) {
           {saveStatus === 'saved' && <span style={s.statusOk}>✓ 저장됨</span>}
           {saveStatus === 'error' && <span style={s.statusErr}>✗ 실패</span>}
         </div>
+      </div>
+
+      {/* ── 랭킹 초기화 패널 ── */}
+      <div style={s.clearPanel}>
+        <span style={s.clearTitle}>🗑 랭킹 초기화</span>
+        <select
+          style={s.clearSelect}
+          value={clearDiff}
+          onChange={e => { setClearDiff(e.target.value); setClearStatus('idle') }}
+        >
+          {['전체', '루키', '아마추어', '프로', '메이저'].map(d => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
+        <button
+          style={{ ...s.clearBtn, opacity: clearStatus === 'clearing' ? 0.5 : 1 }}
+          onClick={handleClearRankings}
+          disabled={clearStatus === 'clearing'}
+        >
+          {clearStatus === 'clearing' ? '삭제 중...' : '초기화'}
+        </button>
+        {clearStatus === 'done'  && <span style={s.clearOk}>✓ {clearCount}건 삭제됨</span>}
+        {clearStatus === 'error' && <span style={s.clearErr}>✗ 실패</span>}
       </div>
 
       {/* ── 바디 (3열) ── */}
@@ -240,6 +284,27 @@ const s: Record<string, React.CSSProperties> = {
   },
   statusOk: { color: '#4caf50', fontSize: 12 },
   statusErr: { color: '#f44336', fontSize: 12 },
+
+  // 랭킹 초기화 패널
+  clearPanel: {
+    display: 'flex', alignItems: 'center', gap: 10,
+    padding: '8px 20px',
+    background: 'rgba(244,67,54,0.06)',
+    borderBottom: '1px solid rgba(244,67,54,0.18)',
+  },
+  clearTitle: { fontSize: 12, fontWeight: 700, color: '#ef9a9a', flexShrink: 0 },
+  clearSelect: {
+    background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.18)',
+    color: '#fff', borderRadius: 5, padding: '4px 8px', fontSize: 12, cursor: 'pointer',
+  },
+  clearBtn: {
+    background: 'rgba(244,67,54,0.2)', border: '1px solid rgba(244,67,54,0.5)',
+    color: '#ef9a9a', padding: '4px 14px', borderRadius: 5,
+    cursor: 'pointer', fontSize: 12, fontWeight: 700,
+  },
+  clearOk:  { color: '#4caf50', fontSize: 11 },
+  clearErr: { color: '#f44336', fontSize: 11 },
+
   body: {
     display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0,
   },

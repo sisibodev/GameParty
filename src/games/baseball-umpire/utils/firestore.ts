@@ -1,6 +1,6 @@
 import {
   collection, addDoc, query, orderBy, limit, getDocs,
-  serverTimestamp, Timestamp, where,
+  serverTimestamp, Timestamp, where, writeBatch, doc,
 } from 'firebase/firestore'
 import { db } from '../../../firebase/config'
 import { PitchParams, PitchType } from '../types'
@@ -114,6 +114,34 @@ export async function fetchTopRankings(count = 10, difficulty?: string): Promise
       teamId: data.teamId,
     }
   })
+}
+
+/**
+ * 랭킹 초기화 (관리자 전용)
+ * difficulty 지정 시 해당 난이도만 삭제, 미지정 시 전체 삭제
+ * Firestore writeBatch 500개 제한을 지켜 청크 단위로 처리
+ * @returns 삭제된 문서 수
+ */
+export async function clearRankings(difficulty?: string): Promise<number> {
+  const q = difficulty
+    ? query(collection(db, 'umpire_records'), where('difficulty', '==', difficulty))
+    : query(collection(db, 'umpire_records'))
+
+  const snap = await getDocs(q)
+  if (snap.empty) return 0
+
+  const CHUNK = 500
+  let deleted = 0
+  const docs = snap.docs
+
+  for (let i = 0; i < docs.length; i += CHUNK) {
+    const batch = writeBatch(db)
+    docs.slice(i, i + CHUNK).forEach(d => batch.delete(doc(db, 'umpire_records', d.id)))
+    await batch.commit()
+    deleted += Math.min(CHUNK, docs.length - i)
+  }
+
+  return deleted
 }
 
 export type { PitchType }
