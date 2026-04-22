@@ -1,7 +1,5 @@
 import { Assets, AnimatedSprite, Texture, Rectangle } from 'pixi.js'
 
-const CELL_W = 144
-const CELL_H = 261
 const DIR_COUNT = 8
 const FRAME_COUNT = 4
 
@@ -26,26 +24,27 @@ export function dirToCol(dx: number, dy: number): number {
 
 export async function loadCharFrames(role: 'thief' | 'cop'): Promise<CharFrames> {
   const tex = await Assets.load<Texture>(`${import.meta.env.BASE_URL}assets/cops-and-robbers/${role}.png`)
+  const cellW = Math.round(tex.width / DIR_COUNT)
+  const cellH = Math.round(tex.height / FRAME_COUNT)
   const frames: CharFrames = []
   for (let col = 0; col < DIR_COUNT; col++) {
     frames[col] = []
     for (let row = 0; row < FRAME_COUNT; row++) {
       frames[col][row] = new Texture({
         source: tex.source,
-        frame: new Rectangle(col * CELL_W, row * CELL_H, CELL_W, CELL_H),
+        frame: new Rectangle(col * cellW, row * cellH, cellW, cellH),
       })
     }
   }
   return frames
 }
 
-// PLAYER_RADIUS=12 기준 sprite 높이 ≈ 2.5×radius
-const SPRITE_SCALE = (12 * 2.5) / CELL_H
-
 export function createCharSprite(frames: CharFrames, col = 4): AnimatedSprite {
   const sprite = new AnimatedSprite(frames[col])
   sprite.anchor.set(0.5, 0.8)
-  sprite.scale.set(SPRITE_SCALE)
+  // PLAYER_RADIUS=12 기준 sprite 높이 ≈ 2.5×radius
+  const cellH = frames[col][0]?.height ?? 230
+  sprite.scale.set((12 * 2.5) / cellH)
   sprite.animationSpeed = 0.15
   sprite.play()
   return sprite
