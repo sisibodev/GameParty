@@ -43,6 +43,9 @@ export const SAFE_ALARM_DURATION_MS = 8000
 export const ESCAPE_ZONE_POS = { x: TILE_SIZE * 36.5, y: TILE_SIZE * 24.5 }
 export const ESCAPE_ZONE_RADIUS = TILE_SIZE * 2.2
 
+export const FOOTSTEP_WALK_RADIUS = TILE_SIZE * 3   // 경찰 걷기 발소리 반경
+export const FOOTSTEP_SPRINT_RADIUS = TILE_SIZE * 6  // 경찰 뛰기 발소리 반경
+
 export const JAIL_POS = { x: TILE_SIZE * 20.5, y: TILE_SIZE * 21.5 }
 export const JAIL_RADIUS = TILE_SIZE * 2.5
 export const JAIL_RESCUE_WAIT_MS = 180_000 // 3분

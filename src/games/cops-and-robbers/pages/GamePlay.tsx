@@ -43,6 +43,7 @@ import {
   SMOKE_DURATION_MS,
   STEALTH_COOLDOWN_MS,
   STEALTH_DURATION_MS,
+  THIEF_VISION_RADIUS,
   TILE_SIZE,
   VIEWPORT_HEIGHT,
   VIEWPORT_WIDTH,
@@ -64,6 +65,12 @@ import {
 import { saveGameResult } from '../utils/copsFirestore'
 import { createEscapeZone, type EscapeZoneHandle } from '../engine/escapeZone'
 import { createJail, type JailHandle } from '../engine/jail'
+import {
+  createCopFootprintRing,
+  createFootstepIndicator,
+  updateCopFootprintRing,
+  type FootstepIndicatorHandle,
+} from '../engine/footstep'
 import type { PlayerRole, ResultStats } from '../types'
 
 const POS_SYNC_MS = 67   // ~15 fps
@@ -117,6 +124,16 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
   const rescueTargetUidRef = useRef<string | null>(null)
   // pixi thief 오브젝트 (RTDB 구독에서 위치 리셋용)
   const thiefRef = useRef<ReturnType<typeof createPlayer> | null>(null)
+  // 발소리 인디케이터 (도둑 전용)
+  const footstepIndicatorRef = useRef<FootstepIndicatorHandle | null>(null)
+  // 경찰 발소리 링 (경찰 전용)
+  const copFootprintRingRef = useRef<import('pixi.js').Graphics | null>(null)
+  // 관전 모드: 잡혔을 때 볼 팀원 uid
+  const [spectateUid, setSpectateUid] = useState<string | null>(null)
+  const spectateUidRef = useRef<string | null>(null)
+  spectateUidRef.current = spectateUid
+  // RTDB 플레이어 목록 (관전 이름 표시용)
+  const [roomPlayers, setRoomPlayers] = useState<Record<string, import('../utils/copsRtdb').RoomPlayer>>({})
   // Per-cop hit cooldowns: copUid → lastHitMs
   const remoteCopHitRef = useRef<Map<string, number>>(new Map())
 
@@ -193,6 +210,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
     const r = subscribeRoom(roomId, (data) => {
       rtdbDataRef.current = data
       if (!data) return
+      if (data.players) setRoomPlayers(data.players)
 
       // Sync safe states from RTDB (changes made by other players)
       if (data.safes) {
@@ -361,6 +379,21 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
 
       const thief = createPlayer(myRole, { x: TILE_SIZE * 2.5, y: TILE_SIZE * 2.5 })
       thiefRef.current = thief
+
+      // 발소리 인디케이터 (도둑 전용 — 경찰 방향 화살표)
+      if (myRole === 'thief') {
+        const fsIndicator = createFootstepIndicator()
+        footstepIndicatorRef.current = fsIndicator
+        fsIndicator.container.position.set(thief.state.pos.x, thief.state.pos.y)
+        world.addChild(fsIndicator.container)
+      }
+
+      // 경찰 발소리 링 (경찰 플레이어 본인 전용)
+      if (myRole === 'cop') {
+        const copRing = createCopFootprintRing()
+        copFootprintRingRef.current = copRing
+        world.addChild(copRing)
+      }
       world.addChild(abHandle.stealthOverlay)
       world.addChild(thief.view)
 
@@ -371,10 +404,20 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
       setReady(true)
 
       app.ticker.add((ticker) => {
-        if (capturePhaseRef.current !== 'playing') return
-
         const dtMs = ticker.deltaMS
         nowMsRef.current += dtMs
+
+        // 관전 모드 (유치장 대기 중): fog만 관전 대상 위치로 갱신
+        if (capturePhaseRef.current === 'jailed') {
+          const sp = spectateUidRef.current
+            ? rtdbDataRef.current?.players?.[spectateUidRef.current]
+            : null
+          const viewPos = sp ? sp.pos : thief.state.pos
+          fog.update(viewPos.x, viewPos.y, THIEF_VISION_RADIUS)
+          return
+        }
+
+        if (capturePhaseRef.current !== 'playing') return
         const nowMs = nowMsRef.current
         const dt = dtMs / 1000
         const k = keyboard.state
@@ -485,6 +528,28 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
 
         fog.update(thief.state.pos.x, thief.state.pos.y, thief.state.visionRadius)
 
+        // ── 발소리 시스템 ────────────────────────────────────────────────────────
+        if (myRole === 'thief') {
+          // 경찰 봇 발소리 (순찰=걷기, 추격/공격=뛰기)
+          const botCops = [{
+            pos: copHandle.state.pos,
+            sprinting: copHandle.state.behavior !== 'patrol',
+          }]
+          // 멀티: 원격 경찰 플레이어 (항상 sprint 반경 사용 — 정보 부족)
+          const remoteCops = Object.entries(rtdbDataRef.current?.players ?? {})
+            .filter(([pUid, p]) => pUid !== uid && p.role === 'cop')
+            .map(([, p]) => ({ pos: p.pos, sprinting: true }))
+
+          footstepIndicatorRef.current?.update(thief.state.pos, [...botCops, ...remoteCops])
+          footstepIndicatorRef.current?.container.position.set(thief.state.pos.x, thief.state.pos.y)
+        }
+
+        if (myRole === 'cop') {
+          const sprinting = keyboard.state.sprint
+          const copRing = copFootprintRingRef.current
+          if (copRing) updateCopFootprintRing(copRing, thief.state.pos, sprinting)
+        }
+
         // 탈출구 잠금 해제 (보물 목표 달성 시 1회)
         if (!escapeUnlockedRef.current && treasureCountRef.current >= TREASURE_GOAL) {
           escapeUnlockedRef.current = true
@@ -567,6 +632,24 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      // 관전 모드: Q/E로 팀원 시점 전환
+      if (capturePhaseRef.current === 'jailed' && (e.code === 'KeyQ' || e.code === 'KeyE')) {
+        const players = rtdbDataRef.current?.players ?? {}
+        const free = Object.entries(players)
+          .filter(([pUid, p]) => pUid !== uid && !p.captured)
+          .map(([pUid]) => pUid)
+        if (free.length === 0) return
+        const cur = spectateUidRef.current
+        const curIdx = cur ? free.indexOf(cur) : -1
+        const nextIdx = e.code === 'KeyE'
+          ? (curIdx + 1) % free.length
+          : (curIdx - 1 + free.length) % free.length
+        const nextUid = free[nextIdx]
+        spectateUidRef.current = nextUid
+        setSpectateUid(nextUid)
+        return
+      }
+
       const abHandle = abilitiesHandleRef.current
       if (!abHandle) return
 
@@ -689,10 +772,6 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
     [safes],
   )
 
-  if (capturePhase === 'jailed') {
-    return <JailWaitScreen jailedAt={jailedAt} treasureCount={team.treasureCount} onBack={onBack} />
-  }
-
   if (capturePhase === 'captured') {
     return (
       <div style={captureScreenStyle}>
@@ -767,6 +846,17 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
           session={session}
           onSubmit={handleGuess}
           onClose={() => setSession(null)}
+        />
+      )}
+
+      {capturePhase === 'jailed' && (
+        <JailOverlay
+          jailedAt={jailedAt}
+          treasureCount={team.treasureCount}
+          treasureGoal={TREASURE_GOAL}
+          spectateUid={spectateUid}
+          roomPlayers={roomPlayers}
+          onBack={onBack}
         />
       )}
     </div>
@@ -944,7 +1034,7 @@ const canvasWrapStyle: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   padding: 20,
-  position: 'relative',
+  position: 'relative', // jail overlay 기준점
 }
 
 const loadingStyle: React.CSSProperties = {
@@ -998,14 +1088,20 @@ const captureRetryStyle: React.CSSProperties = {
   fontSize: 14,
 }
 
-// ── 유치장 대기 화면 ─────────────────────────────────────────────────────────────
-function JailWaitScreen({
+// ── 유치장 오버레이 (피시 캔버스 위에 반투명 패널) ──────────────────────────────
+function JailOverlay({
   jailedAt,
   treasureCount,
+  treasureGoal,
+  spectateUid,
+  roomPlayers,
   onBack,
 }: {
   jailedAt: number | null
   treasureCount: number
+  treasureGoal: number
+  spectateUid: string | null
+  roomPlayers: Record<string, import('../utils/copsRtdb').RoomPlayer>
   onBack: () => void
 }) {
   const [elapsed, setElapsed] = useState(0)
@@ -1018,36 +1114,73 @@ function JailWaitScreen({
     return () => clearInterval(id)
   }, [jailedAt])
 
-  const waitMs = JAIL_RESCUE_WAIT_MS
-  const remaining = Math.max(0, waitMs - elapsed)
+  const remaining = Math.max(0, JAIL_RESCUE_WAIT_MS - elapsed)
   const rescuable = remaining === 0
   const min = Math.floor(remaining / 60000)
   const sec = Math.floor((remaining % 60000) / 1000)
+  const spectateName = spectateUid ? (roomPlayers[spectateUid]?.name ?? spectateUid) : null
 
   return (
-    <div style={captureScreenStyle}>
-      <div style={{ ...captureCardStyle, borderColor: '#1a2a4a' }}>
-        <div style={captureIconStyle}>🔒</div>
-        <h2 style={{ ...captureTitleStyle, color: '#7dd3fc' }}>유치장에 갇혔습니다</h2>
-        <p style={captureDescStyle}>팀원이 유치장에 와서 구출할 수 있습니다.</p>
-
+    <div style={jailOverlayStyle}>
+      <div style={jailPanelStyle}>
+        <span style={jailIconStyle}>🔒</span>
+        <span style={jailTitleStyle}>유치장 대기 중</span>
         {rescuable ? (
-          <p style={{ ...captureStatsStyle, color: '#34d399' }}>
-            ✅ 구출 가능 — 팀원이 유치장에 오면 자동 구출됩니다
-          </p>
+          <span style={{ color: '#34d399', fontSize: 13, fontWeight: 700 }}>
+            ✅ 구출 가능
+          </span>
         ) : (
-          <p style={captureStatsStyle}>
-            ⏳ 구출 대기: {min}:{sec.toString().padStart(2, '0')}
-          </p>
+          <span style={{ color: '#fbbf24', fontSize: 13 }}>
+            ⏳ {min}:{sec.toString().padStart(2, '0')}
+          </span>
         )}
-
-        <p style={{ ...captureDescStyle, marginTop: 8 }}>
-          팀 보물: {treasureCount} / {TREASURE_GOAL}
-        </p>
-        <button style={captureRetryStyle} onClick={onBack}>
-          포기하고 나가기
-        </button>
+        <span style={{ color: '#6b7280', fontSize: 12 }}>
+          보물 {treasureCount}/{treasureGoal}
+        </span>
+        {spectateName ? (
+          <span style={{ color: '#7dd3fc', fontSize: 12 }}>
+            👁 관전: {spectateName}
+          </span>
+        ) : (
+          <span style={{ color: '#6b7280', fontSize: 12 }}>Q/E: 팀원 관전</span>
+        )}
+        <button style={jailLeaveStyle} onClick={onBack}>포기</button>
       </div>
     </div>
   )
+}
+
+const jailOverlayStyle: React.CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  pointerEvents: 'none',
+  display: 'flex',
+  alignItems: 'flex-end',
+  justifyContent: 'center',
+  paddingBottom: 24,
+  zIndex: 20,
+}
+
+const jailPanelStyle: React.CSSProperties = {
+  pointerEvents: 'auto',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 16,
+  background: 'rgba(10, 13, 20, 0.88)',
+  border: '1px solid #1a2a4a',
+  borderRadius: 12,
+  padding: '10px 20px',
+  backdropFilter: 'blur(6px)',
+}
+
+const jailIconStyle: React.CSSProperties = { fontSize: 20 }
+const jailTitleStyle: React.CSSProperties = { color: '#7dd3fc', fontWeight: 700, fontSize: 14 }
+const jailLeaveStyle: React.CSSProperties = {
+  background: '#1b2230',
+  color: '#8a93a6',
+  border: '1px solid #2a3345',
+  padding: '4px 10px',
+  borderRadius: 6,
+  cursor: 'pointer',
+  fontSize: 12,
 }
