@@ -27,11 +27,14 @@ import type {
   TeamStats,
 } from '../types'
 import NumberBaseballModal from './NumberBaseballModal'
+import Minimap from './Minimap'
 import {
   COLORS,
   COP_BOT_ATTACK_RADIUS,
   COP_BOT_HIT_COOLDOWN_MS,
   HIT_STACK_MAX,
+  JAIL_CAMPING_REVEAL_MS,
+  JAIL_CAMPING_REVEAL_RADIUS,
   JAIL_EXIT_OFFSET_X,
   JAIL_POS,
   JAIL_RESCUE_WAIT_MS,
@@ -109,6 +112,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
   // Game time + result
   const nowMsRef = useRef(0)
   const treasureCountRef = useRef(0)
+  const treasureGoalRef = useRef(TREASURE_GOAL)
   const gameEndedRef = useRef(false)
   const escapeZoneHandleRef = useRef<EscapeZoneHandle | null>(null)
   const jailHandleRef = useRef<JailHandle | null>(null)
@@ -136,6 +140,12 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
   const [roomPlayers, setRoomPlayers] = useState<Record<string, import('../utils/copsRtdb').RoomPlayer>>({})
   // Per-cop hit cooldowns: copUid → lastHitMs
   const remoteCopHitRef = useRef<Map<string, number>>(new Map())
+  // Minimap
+  const tileMapRef = useRef<import('../types').TileMap | null>(null)
+  const [myPosForMinimap, setMyPosForMinimap] = useState<import('../types').Vec2>({ x: 0, y: 0 })
+  const [botPosForMinimap, setBotPosForMinimap] = useState<import('../types').Vec2 | null>(null)
+  const minimapTickRef = useRef(0)
+  const [highlightSafeIds, setHighlightSafeIds] = useState<Set<string>>(new Set())
 
   const [nearestId, setNearestId] = useState<string | null>(null)
   const nearestIdRef = useRef<string | null>(null)
@@ -150,6 +160,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
     treasureGoal: TREASURE_GOAL,
   })
   treasureCountRef.current = team.treasureCount
+  treasureGoalRef.current = team.treasureGoal
 
   const [hitStack, setHitStack] = useState(0)
   const hitStackRef = useRef(0)
@@ -211,6 +222,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
       rtdbDataRef.current = data
       if (!data) return
       if (data.players) setRoomPlayers(data.players)
+      setBotPosForMinimap(data.bot?.pos ?? null)
 
       // Sync safe states from RTDB (changes made by other players)
       if (data.safes) {
@@ -233,9 +245,14 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
         })
       }
 
-      // Sync treasure count
-      if (typeof data.treasureCount === 'number') {
-        setTeam((t) => t.treasureCount !== data.treasureCount ? { ...t, treasureCount: data.treasureCount } : t)
+      // Sync treasure count + goal
+      if (typeof data.treasureCount === 'number' || typeof data.treasureGoal === 'number') {
+        setTeam((t) => {
+          const nextCount = typeof data.treasureCount === 'number' ? data.treasureCount : t.treasureCount
+          const nextGoal = typeof data.treasureGoal === 'number' ? data.treasureGoal : t.treasureGoal
+          if (t.treasureCount === nextCount && t.treasureGoal === nextGoal) return t
+          return { ...t, treasureCount: nextCount, treasureGoal: nextGoal }
+        })
       }
 
       // Cop player wins when all thieves captured
@@ -346,6 +363,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
       app.stage.addChild(world)
 
       const map = buildTileMap()
+      tileMapRef.current = map
       world.addChild(renderTileMap(map))
 
       const ezHandle = createEscapeZone()
@@ -550,8 +568,15 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
           if (copRing) updateCopFootprintRing(copRing, thief.state.pos, sprinting)
         }
 
+        // Minimap 위치 동기화 (300ms 주기)
+        minimapTickRef.current += dtMs
+        if (minimapTickRef.current >= 300) {
+          minimapTickRef.current = 0
+          setMyPosForMinimap({ x: thief.state.pos.x, y: thief.state.pos.y })
+        }
+
         // 탈출구 잠금 해제 (보물 목표 달성 시 1회)
-        if (!escapeUnlockedRef.current && treasureCountRef.current >= TREASURE_GOAL) {
+        if (!escapeUnlockedRef.current && treasureCountRef.current >= treasureGoalRef.current) {
           escapeUnlockedRef.current = true
           escapeZoneHandleRef.current?.setLocked(false)
           showToast('🔓 탈출구 해제! 탈출 존으로 이동하세요!')
@@ -577,7 +602,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
         // Escape zone win check (thief role only)
         if (myRole === 'thief' && !gameEndedRef.current) {
           if (
-            treasureCountRef.current >= TREASURE_GOAL &&
+            treasureCountRef.current >= treasureGoalRef.current &&
             escapeZoneHandleRef.current?.isInZone(thief.state.pos)
           ) {
             if (roomId) endGame(roomId, 'thieves').catch(() => {})
@@ -767,6 +792,27 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
     }
   }
 
+  // 캠핑 방지: 유치장 15s 경과 시 근처 금고 미니맵 강조
+  useEffect(() => {
+    if (!jailedAt || capturePhase !== 'jailed') {
+      setHighlightSafeIds(new Set())
+      return
+    }
+    const delay = Math.max(0, jailedAt + JAIL_CAMPING_REVEAL_MS - Date.now())
+    const timer = setTimeout(() => {
+      const nearby = new Set(
+        safes
+          .filter((s) => {
+            if (s.status === 'opened_treasure' || s.status === 'opened_empty') return false
+            return Math.hypot(s.pos.x - JAIL_POS.x, s.pos.y - JAIL_POS.y) <= JAIL_CAMPING_REVEAL_RADIUS
+          })
+          .map((s) => s.id),
+      )
+      setHighlightSafeIds(nearby)
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [jailedAt, capturePhase, safes])
+
   const openedCount = useMemo(
     () => safes.filter((s) => s.status === 'opened_treasure' || s.status === 'opened_empty').length,
     [safes],
@@ -779,7 +825,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
           <div style={captureIconStyle}>🚔</div>
           <h2 style={captureTitleStyle}>체포됐습니다!</h2>
           <p style={captureDescStyle}>경찰에게 3번 피격되어 유치장으로 이송됩니다.</p>
-          <p style={captureStatsStyle}>획득 보물: {team.treasureCount} / {TREASURE_GOAL}</p>
+          <p style={captureStatsStyle}>획득 보물: {team.treasureCount} / {team.treasureGoal}</p>
           <button style={captureRetryStyle} onClick={onBack}>
             돌아가기
           </button>
@@ -827,16 +873,32 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
 
       <div style={canvasWrapStyle}>
         <div
-          ref={hostRef}
-          style={{
-            width: VIEWPORT_WIDTH,
-            height: VIEWPORT_HEIGHT,
-            boxShadow: '0 0 0 1px #222, 0 12px 40px rgba(0,0,0,0.6)',
-            borderRadius: 8,
-            overflow: 'hidden',
-            background: '#000',
-          }}
-        />
+          style={{ position: 'relative', lineHeight: 0 }}
+        >
+          <div
+            ref={hostRef}
+            style={{
+              width: VIEWPORT_WIDTH,
+              height: VIEWPORT_HEIGHT,
+              boxShadow: '0 0 0 1px #222, 0 12px 40px rgba(0,0,0,0.6)',
+              borderRadius: 8,
+              overflow: 'hidden',
+              background: '#000',
+            }}
+          />
+          {ready && tileMapRef.current && (
+            <Minimap
+              tileMap={tileMapRef.current}
+              myPos={myPosForMinimap}
+              myRole={myRole}
+              myUid={uid ?? ''}
+              remotePlayers={roomPlayers}
+              botPos={botPosForMinimap}
+              safes={safes}
+              highlightSafeIds={highlightSafeIds}
+            />
+          )}
+        </div>
         {!ready && <div style={loadingStyle}>로딩 중…</div>}
         {toast && <div style={toastStyle}>{toast}</div>}
       </div>
@@ -853,7 +915,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
         <JailOverlay
           jailedAt={jailedAt}
           treasureCount={team.treasureCount}
-          treasureGoal={TREASURE_GOAL}
+          treasureGoal={team.treasureGoal}
           spectateUid={spectateUid}
           roomPlayers={roomPlayers}
           onBack={onBack}

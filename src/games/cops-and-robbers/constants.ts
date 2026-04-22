@@ -51,6 +51,8 @@ export const JAIL_RADIUS = TILE_SIZE * 2.5
 export const JAIL_RESCUE_WAIT_MS = 180_000 // 3분
 export const JAIL_RESCUE_INTERACT_RADIUS = TILE_SIZE * 2.2
 export const JAIL_EXIT_OFFSET_X = TILE_SIZE * 3.5 // 구출 후 리스폰 x 오프셋
+export const JAIL_CAMPING_REVEAL_MS = 15_000        // 15s 후 근처 금고 미니맵 표시
+export const JAIL_CAMPING_REVEAL_RADIUS = TILE_SIZE * 8
 
 export const COLORS = {
   floor: 0x2a2f3a,

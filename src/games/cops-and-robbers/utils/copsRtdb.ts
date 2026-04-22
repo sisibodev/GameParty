@@ -53,6 +53,7 @@ export interface RoomData {
   safes: Record<string, RoomSafe> | null
   bot: RoomBot | null
   treasureCount: number
+  treasureGoal: number
   winner: 'thieves' | 'cops' | null
 }
 
@@ -127,6 +128,7 @@ export async function startGame(
   roomId: string,
   safes: RoomSafe[],
   botSpawnPos: Vec2,
+  treasureGoal: number,
 ): Promise<void> {
   const safesRecord: Record<string, RoomSafe> = {}
   for (const s of safes) safesRecord[s.id] = s
@@ -135,6 +137,7 @@ export async function startGame(
     safes: safesRecord,
     bot: { pos: botSpawnPos, behavior: 'patrol' as BotBehavior },
     treasureCount: 0,
+    treasureGoal,
     winner: null,
   })
 }
