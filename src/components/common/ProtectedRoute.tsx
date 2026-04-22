@@ -11,6 +11,7 @@ function Loading() {
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
+  if (import.meta.env.DEV) return <>{children}</>
   if (loading) return <Loading />
   if (!user) return <Navigate to="/login" replace />
   return <>{children}</>

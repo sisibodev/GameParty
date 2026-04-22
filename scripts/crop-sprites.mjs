@@ -73,10 +73,24 @@ async function cropSpriteSheet(srcFile, dstFile, label) {
       const y = topLabel + row * cellH
       const w = Math.min(cellW, imgW - x)
       const h = Math.min(cellH, imgH - y)
+
+      // 1. 셀 크롭
+      const cellBuf = await sharp(srcFile)
+        .extract({ left: x, top: y, width: w, height: h })
+        .extend({ right: cellW - w, bottom: cellH - h, background: { r: 255, g: 255, b: 255, alpha: 1 } })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true })
+
+      // 2. 흰 배경 제거: 밝은 픽셀(R>230 & G>230 & B>230)을 투명하게
+      const px = cellBuf.data
+      for (let i = 0; i < px.length; i += 4) {
+        if (px[i] > 230 && px[i+1] > 230 && px[i+2] > 230) px[i+3] = 0
+      }
+
       cells.push({
-        input: await sharp(srcFile)
-          .extract({ left: x, top: y, width: w, height: h })
-          .extend({ right: cellW - w, bottom: cellH - h, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        input: await sharp(px, { raw: { width: cellW, height: cellH, channels: 4 } })
+          .png()
           .toBuffer(),
         left: col * cellW,
         top: row * cellH,
