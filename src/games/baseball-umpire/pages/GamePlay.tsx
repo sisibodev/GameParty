@@ -86,7 +86,8 @@ export default function GamePlay({
   // ── Refs (stale closure 방지용 최신값 저장) ──────────────────────────────
   const rngRef            = useRef<SeededRng>(new SeededRng(initialSeed ?? randomSeed()))
   const battersRef        = useRef<BatterProfile[]>([])
-  const pitcherFormsRef   = useRef<PitcherForm[]>([])   // 3 forms for 10-pitch segments
+  const pitcherFormsRef   = useRef<PitcherForm[]>([])   // 6 forms for 5-pitch segments
+  const pitcherLeftyRef   = useRef<boolean[]>([])        // 6 handedness flags (true=왼손)
   const activePitchTypesRef = useRef<PitchType[]>(['fastball'])  // 이번 게임 사용 구종
   const judgeTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownRef      = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -125,11 +126,9 @@ export default function GamePlay({
     rngRef.current = rng
     battersRef.current = generateBatters(rng, TOTAL_BATTERS)
     // 10구 단위 3개 세그먼트 투구폼 미리 결정 (RNG 시퀀스 유지)
-    pitcherFormsRef.current = [
-      rng.pick(PITCHER_FORMS),
-      rng.pick(PITCHER_FORMS),
-      rng.pick(PITCHER_FORMS),
-    ]
+    // 5구 단위 6개 세그먼트 투구폼·손 미리 결정 (RNG 시퀀스 유지)
+    pitcherFormsRef.current = Array.from({ length: 6 }, () => rng.pick(PITCHER_FORMS))
+    pitcherLeftyRef.current = Array.from({ length: 6 }, () => rng.next() < 0.5)
     // 변화구 풀에서 breakingBallCount개 랜덤 선택 (부분 Fisher-Yates)
     // 멀티플레이: 동일 시드 → 모든 플레이어가 같은 구종 조합
     const pool = [...BREAKING_BALL_POOL]
@@ -179,13 +178,14 @@ export default function GamePlay({
         speedMax: Math.min(config.speedMax + speedBonus, GLOBAL_SPEED_CAP),
       }
 
-      // 10구마다 폼 변경 (세그먼트: 0~9, 10~19, 20~29)
-      const segment = Math.min(Math.floor(pitchIndexRef.current / 10), 2)
-      const form = pitcherFormsRef.current[segment] ?? 'overhand'
+      // 5구마다 폼·손 변경 (세그먼트: 0~4, 5~9, ..., 25~29)
+      const segment = Math.min(Math.floor(pitchIndexRef.current / 5), 5)
+      const form    = pitcherFormsRef.current[segment] ?? 'overhand'
+      const isLefty = pitcherLeftyRef.current[segment] ?? false
 
       const pitch = generatePitch(
         rngRef.current, bidx, batter, boostedConfig, pitchIndexRef.current++, form,
-        activePitchTypesRef.current,
+        activePitchTypesRef.current, isLefty,
       )
       currentPitchRef.current = pitch
       setCurrentPitch(pitch)
@@ -471,6 +471,8 @@ export default function GamePlay({
         batter={currentBatter}
         pitchCount={pitchCount}
         totalPitches={TOTAL_PITCHES}
+        pitcherForm={currentPitch?.pitcherForm ?? null}
+        pitcherLefty={currentPitch?.pitcherLefty ?? null}
         multiRankings={multiRankings}
         myUid={myUid}
       />

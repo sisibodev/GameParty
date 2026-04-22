@@ -5,6 +5,7 @@ import { GameMode, Difficulty, TrajectoryMode, DIFFICULTY_CONFIG } from '../type
 import { fetchTopRankings, RankEntry } from '../utils/firestore'
 import { getMyTeam, KBOTeam, KBO_TEAMS } from '../utils/kboTeams'
 import TeamSelectModal from '../components/TeamSelectModal'
+import UpdateNotesModal from '../components/UpdateNotesModal'
 
 interface Props {
   onStart: (mode: GameMode, difficulty: Difficulty, trajectoryMode: TrajectoryMode) => void
@@ -20,6 +21,7 @@ export default function ModeSelect({ onStart, onMultiBattle, onPitchEditor, onBa
   const [myTeam, setMyTeam] = useState<KBOTeam | null>(getMyTeam)
   const [showTeamModal, setShowTeamModal] = useState(false)
   const [showRanking, setShowRanking] = useState(false)
+  const [showUpdateNotes, setShowUpdateNotes] = useState(false)
 
   const modes: { id: GameMode; label: string; desc: string; emoji: string }[] = [
     {
@@ -122,9 +124,14 @@ export default function ModeSelect({ onStart, onMultiBattle, onPitchEditor, onBa
             </button>
           </div>
 
-          <button style={styles.rankingBtn} onClick={() => setShowRanking(true)}>
-            🏆 랭킹 보기
-          </button>
+          <div style={styles.actionBtns}>
+            <button style={styles.rankingBtn} onClick={() => setShowRanking(true)}>
+              🏆 랭킹 보기
+            </button>
+            <button style={styles.updateBtn} onClick={() => setShowUpdateNotes(true)}>
+              📋 업데이트
+            </button>
+          </div>
 
           <div style={styles.diffTable}>
             <div style={styles.sectionTitle}>난이도 안내</div>
@@ -203,6 +210,11 @@ export default function ModeSelect({ onStart, onMultiBattle, onPitchEditor, onBa
       {/* 랭킹 모달 */}
       {showRanking && (
         <RankingModal user={user} onClose={() => setShowRanking(false)} />
+      )}
+
+      {/* 업데이트 노트 모달 */}
+      {showUpdateNotes && (
+        <UpdateNotesModal onClose={() => setShowUpdateNotes(false)} />
       )}
     </div>
   )
@@ -418,16 +430,31 @@ const styles: Record<string, React.CSSProperties> = {
   emoji: { fontSize: 40, marginBottom: 10 },
   cardTitle: { fontSize: 20, fontWeight: 700, marginBottom: 8 },
   cardDesc: { fontSize: 13, color: '#aac', lineHeight: 1.6, maxWidth: 220 },
+  actionBtns: {
+    display: 'flex',
+    gap: 8,
+    marginBottom: 16,
+  },
   rankingBtn: {
     background: 'rgba(255,215,0,0.08)',
     border: '1px solid rgba(255,215,0,0.35)',
     color: '#ffd700',
-    padding: '8px 24px',
+    padding: '8px 20px',
     borderRadius: 8,
     cursor: 'pointer',
     fontSize: 14,
     fontWeight: 700,
-    marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+  updateBtn: {
+    background: 'rgba(0,229,255,0.08)',
+    border: '1px solid rgba(0,229,255,0.3)',
+    color: '#00e5ff',
+    padding: '8px 20px',
+    borderRadius: 8,
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 700,
     letterSpacing: 0.5,
   },
   diffTable: {

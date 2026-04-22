@@ -1,4 +1,5 @@
 import { BatterProfile, PitchParams } from '../types'
+import { BALL_RADIUS } from '../utils/pitch'
 
 interface Props {
   pitch: PitchParams
@@ -39,14 +40,20 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
   const toSvgY = (y: number) =>
     PADDING + (1 - (y - rangeYb) / rangeH) * ZONE_H
 
-  // ── 실제 스트라이크 존 박스 SVG 좌표 (판정 로직과 동일한 좌표계) ─────────
-  const zoneX1 = toSvgX(-batter.zoneHalfWidth)  // 왼쪽 경계
-  const zoneX2 = toSvgX(+batter.zoneHalfWidth)  // 오른쪽 경계
-  const zoneY1 = toSvgY(batter.zoneTop)          // 상단 경계 (SVG y: 위가 작음)
-  const zoneY2 = toSvgY(batter.zoneBottom)       // 하단 경계
+  // ── 실제 스트라이크 존 박스 SVG 좌표 ────────────────────────────────────
+  // ABS 실효 판정 기준: midHalfW + BALL_RADIUS = zoneHalfWidth + 0.02 + 0.037
+  // 박스 안 = 실제 스트라이크, 박스 밖 = 볼 (시각·판정 일치)
+  const effectiveHalfW = batter.zoneHalfWidth + 0.02 + BALL_RADIUS
+  const zoneX1 = toSvgX(-effectiveHalfW)
+  const zoneX2 = toSvgX(+effectiveHalfW)
+  const zoneY1 = toSvgY(batter.zoneTop    + BALL_RADIUS)
+  const zoneY2 = toSvgY(batter.zoneBottom - BALL_RADIUS)
 
   const zoneCx = (zoneX1 + zoneX2) / 2
   const zoneCy = (zoneY1 + zoneY2) / 2
+
+  // 홈플레이트는 실제 플레이트 폭(zoneHalfWidth)으로 별도 계산
+  const plateSvgHalfW = toSvgX(batter.zoneHalfWidth) - toSvgX(0)
 
   // ── 공 위치 (카메라가 뒤에서 보므로 X 반전) ──────────────────────────────
   const ballSvgX = toSvgX(-pitch.plateX)
@@ -66,7 +73,7 @@ export default function StrikeZoneResult2D({ pitch, batter, visible }: Props) {
 
   // 홈플레이트 (존 하단과 8px 간격)
   const plateTop = zoneY2 + 24
-  const plateHw  = (zoneX2 - zoneX1) / 2
+  const plateHw  = plateSvgHalfW   // 실제 홈플레이트 폭 사용
   const platePh  = 10
   const platePs  = 6
   const platePts = [

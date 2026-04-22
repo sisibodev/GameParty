@@ -1,4 +1,4 @@
-import { BatterProfile } from '../types'
+import { BatterProfile, PitcherForm } from '../types'
 
 interface MultiRankEntry {
   uid: string
@@ -12,6 +12,8 @@ interface Props {
   batter: BatterProfile | null
   pitchCount: number     // 1-based, current pitch number
   totalPitches: number
+  pitcherForm?: PitcherForm | null
+  pitcherLefty?: boolean | null
   multiRankings?: MultiRankEntry[]
   myUid?: string
 }
@@ -20,9 +22,29 @@ const HEIGHT_LABEL: Record<string, string> = { short: '단신 (165cm)', medium: 
 const BUILD_LABEL:  Record<string, string> = { slim: '마른', normal: '보통', stocky: '다부짐' }
 const STANCE_LABEL: Record<string, string> = { low: '낮은', mid: '표준', high: '높은' }
 
+const FORM_LABEL: Record<PitcherForm, string> = {
+  overhand:      '오버핸드',
+  three_quarter: '쓰리쿼터',
+  sidearm:       '사이드암',
+  underhand:     '언더핸드',
+}
+// 시계 방향 팔 각도로 폼 직관적 표현
+const FORM_CLOCK: Record<PitcherForm, string> = {
+  overhand:      '12시',
+  three_quarter: '10시',
+  sidearm:       '3시',
+  underhand:     '6시',
+}
+const FORM_COLOR: Record<PitcherForm, string> = {
+  overhand:      '#7ecfff',
+  three_quarter: '#a0e0a0',
+  sidearm:       '#ffd580',
+  underhand:     '#ff9fa0',
+}
+
 export default function LeftPanel({
   batterIndex, totalBatters, batter, pitchCount, totalPitches,
-  multiRankings, myUid,
+  pitcherForm, pitcherLefty, multiRankings, myUid,
 }: Props) {
   // SVG 미니 스트라이크존
   const svgW = 120
@@ -59,6 +81,35 @@ export default function LeftPanel({
       </div>
 
       <div style={styles.divider} />
+
+      {/* 투수 폼 */}
+      {pitcherForm && (
+        <>
+          <div style={styles.divider} />
+          <div>
+            <div style={styles.sectionLabel}>투수 폼</div>
+            <div style={{
+              ...styles.formChip,
+              borderColor: FORM_COLOR[pitcherForm],
+              color: FORM_COLOR[pitcherForm],
+            }}>
+              {FORM_LABEL[pitcherForm]}
+            </div>
+            <div style={styles.formClock}>{FORM_CLOCK[pitcherForm]} 방향</div>
+            {pitcherLefty != null && (
+              <div style={{
+                ...styles.handChip,
+                background: pitcherLefty
+                  ? 'rgba(255,152,0,0.15)' : 'rgba(33,150,243,0.15)',
+                borderColor: pitcherLefty ? '#ff9800' : '#2196f3',
+                color: pitcherLefty ? '#ffb74d' : '#64b5f6',
+              }}>
+                {pitcherLefty ? '🤚 왼손' : '✋ 오른손'}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* 타자 정보 */}
       {batter ? (
@@ -194,6 +245,30 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
+  },
+  formChip: {
+    fontSize: 13,
+    fontWeight: 800,
+    border: '1px solid',
+    borderRadius: 6,
+    padding: '3px 8px',
+    display: 'inline-block',
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  formClock: {
+    fontSize: 10,
+    color: '#888',
+    paddingLeft: 2,
+  },
+  handChip: {
+    fontSize: 11,
+    fontWeight: 700,
+    border: '1px solid',
+    borderRadius: 5,
+    padding: '2px 7px',
+    display: 'inline-block',
+    marginTop: 4,
   },
   batterInfo: {
     display: 'flex',

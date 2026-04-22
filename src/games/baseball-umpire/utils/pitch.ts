@@ -103,8 +103,9 @@ const PITCH_BREAK: Record<PitchType, BreakProfile> = {
   //            포수 시점: "바깥으로 빠졌다가 안으로 들어오는" 특성 구현
   slider:   { t1: 0.30, x1: +0.10, y1: +0.06,  t2: 0.76, x2: -0.06, y2: -0.12 },
 
-  // 스위퍼 ─ 초반 직선 → 후반 3루(x-)방향 크게 스윕. 수직변화 작음 (x2 강화로 오버핸드에서도 스윕 명확)
-  sweeper:  { t1: 0.28, x1:  0.00, y1: +0.02,  t2: 0.73, x2: -0.13, y2: -0.05 },
+  // 스위퍼 ─ 초반 직선 → 후반 3루(x-)방향 크게 스윕. 수직변화 작음
+  // x2 -0.13→-0.22: 베지어 아크 스윕 강화 (plate 목적지 불변, 시각적 스윕만 확대)
+  sweeper:  { t1: 0.28, x1:  0.00, y1: +0.02,  t2: 0.73, x2: -0.22, y2: -0.05 },
 
   // 체인지업 ─ 직구 위장(초반 약상승) → 암사이드로 낙하
   changeup: { t1: 0.33, x1: +0.03, y1: +0.08,  t2: 0.76, x2: +0.06, y2: -0.20 },
@@ -191,6 +192,7 @@ export function generatePitch(
   pitchIndex: number,
   pitcherForm: PitcherForm,
   activePitchTypes: PitchType[],
+  pitcherLefty = false,
 ): PitchParams {
   const pitchType = rng.pick(activePitchTypes)
 
@@ -251,7 +253,8 @@ export function generatePitch(
   const rawMvX = (mv.xBase + rng.float(-mv.xRange, mv.xRange)) * fm.x * variety
   const rawMvY = (mv.yBase + rng.float(-mv.yRange, mv.yRange)) * fm.y * variety
 
-  const mvX = rawMvX
+  // 왼손 투수: 수평 무브먼트 방향 반전 (암사이드/글러브사이드 대칭)
+  const mvX = rawMvX * (pitcherLefty ? -1 : 1)
   // forceDown 구종: 항상 낙하 방향 보장 (최소 -5cm 낙하)
   const mvY = mv.forceDown ? Math.min(rawMvY, -0.05) : rawMvY
 
@@ -294,6 +297,7 @@ export function generatePitch(
     pitchIndex,
     pitchType,
     pitcherForm,
+    pitcherLefty,
     speed,
     plateX: finalPlateX,
     plateY: finalPlateY,
@@ -324,34 +328,39 @@ export function buildPitchCurve(
   const bp = (_configOverride?.pitchBreak    ?? PITCH_BREAK)[params.pitchType]
   const fb = (_configOverride?.formBreakMult ?? FORM_BREAK_MULT)[form]
 
+  // 왼손 투수: 릴리즈 포인트 X 및 베지어 아크 X 오프셋 반전
+  const mirror = (params.pitcherLefty ?? false) ? -1 : 1
+  const startX = rp.x * mirror
+
   const startZ = MOUND_DISTANCE - rp.z
-  const start  = new THREE.Vector3(rp.x, rp.y, startZ)
+  const start  = new THREE.Vector3(startX, rp.y, startZ)
   const end    = new THREE.Vector3(params.plateX, params.plateY, -0.30)
 
   const totalZ = startZ - (-0.30)
   const lerpOnLine = (t: number) => new THREE.Vector3(
-    rp.x + (params.plateX - rp.x) * t,
-    rp.y  + (params.plateY - rp.y) * t,
+    startX + (params.plateX - startX) * t,
+    rp.y   + (params.plateY - rp.y)  * t,
     startZ - totalZ * t,
   )
 
   const base1 = lerpOnLine(bp.t1)
   const base2 = lerpOnLine(bp.t2)
 
-  // 폼별 배율로 X·Y 아크 조정
+  // 폼별 배율로 X·Y 아크 조정 + 왼손 mirror 적용
   // ?? 0 / ?? 1 : 구버전 Firestore 설정에 x1/x2 필드 없을 때 NaN 방지
   const ctrl1 = new THREE.Vector3(
-    base1.x + (bp.x1 ?? 0) * (fb.x1 ?? 1),
+    base1.x + (bp.x1 ?? 0) * (fb.x1 ?? 1) * mirror,
     base1.y + bp.y1 * fb.y1,
     base1.z,
   )
   const ctrl2RawY = base2.y + bp.y2 * fb.y2
-  // ctrl2.y 안전망: 하강 궤적(릴리즈 > 도달)에서만 클램프 적용
-  // 상승 궤적(언더핸드 → 높은 타깃)에서 클램프하면 오히려 끝에서 튀어오르는 버그 유발
-  const isDescending = rp.y > params.plateY
-  const ctrl2Y = (isDescending && ctrl2RawY < params.plateY) ? params.plateY : ctrl2RawY
+  // ctrl2.y 안전망: ctrl2RawY < plateY 이면 항상 클램프
+  // ※ 상승/하강 구분 없이 적용: isDescending 조건을 두면 언더핸드처럼 릴리즈보다
+  //   높은 타깃을 향할 때 ctrl2가 플레이트 아래로 내려갔다가 다시 올라오는
+  //   U자 궤적(도착 직전 위로 솟는 버그)이 발생한다.
+  const ctrl2Y = ctrl2RawY < params.plateY ? params.plateY : ctrl2RawY
   const ctrl2 = new THREE.Vector3(
-    base2.x + (bp.x2 ?? 0) * (fb.x2 ?? 1),
+    base2.x + (bp.x2 ?? 0) * (fb.x2 ?? 1) * mirror,
     ctrl2Y,
     base2.z,
   )
@@ -372,14 +381,17 @@ export function buildPitchCurveWithConfig(
   const bp  = config.pitchBreak[params.pitchType]
   const fb  = config.formBreakMult[form]
 
+  const mirror = (params.pitcherLefty ?? false) ? -1 : 1
+  const startX = rp.x * mirror
+
   const startZ = MOUND_DISTANCE - rp.z
-  const start  = new THREE.Vector3(rp.x, rp.y, startZ)
+  const start  = new THREE.Vector3(startX, rp.y, startZ)
   const end    = new THREE.Vector3(params.plateX, params.plateY, -0.30)
 
   const totalZ = startZ - (-0.30)
   const lerpOnLine = (t: number) => new THREE.Vector3(
-    rp.x + (params.plateX - rp.x) * t,
-    rp.y  + (params.plateY - rp.y) * t,
+    startX + (params.plateX - startX) * t,
+    rp.y   + (params.plateY - rp.y)  * t,
     startZ - totalZ * t,
   )
 
@@ -387,15 +399,14 @@ export function buildPitchCurveWithConfig(
   const base2 = lerpOnLine(bp.t2)
 
   const ctrl1 = new THREE.Vector3(
-    base1.x + (bp.x1 ?? 0) * (fb.x1 ?? 1),
+    base1.x + (bp.x1 ?? 0) * (fb.x1 ?? 1) * mirror,
     base1.y + bp.y1 * fb.y1,
     base1.z,
   )
   const ctrl2RawY = base2.y + bp.y2 * fb.y2
-  const isDescending2 = rp.y > params.plateY
-  const ctrl2Y2 = (isDescending2 && ctrl2RawY < params.plateY) ? params.plateY : ctrl2RawY
+  const ctrl2Y2 = ctrl2RawY < params.plateY ? params.plateY : ctrl2RawY
   const ctrl2 = new THREE.Vector3(
-    base2.x + (bp.x2 ?? 0) * (fb.x2 ?? 1),
+    base2.x + (bp.x2 ?? 0) * (fb.x2 ?? 1) * mirror,
     ctrl2Y2,
     base2.z,
   )
