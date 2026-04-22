@@ -18,7 +18,7 @@ export function dirToCol(dx: number, dy: number): number {
 }
 
 export async function loadCharFrames(role: 'thief' | 'cop'): Promise<CharFrames> {
-  const tex = await Assets.load<Texture>(`/assets/cops-and-robbers/${role}.png`)
+  const tex = await Assets.load<Texture>(`${import.meta.env.BASE_URL}assets/cops-and-robbers/${role}.png`)
   const frames: CharFrames = []
   for (let col = 0; col < DIR_COUNT; col++) {
     frames[col] = []
