@@ -30,4 +30,14 @@ export const GAMES: GameMeta[] = [
     tags: ['스포츠', '싱글', '판단력'],
     players: '1인',
   },
+  {
+    id: 'cops-and-robbers',
+    name: '경찰과 도둑',
+    description: '시야 제한 맵에서 도둑이 금고를 털고 탈출, 경찰이 이를 저지하는 팀 대전 (Phase 1 프로토타입)',
+    thumbnail: '🕵️',
+    path: '/game/cops-and-robbers',
+    enabled: true,
+    tags: ['멀티', '스텔스', '대전'],
+    players: '4~10명',
+  },
 ]

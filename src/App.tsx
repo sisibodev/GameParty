@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage'
 import LobbyPage from './pages/LobbyPage'
 import StockGame from './games/stock/StockGame'
 import BaseballUmpireGame from './games/baseball-umpire/BaseballUmpireGame'
+import CopsAndRobbersGame from './games/cops-and-robbers/CopsAndRobbersGame'
 
 export default function App() {
   return (
@@ -33,6 +34,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <BaseballUmpireGame />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/game/cops-and-robbers/*"
+            element={
+              <ProtectedRoute>
+                <CopsAndRobbersGame />
               </ProtectedRoute>
             }
           />

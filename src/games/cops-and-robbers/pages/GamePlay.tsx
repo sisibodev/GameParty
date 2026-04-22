@@ -31,6 +31,7 @@ import Minimap from './Minimap'
 import {
   COLORS,
   COP_BOT_ATTACK_RADIUS,
+  COP_BOT_DETECT_RADIUS,
   COP_BOT_HIT_COOLDOWN_MS,
   HIT_STACK_MAX,
   JAIL_CAMPING_REVEAL_MS,
@@ -93,6 +94,7 @@ interface GamePlayProps {
 const TOTAL_SAFES = 10
 const TREASURE_GOAL = 5
 const COP_SPAWN = { x: TILE_SIZE * 20.5, y: TILE_SIZE * 14.5 }
+const DEMO_RESCUE_WAIT_MS = 8_000
 
 export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRole = 'thief', isDemo = false }: GamePlayProps) {
   const hostRef = useRef<HTMLDivElement | null>(null)
@@ -150,6 +152,19 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
   const [highlightSafeIds, setHighlightSafeIds] = useState<Set<string>>(new Set())
   // 봇 데모 모드
   const thiefBotRef = useRef<ReturnType<typeof createThiefBot> | null>(null)
+  type DemoThief = {
+    player: ReturnType<typeof createPlayer>
+    bot: ReturnType<typeof createThiefBot>
+    ab: AbilitiesHandle
+    hitStack: number
+    lastHitMs: number
+    captured: boolean
+    capturedAt: number
+  }
+  const demoExtraThievesRef = useRef<DemoThief[]>([])
+  const demoCop2Ref = useRef<CopBotHandle | null>(null)
+  const demoMainCapturedRef = useRef(false)
+  const demoMainCapturedAtRef = useRef(-1)
 
   const [nearestId, setNearestId] = useState<string | null>(null)
   const nearestIdRef = useRef<string | null>(null)
@@ -420,13 +435,36 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
       world.addChild(thief.view)
 
       const fog = createFogOfWar()
-      app.stage.addChild(fog.view)
-      // 데모 모드: 안개 완전 제거 (전체 맵 공개)
+      // 데모 모드: 안개 없음 (전체 맵 공개)
       if (isDemo) {
-        fog.update(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, VIEWPORT_WIDTH * 2)
+        world.mask = null
         thiefBotRef.current = createThiefBot()
+
+        // 추가 도둑 3명 (총 4명)
+        const extraSpawns = [
+          { x: TILE_SIZE * 37.5, y: TILE_SIZE * 2.5 },
+          { x: TILE_SIZE * 2.5,  y: TILE_SIZE * 25.5 },
+          { x: TILE_SIZE * 37.5, y: TILE_SIZE * 25.5 },
+        ]
+        demoExtraThievesRef.current = extraSpawns.map((spawn) => {
+          const player = createPlayer('thief', spawn)
+          const ab = createAbilities()
+          world.addChild(ab.smokeLayer)
+          world.addChild(ab.stealthOverlay)
+          world.addChild(player.view)
+          return { player, bot: createThiefBot(), ab, hitStack: 0, lastHitMs: -COP_BOT_HIT_COOLDOWN_MS, captured: false, capturedAt: -1 }
+        })
+
+        // 경찰 2번째 봇
+        const cop2 = createCopBot({ x: TILE_SIZE * 10.5, y: TILE_SIZE * 14.5 })
+        demoCop2Ref.current = cop2
+        world.addChild(cop2.footprintRing)
+        world.addChild(cop2.view)
+        world.addChild(cop2.scanRing)
       } else {
-        fog.update(thief.state.pos.x, thief.state.pos.y, thief.state.visionRadius)
+        // visibilityMask를 world의 마스크로 적용 — fill() 기반이라 cut() 아티팩트 없음
+        world.mask = fog.visibilityMask
+        fog.update(thief.state.pos.x, thief.state.pos.y, thief.state.visionRadius * 1.8, 0, map)
       }
 
       setReady(true)
@@ -451,22 +489,85 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
         const k = keyboard.state
         const modalOpen = sessionRef.current !== null
 
+        // ── 데모: 구출 조정 ────────────────────────────────────────────────────
+        let demoNeedsRescue = false
+        if (isDemo) {
+          const hasCapturedMain = demoMainCapturedRef.current && nowMs - demoMainCapturedAtRef.current >= DEMO_RESCUE_WAIT_MS
+          const hasCapturedExtra = demoExtraThievesRef.current.some(
+            (t) => t.captured && nowMs - t.capturedAt >= DEMO_RESCUE_WAIT_MS,
+          )
+          demoNeedsRescue = hasCapturedMain || hasCapturedExtra
+          const rescuePos = { x: JAIL_POS.x + JAIL_EXIT_OFFSET_X, y: JAIL_POS.y }
+          if (!demoMainCapturedRef.current && thiefBotRef.current) {
+            thiefBotRef.current.setRescueTarget(demoNeedsRescue ? rescuePos : null)
+          }
+        }
+
+        const performRescue = () => {
+          if (demoMainCapturedRef.current) {
+            demoMainCapturedRef.current = false
+            demoMainCapturedAtRef.current = -1
+            hitStackRef.current = 0
+            setHitStack(0)
+            thief.state.pos.x = JAIL_POS.x + JAIL_EXIT_OFFSET_X
+            thief.state.pos.y = JAIL_POS.y
+            syncPlayerView(thief)
+            showToast('🔓 팀원 구출!')
+            return
+          }
+          for (const demoThief of demoExtraThievesRef.current) {
+            if (demoThief.captured) {
+              demoThief.captured = false
+              demoThief.capturedAt = -1
+              demoThief.hitStack = 0
+              demoThief.player.state.pos.x = JAIL_POS.x + JAIL_EXIT_OFFSET_X
+              demoThief.player.state.pos.y = JAIL_POS.y
+              syncPlayerView(demoThief.player)
+              showToast('🔓 팀원 구출!')
+              return
+            }
+          }
+        }
+
         // ── 이동 (데모 봇 / 키보드) ──────────────────────────────────────────────
         let dx = 0
         let dy = 0
         let botCrackedSafeId: string | null = null
 
-        if (isDemo && thiefBotRef.current) {
+        if (isDemo && thiefBotRef.current && !demoMainCapturedRef.current) {
+          // 가장 가까운 경찰 위치 (두 경찰 중 더 가까운 쪽 회피)
+          const cop2 = demoCop2Ref.current
+          const nearestCopPos = (() => {
+            if (!cop2) return copHandle.state.pos
+            const d1 = Math.hypot(copHandle.state.pos.x - thief.state.pos.x, copHandle.state.pos.y - thief.state.pos.y)
+            const d2 = Math.hypot(cop2.state.pos.x - thief.state.pos.x, cop2.state.pos.y - thief.state.pos.y)
+            return d1 < d2 ? copHandle.state.pos : cop2.state.pos
+          })()
+          const mainCopDist = Math.hypot(nearestCopPos.x - thief.state.pos.x, nearestCopPos.y - thief.state.pos.y)
+          if (mainCopDist < COP_BOT_ATTACK_RADIUS * 2.5 && abHandle.abilities.smoke.state === 'ready') {
+            activateSmoke(abHandle, thief.state.pos)
+          } else if (mainCopDist < COP_BOT_DETECT_RADIUS && abHandle.abilities.stealth.state === 'ready') {
+            activateStealth(abHandle)
+          }
+          const extraOccupied = new Set(
+            demoExtraThievesRef.current
+              .filter(t => !t.captured)
+              .map(t => t.bot.getTargetSafeId())
+              .filter((id): id is string => id !== null)
+          )
           const botResult = thiefBotRef.current.tick(
             dtMs,
             thief.state.pos,
             safesRef.current,
-            copHandle.state.pos,
+            nearestCopPos,
             treasureCountRef.current,
             treasureGoalRef.current,
+            map,
+            extraOccupied,
           )
           if (botResult.dir) { dx = botResult.dir.x; dy = botResult.dir.y }
           botCrackedSafeId = botResult.crackedSafeId
+          if (botResult.rescued) performRescue()
         } else if (!modalOpen) {
           if (k.up) dy -= 1
           if (k.down) dy += 1
@@ -523,15 +624,130 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
           }
         }
 
+        // 데모: 추가 도둑 봇 3명 처리
+        if (isDemo) {
+          const allCops = [copHandle, demoCop2Ref.current].filter(Boolean) as CopBotHandle[]
+          for (const demoThief of demoExtraThievesRef.current) {
+            if (demoThief.captured) continue
+            // 가장 가까운 경찰 회피
+            const nearestCop = allCops.reduce((best, cop) => {
+              const db = Math.hypot(best.state.pos.x - demoThief.player.state.pos.x, best.state.pos.y - demoThief.player.state.pos.y)
+              const dc = Math.hypot(cop.state.pos.x - demoThief.player.state.pos.x, cop.state.pos.y - demoThief.player.state.pos.y)
+              return dc < db ? cop : best
+            }, allCops[0])
+            demoThief.ab.tick(dtMs)
+            demoThief.ab.stealthOverlay.position.set(demoThief.player.state.pos.x, demoThief.player.state.pos.y)
+            const extraCopDist = Math.hypot(nearestCop.state.pos.x - demoThief.player.state.pos.x, nearestCop.state.pos.y - demoThief.player.state.pos.y)
+            if (extraCopDist < COP_BOT_ATTACK_RADIUS * 2.5 && demoThief.ab.abilities.smoke.state === 'ready') {
+              activateSmoke(demoThief.ab, demoThief.player.state.pos)
+            } else if (extraCopDist < COP_BOT_DETECT_RADIUS && demoThief.ab.abilities.stealth.state === 'ready') {
+              activateStealth(demoThief.ab)
+            }
+            const rescuePos = { x: JAIL_POS.x + JAIL_EXIT_OFFSET_X, y: JAIL_POS.y }
+            demoThief.bot.setRescueTarget(demoNeedsRescue ? rescuePos : null)
+            const occupied = new Set<string>()
+            const mainId = (!demoMainCapturedRef.current && thiefBotRef.current) ? thiefBotRef.current.getTargetSafeId() : null
+            if (mainId) occupied.add(mainId)
+            for (const other of demoExtraThievesRef.current) {
+              if (other !== demoThief && !other.captured) {
+                const id = other.bot.getTargetSafeId()
+                if (id) occupied.add(id)
+              }
+            }
+            const br = demoThief.bot.tick(dtMs, demoThief.player.state.pos, safesRef.current, nearestCop.state.pos, treasureCountRef.current, treasureGoalRef.current, map, occupied)
+            if (br.rescued) performRescue()
+            if (br.dir) {
+              const step = demoThief.player.state.speed * dt
+              const nx = demoThief.player.state.pos.x + br.dir.x * step
+              if (!circleCollidesWall(map, nx, demoThief.player.state.pos.y, PLAYER_RADIUS - 1)) demoThief.player.state.pos.x = nx
+              const ny = demoThief.player.state.pos.y + br.dir.y * step
+              if (!circleCollidesWall(map, demoThief.player.state.pos.x, ny, PLAYER_RADIUS - 1)) demoThief.player.state.pos.y = ny
+              syncPlayerView(demoThief.player)
+            }
+            if (br.crackedSafeId) {
+              const safe = safesRef.current.find((s) => s.id === br.crackedSafeId)
+              if (safe && (safe.status === 'locked' || safe.status === 'alarmed')) {
+                const openedStatus = safe.hasTreasure ? 'opened_treasure' as const : 'opened_empty' as const
+                const next = safesRef.current.map((s) => s.id === br.crackedSafeId ? { ...s, status: openedStatus } : s)
+                setSafes(next); safesRef.current = next
+                safesHandleRef.current?.refresh({ ...safe, status: openedStatus })
+                if (safe.hasTreasure) {
+                  setTeam((t) => ({ ...t, treasureCount: t.treasureCount + 1 }))
+                  showToast('🤖 도둑봇이 보물 획득!')
+                }
+              }
+            }
+            // 경찰 피격
+            for (const cop of allCops) {
+              const dist = Math.hypot(cop.state.pos.x - demoThief.player.state.pos.x, cop.state.pos.y - demoThief.player.state.pos.y)
+              if (dist < COP_BOT_ATTACK_RADIUS && nowMs - demoThief.lastHitMs >= COP_BOT_HIT_COOLDOWN_MS) {
+                demoThief.lastHitMs = nowMs
+                demoThief.hitStack++
+                if (demoThief.hitStack >= HIT_STACK_MAX) {
+                  demoThief.captured = true
+                  demoThief.capturedAt = nowMs
+                  demoThief.player.state.pos.x = JAIL_POS.x + (Math.random() - 0.5) * TILE_SIZE
+                  demoThief.player.state.pos.y = JAIL_POS.y + (Math.random() - 0.5) * TILE_SIZE
+                  syncPlayerView(demoThief.player)
+                }
+                break
+              }
+            }
+            // 탈출 체크
+            if (!gameEndedRef.current && treasureCountRef.current >= treasureGoalRef.current) {
+              if (escapeZoneHandleRef.current?.isInZone(demoThief.player.state.pos)) triggerGameEnd('thieves')
+            }
+          }
+
+          // 데모: 전원 체포 체크
+          if (!gameEndedRef.current) {
+            const allThieves = [{ captured: demoMainCapturedRef.current }, ...demoExtraThievesRef.current]
+            if (allThieves.every((t) => t.captured)) triggerGameEnd('cops')
+          }
+        }
+
         // Disable bot if a human cop player exists in the room
         const humanCopExists = roomId
           ? Object.values(rtdbDataRef.current?.players ?? {}).some((p) => p.role === 'cop')
           : false
 
+        // 데모: 은신 상태 포함한 도둑 목록 구성
+        const allSmokeClouds = isDemo
+          ? [...abHandle.smokeClouds, ...demoExtraThievesRef.current.flatMap(t => t.ab.smokeClouds)]
+          : abHandle.smokeClouds
+
+        const demoThievesPool = isDemo ? [
+          { pos: thief.state.pos, captured: demoMainCapturedRef.current, stealthed: isStealthed(abHandle) },
+          ...demoExtraThievesRef.current.map(t => ({
+            pos: t.player.state.pos, captured: t.captured, stealthed: isStealthed(t.ab),
+          })),
+        ] : [{ pos: thief.state.pos, captured: false, stealthed }]
+
+        // 경찰은 은신 안 한 살아있는 도둑만 추격
+        const pickNearestVisible = (fromPos: { x: number; y: number }) => {
+          const visible = demoThievesPool.filter(t => !t.captured && !t.stealthed)
+          if (!visible.length) return { pos: thief.state.pos, stealthed: true }
+          const nearest = visible.reduce((best, t) => {
+            const db = Math.hypot(best.pos.x - fromPos.x, best.pos.y - fromPos.y)
+            const dc = Math.hypot(t.pos.x - fromPos.x, t.pos.y - fromPos.y)
+            return dc < db ? t : best
+          }, visible[0])
+          return { pos: nearest.pos, stealthed: false }
+        }
+
+        const cop1Target = pickNearestVisible(copHandle.state.pos)
+
         // Only host (or solo) runs bot AI; non-host reads bot pos from RTDB subscription
         const { hitRegistered } = (!humanCopExists && isHost !== false)
-          ? updateCopBot(copHandle, map, thief.state.pos, stealthed, abHandle.smokeClouds, dtMs, nowMs)
+          ? updateCopBot(copHandle, map, cop1Target.pos, cop1Target.stealthed, allSmokeClouds, dtMs, nowMs)
           : { hitRegistered: false }
+
+        // 경찰 2번째 봇 (데모 전용)
+        if (isDemo && demoCop2Ref.current) {
+          const cop2 = demoCop2Ref.current
+          const cop2Target = pickNearestVisible(cop2.state.pos)
+          updateCopBot(cop2, map, cop2Target.pos, cop2Target.stealthed, allSmokeClouds, dtMs, nowMs)
+        }
 
         // Host throttled bot position write (only when bot is active)
         if (roomId && !humanCopExists && (isHost ?? true)) {
@@ -542,7 +758,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
           }
         }
 
-        if (hitRegistered && capturePhaseRef.current === 'playing') {
+        if (hitRegistered && capturePhaseRef.current === 'playing' && !demoMainCapturedRef.current) {
           const newStack = hitStackRef.current + (stealthed ? 0 : 1)
           hitStackRef.current = newStack
           setHitStack(newStack)
@@ -561,6 +777,13 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
               setCapturePhase('jailed')
               setJailedAt(nowTs)
               // 유치장 위치로 이동
+              thief.state.pos.x = JAIL_POS.x
+              thief.state.pos.y = JAIL_POS.y
+              syncPlayerView(thief)
+            } else if (isDemo) {
+              // 데모모드: 메인 도둑 체포 — 게임 계속 (전원 체포 시 종료)
+              demoMainCapturedRef.current = true
+              demoMainCapturedAtRef.current = nowMs
               thief.state.pos.x = JAIL_POS.x
               thief.state.pos.y = JAIL_POS.y
               syncPlayerView(thief)
@@ -587,7 +810,10 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
           stealthed,
         })
 
-        if (!isDemo) fog.update(thief.state.pos.x, thief.state.pos.y, thief.state.visionRadius)
+        if (!isDemo) {
+          const fAngle = Math.atan2(facingRef.current.y, facingRef.current.x)
+          fog.update(thief.state.pos.x, thief.state.pos.y, thief.state.visionRadius * 1.8, fAngle, tileMapRef.current ?? undefined)
+        }
 
         // ── 발소리 시스템 ────────────────────────────────────────────────────────
         if (myRole === 'thief') {

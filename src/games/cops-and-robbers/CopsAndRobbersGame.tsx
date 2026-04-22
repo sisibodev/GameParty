@@ -31,7 +31,13 @@ export default function CopsAndRobbersGame() {
   }
 
   if (phase === 'demo') {
-    return <GamePlay onBack={() => setPhase('select')} isDemo />
+    return (
+      <GamePlay
+        onBack={() => setPhase('select')}
+        onGameEnd={(stats) => { setResultStats(stats); setPhase('result') }}
+        isDemo
+      />
+    )
   }
 
   if (phase === 'select') {
