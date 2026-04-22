@@ -901,7 +901,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
                 if (roomId && uid) updatePlayerHit(roomId, uid, newStack, captured).catch(() => {})
                 if (captured) {
                   const nowTs = Date.now()
-                  jailPlayer(roomId, uid, nowTs).catch(() => {})
+                  if (roomId && uid) jailPlayer(roomId, uid, nowTs).catch(() => {})
                   capturePhaseRef.current = 'jailed'
                   setCapturePhase('jailed')
                   setJailedAt(nowTs)

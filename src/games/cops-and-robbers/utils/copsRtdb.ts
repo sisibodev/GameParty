@@ -81,6 +81,7 @@ export async function createRoom(uid: string, name: string): Promise<string> {
     safes: null,
     bot: null,
     treasureCount: 0,
+    treasureGoal: 0,
     winner: null,
   }
   await set(ref(db(), `cops_robbers_rooms/${roomId}`), room)
