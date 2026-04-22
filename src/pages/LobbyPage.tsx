@@ -6,7 +6,7 @@ import type { GameMeta } from '../data/games'
 import styles from './LobbyPage.module.css'
 
 export default function LobbyPage() {
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const navigate = useNavigate()
 
   async function handleSignOut() {
@@ -30,7 +30,7 @@ export default function LobbyPage() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>게임 목록</h2>
           <div className={styles.gameGrid}>
-            {GAMES.filter((g) => g.enabled).map((game) => (
+            {GAMES.filter((g) => g.enabled && (!g.adminOnly || isAdmin || import.meta.env.DEV)).map((game) => (
               <GameCard key={game.id} game={game} />
             ))}
           </div>
