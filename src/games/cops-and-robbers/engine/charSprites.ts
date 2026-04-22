@@ -5,14 +5,21 @@ const CELL_H = 261
 const DIR_COUNT = 8
 const FRAME_COUNT = 4
 
-// 스프라이트 시트 컬럼: 위, 위오른쪽, 오른쪽, 아래오른쪽, 아래, 아래왼쪽, 왼쪽, 위왼쪽
+// 스프라이트 시트 컬럼 순서 (사용자 확인):
+// col 0=위  col 1=위오른쪽  col 2=오른쪽  col 3=아래오른쪽
+// col 4=아래  col 5=아래왼쪽  col 6=왼쪽  col 7=위왼쪽
+//
+// atan2 sector → col 매핑 (sector 0=오른쪽, 시계방향):
+// sector 0(0°,right)→2  sector 1(45°,SE)→3  sector 2(90°,down)→4
+// sector 3(135°,SW)→5  sector 4(180°,left)→6  sector 5(225°,NW)→7
+// sector 6(270°,up)→0  sector 7(315°,NE)→1
 const SECTOR_TO_COL = [2, 3, 4, 5, 6, 7, 0, 1] as const
 
 // CharFrames[col 0-7][frame 0-3]
 export type CharFrames = Texture[][]
 
 export function dirToCol(dx: number, dy: number): number {
-  const angle = Math.atan2(dy, dx) // -π~π, 0=right
+  const angle = Math.atan2(dy, dx) // -π~π, 0=오른쪽
   const sector = Math.round(((angle / (Math.PI / 4)) + 8)) % 8
   return SECTOR_TO_COL[sector]
 }
@@ -44,6 +51,9 @@ export function createCharSprite(frames: CharFrames, col = 4): AnimatedSprite {
   return sprite
 }
 
+// _dirCol 을 sprite 에 직접 부착해서 reference 비교 오류를 피함
+type TrackedSprite = AnimatedSprite & { _dirCol?: number }
+
 export function updateCharDir(
   sprite: AnimatedSprite,
   frames: CharFrames,
@@ -51,8 +61,13 @@ export function updateCharDir(
   dy: number,
   moving: boolean,
 ) {
+  const s = sprite as TrackedSprite
   const col = dirToCol(dx, dy)
-  if (sprite.textures !== frames[col]) sprite.textures = frames[col]
+  if (s._dirCol !== col) {
+    s._dirCol = col
+    sprite.textures = frames[col]
+    if (moving) sprite.play()
+  }
   if (moving && !sprite.playing) sprite.play()
   else if (!moving) { sprite.stop(); sprite.currentFrame = 0 }
 }
