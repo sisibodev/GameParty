@@ -30,11 +30,16 @@ export default function CopsAndRobbersGame() {
     return <RankingScreen onBack={() => setPhase('select')} />
   }
 
+  if (phase === 'demo') {
+    return <GamePlay onBack={() => setPhase('select')} isDemo />
+  }
+
   if (phase === 'select') {
     return (
       <ModeSelect
         onSolo={() => setPhase('solo')}
         onMulti={() => setPhase('lobby')}
+        onDemo={() => setPhase('demo')}
         onRanking={() => setPhase('ranking')}
         onBack={() => navigate('/')}
         name={name}

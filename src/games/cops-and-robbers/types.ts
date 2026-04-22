@@ -1,6 +1,6 @@
 export type Role = 'thief' | 'cop'
 
-export type Phase = 'select' | 'solo' | 'lobby' | 'playing' | 'result' | 'ranking'
+export type Phase = 'select' | 'solo' | 'lobby' | 'playing' | 'result' | 'ranking' | 'demo'
 
 export type PlayerRole = 'thief' | 'cop'
 

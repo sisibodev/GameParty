@@ -1,13 +1,14 @@
 interface ModeSelectProps {
   onSolo: () => void
   onMulti: () => void
+  onDemo: () => void
   onRanking: () => void
   onBack: () => void
   name: string
   onNameChange: (name: string) => void
 }
 
-export default function ModeSelect({ onSolo, onMulti, onRanking, onBack, name, onNameChange }: ModeSelectProps) {
+export default function ModeSelect({ onSolo, onMulti, onDemo, onRanking, onBack, name, onNameChange }: ModeSelectProps) {
   return (
     <div style={rootStyle}>
       <div style={cardStyle}>
@@ -51,6 +52,9 @@ export default function ModeSelect({ onSolo, onMulti, onRanking, onBack, name, o
           </button>
           <button style={secondaryButtonStyle} onClick={onRanking}>
             🏆 랭킹
+          </button>
+          <button style={secondaryButtonStyle} onClick={onDemo}>
+            🤖 봇 대전
           </button>
           <button style={secondaryButtonStyle} onClick={onSolo}>
             혼자 하기

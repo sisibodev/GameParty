@@ -74,6 +74,7 @@ import {
   updateCopFootprintRing,
   type FootstepIndicatorHandle,
 } from '../engine/footstep'
+import { createThiefBot } from '../engine/thiefBot'
 import type { PlayerRole, ResultStats } from '../types'
 
 const POS_SYNC_MS = 67   // ~15 fps
@@ -86,13 +87,14 @@ interface GamePlayProps {
   uid?: string
   isHost?: boolean
   myRole?: PlayerRole
+  isDemo?: boolean
 }
 
 const TOTAL_SAFES = 10
 const TREASURE_GOAL = 5
 const COP_SPAWN = { x: TILE_SIZE * 20.5, y: TILE_SIZE * 14.5 }
 
-export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRole = 'thief' }: GamePlayProps) {
+export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRole = 'thief', isDemo = false }: GamePlayProps) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const [ready, setReady] = useState(false)
 
@@ -146,6 +148,8 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
   const [botPosForMinimap, setBotPosForMinimap] = useState<import('../types').Vec2 | null>(null)
   const minimapTickRef = useRef(0)
   const [highlightSafeIds, setHighlightSafeIds] = useState<Set<string>>(new Set())
+  // 봇 데모 모드
+  const thiefBotRef = useRef<ReturnType<typeof createThiefBot> | null>(null)
 
   const [nearestId, setNearestId] = useState<string | null>(null)
   const nearestIdRef = useRef<string | null>(null)
@@ -417,7 +421,13 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
 
       const fog = createFogOfWar()
       app.stage.addChild(fog.view)
-      fog.update(thief.state.pos.x, thief.state.pos.y, thief.state.visionRadius)
+      // 데모 모드: 안개 완전 제거 (전체 맵 공개)
+      if (isDemo) {
+        fog.update(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, VIEWPORT_WIDTH * 2)
+        thiefBotRef.current = createThiefBot()
+      } else {
+        fog.update(thief.state.pos.x, thief.state.pos.y, thief.state.visionRadius)
+      }
 
       setReady(true)
 
@@ -441,9 +451,23 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
         const k = keyboard.state
         const modalOpen = sessionRef.current !== null
 
+        // ── 이동 (데모 봇 / 키보드) ──────────────────────────────────────────────
         let dx = 0
         let dy = 0
-        if (!modalOpen) {
+        let botCrackedSafeId: string | null = null
+
+        if (isDemo && thiefBotRef.current) {
+          const botResult = thiefBotRef.current.tick(
+            dtMs,
+            thief.state.pos,
+            safesRef.current,
+            copHandle.state.pos,
+            treasureCountRef.current,
+            treasureGoalRef.current,
+          )
+          if (botResult.dir) { dx = botResult.dir.x; dy = botResult.dir.y }
+          botCrackedSafeId = botResult.crackedSafeId
+        } else if (!modalOpen) {
           if (k.up) dy -= 1
           if (k.down) dy += 1
           if (k.left) dx -= 1
@@ -455,7 +479,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
           dx /= len; dy /= len
           facingRef.current = { x: dx, y: dy }
           setPlayerFacing(thief, dx, dy)
-          const sprint = k.sprint ? 1.5 : 1
+          const sprint = (k.sprint && !isDemo) ? 1.5 : 1
           const step = thief.state.speed * sprint * dt
 
           const nextX = thief.state.pos.x + dx * step
@@ -465,6 +489,25 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
           if (!circleCollidesWall(map, thief.state.pos.x, nextY, PLAYER_RADIUS - 1))
             thief.state.pos.y = nextY
           syncPlayerView(thief)
+        }
+
+        // ── 봇 자동 금고 해킹 처리 ────────────────────────────────────────────────
+        if (botCrackedSafeId) {
+          const safe = safesRef.current.find((s) => s.id === botCrackedSafeId)
+          if (safe && (safe.status === 'locked' || safe.status === 'alarmed')) {
+            const openedStatus = safe.hasTreasure ? 'opened_treasure' as const : 'opened_empty' as const
+            const next = safesRef.current.map((s) =>
+              s.id === botCrackedSafeId ? { ...s, status: openedStatus } : s,
+            )
+            setSafes(next); safesRef.current = next
+            safesHandleRef.current?.refresh({ ...safe, status: openedStatus })
+            if (safe.hasTreasure) {
+              setTeam((t) => ({ ...t, treasureCount: t.treasureCount + 1 }))
+              showToast('🤖 봇이 보물을 획득!')
+            } else {
+              showToast('🤖 봇: 빈 금고')
+            }
+          }
         }
 
         abHandle.tick(dtMs)
@@ -544,7 +587,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
           stealthed,
         })
 
-        fog.update(thief.state.pos.x, thief.state.pos.y, thief.state.visionRadius)
+        if (!isDemo) fog.update(thief.state.pos.x, thief.state.pos.y, thief.state.visionRadius)
 
         // ── 발소리 시스템 ────────────────────────────────────────────────────────
         if (myRole === 'thief') {
@@ -898,6 +941,9 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
               highlightSafeIds={highlightSafeIds}
             />
           )}
+          {isDemo && ready && (
+            <div style={demoBannerStyle}>🤖 봇 대전 관전 중</div>
+          )}
         </div>
         {!ready && <div style={loadingStyle}>로딩 중…</div>}
         {toast && <div style={toastStyle}>{toast}</div>}
@@ -1102,6 +1148,22 @@ const canvasWrapStyle: React.CSSProperties = {
 const loadingStyle: React.CSSProperties = {
   position: 'absolute',
   color: '#8a93a6',
+}
+
+const demoBannerStyle: React.CSSProperties = {
+  position: 'absolute',
+  bottom: 12,
+  left: '50%',
+  transform: 'translateX(-50%)',
+  background: 'rgba(15,19,29,0.88)',
+  border: '1px solid #f97316',
+  color: '#f97316',
+  padding: '5px 14px',
+  borderRadius: 20,
+  fontSize: 13,
+  fontWeight: 700,
+  pointerEvents: 'none',
+  whiteSpace: 'nowrap',
 }
 
 const toastStyle: React.CSSProperties = {
