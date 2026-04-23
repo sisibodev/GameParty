@@ -32,7 +32,7 @@ export const INITIAL_SKILL_COUNT = 3
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 export const MAX_GROWTH_STAT = 9999
-export const INITIAL_PLAYER_STAT_POINTS = 20
+export const INITIAL_PLAYER_STAT_POINTS = 140
 
 export const GROWTH_STAT_KEYS: GrowthStatKey[] = ['hp', 'str', 'agi', 'int', 'luk']
 
@@ -77,11 +77,11 @@ export const MAX_SAVE_SLOTS = 3
 
 // ─── Rewards ─────────────────────────────────────────────────────────────────
 
-export const REWARD_WINNER = 10
-export const REWARD_FINALIST = 7
-export const REWARD_TOURNAMENT_OUT = 3
-export const REWARD_DARKHORSE = 5
-export const PLAYER_EXTRA_STAT_POINTS = 10
+export const REWARD_WINNER = 5
+export const REWARD_FINALIST = 4
+export const REWARD_TOURNAMENT_OUT = 2
+export const REWARD_DARKHORSE = 3
+export const PLAYER_EXTRA_STAT_POINTS = 4
 
 // ─── Archetype Growth Coefficients ───────────────────────────────────────────
 // 각 계수의 의미:
