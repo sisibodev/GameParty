@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../store/useGameStore'
+
 import type { CharacterDef, SlotId } from '../types'
 import type { GamePhase } from '../store/useGameStore'
 import charactersRaw from '../data/characters.json'
@@ -32,7 +33,15 @@ export default function SlotSelectPage() {
 
   return (
     <div style={s.root}>
-      <h1 style={s.title}>배틀 그랑프리</h1>
+      <div style={s.header}>
+        <h1 style={s.title}>배틀 그랑프리</h1>
+        <button style={s.btnEncy} onClick={() => useGameStore.setState({ phase: 'encyclopedia' })}>
+          📖 도감
+        </button>
+        <button style={s.btnEncy} onClick={() => useGameStore.setState({ phase: 'ranking' })}>
+          🏅 랭킹
+        </button>
+      </div>
       <p style={s.sub}>슬롯을 선택하세요</p>
       <div style={s.grid}>
         {SLOT_IDS.map(id => {
@@ -72,8 +81,10 @@ export default function SlotSelectPage() {
 
 const s: Record<string, React.CSSProperties> = {
   root:       { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff' },
-  title:      { fontSize: '2.5rem', fontWeight: 900, letterSpacing: '0.05em', color: '#c0aaff', margin: '0 0 0.5rem' },
-  sub:        { color: '#888', marginBottom: '2rem' },
+  header:     { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' },
+  title:      { fontSize: '2.5rem', fontWeight: 900, letterSpacing: '0.05em', color: '#c0aaff', margin: 0 },
+  btnEncy:    { background: 'transparent', border: '1px solid #555', borderRadius: '8px', color: '#aaa', padding: '0.4rem 0.9rem', cursor: 'pointer', fontSize: '0.85rem' },
+  sub:        { color: '#888', marginBottom: '2rem', marginTop: 0 },
   grid:       { display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' },
   card:       { background: '#1a1a2e', border: '1px solid #333', borderRadius: '12px', padding: '1.5rem', width: '220px', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' },
   slotNum:    { fontSize: '0.75rem', color: '#888', letterSpacing: '0.1em' },

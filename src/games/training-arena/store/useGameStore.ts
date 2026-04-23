@@ -33,10 +33,13 @@ import skillsRaw      from '../data/skills.json'
 
 export type GamePhase =
   | 'slot_select'
+  | 'encyclopedia'
+  | 'ranking'
   | 'char_select'
   | 'stat_alloc'
   | 'gacha'
   | 'tournament'
+  | 'bracket'
   | 'reward'
   | 'skill_select'
   | 'replay'
