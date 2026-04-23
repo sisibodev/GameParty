@@ -9,7 +9,8 @@ import EncyclopediaPage  from './pages/EncyclopediaPage'
 import RankingPage       from './pages/RankingPage'
 import RewardPage        from './pages/RewardPage'
 import SkillSelectPage from './pages/SkillSelectPage'
-import ReplayPage     from './pages/ReplayPage'
+import ReplayPage      from './pages/ReplayPage'
+import SimulationPage  from './pages/SimulationPage'
 
 export default function TrainingArenaGame() {
   const phase = useGameStore(s => s.phase)
@@ -18,6 +19,7 @@ export default function TrainingArenaGame() {
     case 'slot_select':   return <SlotSelectPage />
     case 'encyclopedia':  return <EncyclopediaPage />
     case 'ranking':       return <RankingPage />
+    case 'simulation':    return <SimulationPage />
     case 'char_select':   return <CharSelectPage />
     case 'stat_alloc':   return <StatAllocPage />
     case 'gacha':        return <GachaPage />
