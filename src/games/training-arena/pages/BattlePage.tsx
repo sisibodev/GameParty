@@ -71,9 +71,9 @@ export default function BattlePage() {
   const oppChar    = CHARACTERS.find(c => c.id === oppId)
   const growth     = npcGrowth(activeSlot.currentRound)
   const playerStats: CombatStats | null = playerChar
-    ? deriveStats(playerChar.baseCombat, activeSlot.growthStats) : null
+    ? deriveStats(playerChar.baseCombat, activeSlot.growthStats, playerChar.archetype) : null
   const oppStats: CombatStats | null = oppChar
-    ? deriveStats(oppChar.baseCombat, growth) : null
+    ? deriveStats(oppChar.baseCombat, growth, oppChar.archetype) : null
 
   function handleSetSpeed(sp: '1x' | '2x' | '4x') {
     setSpeed(sp)

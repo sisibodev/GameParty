@@ -36,13 +36,13 @@ function tickEntries(entries: BuffEntry[]): BuffEntry[] {
 }
 
 function tickGauge(state: BattleCharState): BattleCharState {
-  const stats = deriveStats(state.baseCombat, state.growthStats)
+  const stats = deriveStats(state.baseCombat, state.growthStats, state.archetype)
   const spdMult = 1 + sumEffect(state.buffs, 'spd_pct') / 100
   return { ...state, gauge: state.gauge + stats.spd * spdMult }
 }
 
 function regenMana(state: BattleCharState): BattleCharState {
-  const stats = deriveStats(state.baseCombat, state.growthStats)
+  const stats = deriveStats(state.baseCombat, state.growthStats, state.archetype)
   const regen = stats.maxMana * (stats.maxHp + stats.atk) * MANA_REGEN_COEFF
   return { ...state, currentMana: Math.min(state.currentMana + regen, stats.maxMana) }
 }
@@ -50,7 +50,7 @@ function regenMana(state: BattleCharState): BattleCharState {
 // ─── Skill Selection ──────────────────────────────────────────────────────────
 
 function selectSkill(state: BattleCharState, rng: SeededRng): string | null {
-  const stats = deriveStats(state.baseCombat, state.growthStats)
+  const stats = deriveStats(state.baseCombat, state.growthStats, state.archetype)
   const aggrBonus = sumEffect(state.debuffs, 'aggr_pct')
   const activationChance = clamp(0.5 + (stats.aggression + aggrBonus) * 0.005, 0, 1)
 
@@ -85,8 +85,8 @@ function calcHit(
   defIgnore: number,
   rng: SeededRng,
 ): HitResult {
-  const atkStats = deriveStats(actor.baseCombat, actor.growthStats)
-  const defStats = deriveStats(defender.baseCombat, defender.growthStats)
+  const atkStats = deriveStats(actor.baseCombat, actor.growthStats, actor.archetype)
+  const defStats = deriveStats(defender.baseCombat, defender.growthStats, defender.archetype)
 
   const effectiveEva = clamp(
     defStats.eva + sumEffect(defender.buffs, 'eva_flat') + sumEffect(actor.debuffs, 'acc_pct'),
@@ -135,7 +135,7 @@ function applySkill(
   let critical = false
   let evaded = false
 
-  const aStats = deriveStats(a.baseCombat, a.growthStats)
+  const aStats = deriveStats(a.baseCombat, a.growthStats, a.archetype)
 
   if (skill.category === 'attack') {
     const hit = calcHit(a, t, 1.5, 0, rng)
@@ -189,8 +189,8 @@ export function simulateMatch(
   seed: number,
 ): MatchResult {
   const rng   = new SeededRng(seed)
-  const st1   = deriveStats(char1.baseCombat, char1.growthStats)
-  const st2   = deriveStats(char2.baseCombat, char2.growthStats)
+  const st1   = deriveStats(char1.baseCombat, char1.growthStats, char1.archetype)
+  const st2   = deriveStats(char2.baseCombat, char2.growthStats, char2.archetype)
 
   let s1: BattleCharState = {
     ...char1,
@@ -229,8 +229,8 @@ export function simulateMatch(
       s2 = tickGauge(s2)
     }
 
-    const spd1 = deriveStats(s1.baseCombat, s1.growthStats).spd
-    const spd2 = deriveStats(s2.baseCombat, s2.growthStats).spd
+    const spd1 = deriveStats(s1.baseCombat, s1.growthStats, s1.archetype).spd
+    const spd2 = deriveStats(s2.baseCombat, s2.growthStats, s2.archetype).spd
     const actor1Acts =
       s1.gauge >= MAX_ATB_GAUGE &&
       (s2.gauge < MAX_ATB_GAUGE || spd1 >= spd2 || rng.chance(0.5))

@@ -82,3 +82,61 @@ export const REWARD_FINALIST = 7
 export const REWARD_TOURNAMENT_OUT = 3
 export const REWARD_DARKHORSE = 5
 export const PLAYER_EXTRA_STAT_POINTS = 10
+
+// ─── Archetype Growth Coefficients ───────────────────────────────────────────
+// 각 계수의 의미:
+//   hp_to_maxHp : HP 성장 1당 maxHp 증가
+//   str_to_atk  : STR 성장 1당 ATK 증가
+//   str_to_def  : STR 성장 1당 DEF 증가
+//   agi_to_spd  : AGI 성장 1당 SPD 증가
+//   agi_to_eva  : AGI 성장 1당 EVA 증가
+//   luk_to_crit : LUK 성장 1당 CRIT 증가
+//   int_to_mana : INT 성장 1당 maxMana 증가
+//   hp_to_def   : HP 성장 1당 DEF 추가 보너스
+//   int_to_atk  : INT 성장 1당 ATK 추가 보너스
+//   int_to_spd  : INT 성장 1당 SPD 추가 보너스
+//   luk_to_eva  : LUK 성장 1당 EVA 추가 보너스
+//   str_to_crit : STR 성장 1당 CRIT 추가 보너스
+//   int_to_maxHp: INT 성장 1당 maxHp 추가 보너스
+
+export interface ArchetypeCoeffs {
+  hp_to_maxHp: number
+  str_to_atk:  number
+  str_to_def:  number
+  agi_to_spd:  number
+  agi_to_eva:  number
+  luk_to_crit: number
+  int_to_mana: number
+  hp_to_def:   number
+  int_to_atk:  number
+  int_to_spd:  number
+  luk_to_eva:  number
+  str_to_crit: number
+  int_to_maxHp:number
+}
+
+const DEFAULT_COEFFS: ArchetypeCoeffs = {
+  hp_to_maxHp: 10, str_to_atk: 3, str_to_def: 1, agi_to_spd: 2,
+  agi_to_eva: 0.5, luk_to_crit: 0.5, int_to_mana: 5,
+  hp_to_def: 0, int_to_atk: 0, int_to_spd: 0, luk_to_eva: 0,
+  str_to_crit: 0, int_to_maxHp: 0,
+}
+
+export const ARCHETYPE_GROWTH_COEFFS: Record<string, ArchetypeCoeffs> = {
+  // 탱크: 높은 체력·방어, 낮은 공격
+  tank:      { ...DEFAULT_COEFFS, hp_to_maxHp: 12, str_to_atk: 2, str_to_def: 2, hp_to_def: 0.3 },
+  // 버서커: 매우 높은 공격·크리, 낮은 체력
+  berserker: { ...DEFAULT_COEFFS, hp_to_maxHp: 8,  str_to_atk: 5, luk_to_crit: 0.7, str_to_crit: 0.3 },
+  // 어쌔신: 빠른 속도·높은 회피·크리, 낮은 공격
+  assassin:  { ...DEFAULT_COEFFS, str_to_atk: 2,   agi_to_spd: 2.5, luk_to_crit: 0.7, luk_to_eva: 0.3 },
+  // 레인저: 크리 계수 너프 (OP 방지)
+  ranger:    { ...DEFAULT_COEFFS, luk_to_crit: 0.3 },
+  // 마법사: INT→공격·속도 보너스, 마나 대폭 증가, STR→공격 감소
+  mage:      { ...DEFAULT_COEFFS, str_to_atk: 1, int_to_mana: 8, int_to_atk: 2, int_to_spd: 0.5 },
+  // 성기사: 높은 체력·방어, INT→체력 보너스
+  paladin:   { ...DEFAULT_COEFFS, hp_to_maxHp: 12, str_to_atk: 2, str_to_def: 2, int_to_maxHp: 3 },
+  // 서포트: INT→속도·마나, LUK→회피, 낮은 공격·크리
+  support:   { ...DEFAULT_COEFFS, str_to_atk: 2, luk_to_crit: 0.3, int_to_mana: 7, int_to_spd: 0.3, luk_to_eva: 0.3 },
+  // 워리어: 기본값 그대로 (균형)
+  warrior:   { ...DEFAULT_COEFFS },
+}

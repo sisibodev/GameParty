@@ -30,7 +30,7 @@ export default function StatAllocPage() {
 
   const g       = activeSlot.growthStats
   const charDef = characters.find(c => c.id === activeSlot.characterId)
-  const derived = charDef ? deriveStats(charDef.baseCombat, g) : null
+  const derived = charDef ? deriveStats(charDef.baseCombat, g, charDef.archetype) : null
 
   return (
     <div style={s.root}>

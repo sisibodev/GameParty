@@ -106,6 +106,7 @@ export interface BattleCharState {
   skills: string[]
   growthStats: GrowthStats
   baseCombat: CharacterBaseCombat
+  archetype: string
 }
 
 export type ActionType = 'normal_attack' | 'skill' | 'evade'
