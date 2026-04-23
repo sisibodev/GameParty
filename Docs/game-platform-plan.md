@@ -215,6 +215,7 @@
 |--------|------|------|------|
 | 주식 보드게임 | 기획 중 | [기획서 링크](./stock-boardgame-plan.md) | 첫 번째 게임 |
 | 야구 주심 판정 게임 (Strike Zone) | 기획 중 | [기획서 링크](./baseball-umpire/baseball-umpire-plan.md) | 두 번째 게임 |
+| 배틀 그랑프리 (Battle Grand Prix) | 기획 확정 (v0.2, 프로토 착수 준비) | [기획서 링크](./training-arena-plan.md) | 싱글 육성 + 자동 전투 + 가챠 (카툰풍 2D) |
 
 > 게임 기획서 완성 시 이 표에 게임명 + 링크 업데이트
 
