@@ -62,25 +62,38 @@ export default function StatAllocPage() {
           </div>
         </div>
 
-        {/* 현재 전투 스탯 */}
-        {derived && (
-          <div style={s.statsBox}>
-            <h3 style={s.sectionTitle}>현재 전투 스탯</h3>
-            <div style={s.statGrid}>
-              {COMBAT_LABELS.map(({ key, label }) => (
-                <div key={key} style={s.statCell}>
-                  <span style={s.statLabel}>{label}</span>
-                  <span style={s.statVal}>
-                    {Math.round(derived[key] as number)}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {charDef && (
-              <p style={s.charName}>#{charDef.id} {charDef.name}</p>
-            )}
+        {/* 순수 성장 스탯 + 전투 스탯 */}
+        <div style={s.statsBox}>
+          <h3 style={s.sectionTitle}>성장 스탯</h3>
+          <div style={s.statGrid}>
+            {(['hp','str','agi','int','luk'] as const).map(key => (
+              <div key={key} style={s.statCell}>
+                <span style={s.statLabel}>{key.toUpperCase()}</span>
+                <span style={{ ...s.statVal, color: '#ffd700' }}>{g[key]}</span>
+              </div>
+            ))}
           </div>
-        )}
+
+          {derived && (
+            <>
+              <h3 style={{ ...s.sectionTitle, marginTop: '1rem' }}>전투 스탯</h3>
+              <div style={s.statGrid}>
+                {COMBAT_LABELS.map(({ key, label }) => (
+                  <div key={key} style={s.statCell}>
+                    <span style={s.statLabel}>{label}</span>
+                    <span style={s.statVal}>
+                      {Math.round(derived[key] as number)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {charDef && (
+            <p style={s.charName}>#{charDef.id} {charDef.name}</p>
+          )}
+        </div>
       </div>
 
       <button style={s.btnConfirm} onClick={confirmStatAlloc}>
