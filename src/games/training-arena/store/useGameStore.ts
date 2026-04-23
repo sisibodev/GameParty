@@ -39,14 +39,16 @@ export type GamePhase =
   | 'tournament'
   | 'reward'
   | 'skill_select'
+  | 'replay'
 
 interface GameState {
-  phase:          GamePhase
-  slots:          SaveSlot[]
-  activeSlot:     SaveSlot | null
-  lastTournament: TournamentResult | null
-  pendingReward:  RewardPackage | null
-  statPointsLeft: number
+  phase:             GamePhase
+  slots:             SaveSlot[]
+  activeSlot:        SaveSlot | null
+  lastTournament:    TournamentResult | null
+  pendingReward:     RewardPackage | null
+  statPointsLeft:    number
+  lastRandomStatKey: GrowthStatKey | null
 }
 
 interface GameActions {
@@ -57,8 +59,8 @@ interface GameActions {
   confirmStatAlloc: () => Promise<void>
   runGachaPhase:    (seed: number) => Promise<GachaResult>
   startTournament:  (seed: number) => Promise<TournamentResult>
-  claimReward:      (randomStatKey: GrowthStatKey) => Promise<void>
-  acquireSkill:     (skillId: string) => Promise<void>
+  claimReward:      () => Promise<void>
+  acquireSkill:     (skillId: string, replaceId?: string) => Promise<void>
   setPhase:         (phase: GamePhase) => void
 }
 
@@ -84,26 +86,34 @@ function npcSkills(charId: number, round: number): string[] {
   return pickN(allSkillIds, INITIAL_SKILL_COUNT, rng)
 }
 
+// 16명 브래킷 기준: round 4 탈락 = 결승 패배(준우승)
+const FINALIST_BRACKET_ROUND = 4
+
 function derivePlayerResult(
   slot: SaveSlot,
   result: TournamentResult,
 ): PlayerTournamentResult {
   const id = slot.characterId
-  if (result.winner === id)              return 'winner'
-  if (result.finalists.includes(id))     return 'tournament_out'
-  if (result.qualifiers.includes(id))    return 'group_out'
+  if (result.winner === id) return 'winner'
+  if (result.finalists.includes(id)) {
+    return result.bracketEliminations[id] === FINALIST_BRACKET_ROUND
+      ? 'finalist'
+      : 'tournament_out'
+  }
+  if (result.qualifiers.includes(id)) return 'group_out'
   return 'qualifier_out'
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useGameStore = create<GameState & GameActions>((set, get) => ({
-  phase:          'slot_select',
-  slots:          [],
-  activeSlot:     null,
-  lastTournament: null,
-  pendingReward:  null,
-  statPointsLeft: 0,
+  phase:             'slot_select',
+  slots:             [],
+  activeSlot:        null,
+  lastTournament:    null,
+  pendingReward:     null,
+  statPointsLeft:    0,
+  lastRandomStatKey: null,
 
   initSlots: async () => {
     const slots = await listSlots()
@@ -129,9 +139,10 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const slots = await listSlots()
     set({
       slots,
-      activeSlot:     slot,
-      statPointsLeft: INITIAL_PLAYER_STAT_POINTS,
-      phase:          'stat_alloc',
+      activeSlot:        slot,
+      statPointsLeft:    INITIAL_PLAYER_STAT_POINTS,
+      lastRandomStatKey: null,
+      phase:             'stat_alloc',
     })
   },
 
@@ -157,10 +168,13 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   },
 
   confirmStatAlloc: async () => {
-    const { activeSlot } = get()
+    const { activeSlot, pendingReward } = get()
     if (!activeSlot) return
     await saveSlot(activeSlot)
-    set({ phase: 'gacha' })
+    // 라운드 루프 중 스탯 배분 후: 대기 스킬이 있으면 skill_select, 아니면 gacha
+    const nextPhase: GamePhase =
+      (pendingReward?.skillChoices.length ?? 0) > 0 ? 'skill_select' : 'gacha'
+    set({ phase: nextPhase })
   },
 
   runGachaPhase: async (seed) => {
@@ -218,9 +232,13 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     return result
   },
 
-  claimReward: async (randomStatKey) => {
+  claimReward: async () => {
     const { activeSlot, pendingReward, lastTournament } = get()
     if (!activeSlot || !pendingReward) return
+
+    // 랜덤 스탯 자동 배정
+    const randomIdx     = Math.floor(Math.random() * GROWTH_STAT_KEYS.length)
+    const randomStatKey = GROWTH_STAT_KEYS[randomIdx]
 
     const isWinner  = lastTournament?.winner === activeSlot.characterId
     const newGrowth = {
@@ -244,23 +262,42 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     }
     await saveSlot(updated)
 
-    const nextPhase: GamePhase =
-      pendingReward.skillChoices.length > 0 ? 'skill_select' : 'gacha'
+    // 추가 포인트 있으면 stat_alloc → confirmStatAlloc에서 skill_select/gacha 결정
     const extraPoints = pendingReward.playerExtraPoints
+    const nextPhase: GamePhase =
+      extraPoints > 0
+        ? 'stat_alloc'
+        : pendingReward.skillChoices.length > 0
+          ? 'skill_select'
+          : 'gacha'
 
     set({
-      activeSlot:     updated,
-      statPointsLeft: extraPoints,
-      phase:          nextPhase,
+      activeSlot:        updated,
+      statPointsLeft:    extraPoints,
+      lastRandomStatKey: randomStatKey,
+      phase:             nextPhase,
     })
   },
 
-  acquireSkill: async (skillId) => {
+  acquireSkill: async (skillId, replaceId) => {
     const { activeSlot } = get()
     if (!activeSlot) return
+
+    let initialSkills  = activeSlot.initialSkills
+    let acquiredSkills = activeSlot.acquiredSkills
+
+    if (replaceId) {
+      if (initialSkills.includes(replaceId)) {
+        initialSkills = initialSkills.filter(s => s !== replaceId)
+      } else {
+        acquiredSkills = acquiredSkills.filter(s => s !== replaceId)
+      }
+    }
+
     const updated: SaveSlot = {
       ...activeSlot,
-      acquiredSkills: [...activeSlot.acquiredSkills, skillId],
+      initialSkills,
+      acquiredSkills: [...acquiredSkills, skillId],
     }
     await saveSlot(updated)
     set({ activeSlot: updated, pendingReward: null, phase: 'gacha' })
