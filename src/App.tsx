@@ -5,7 +5,8 @@ import LoginPage from './pages/LoginPage'
 import LobbyPage from './pages/LobbyPage'
 import StockGame from './games/stock/StockGame'
 import BaseballUmpireGame from './games/baseball-umpire/BaseballUmpireGame'
-import CopsAndRobbersGame from './games/cops-and-robbers/CopsAndRobbersGame'
+import CopsAndRobbersGame  from './games/cops-and-robbers/CopsAndRobbersGame'
+import TrainingArenaGame   from './games/training-arena/TrainingArenaGame'
 
 export default function App() {
   return (
@@ -42,6 +43,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <CopsAndRobbersGame />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/game/training-arena/*"
+            element={
+              <ProtectedRoute>
+                <TrainingArenaGame />
               </ProtectedRoute>
             }
           />

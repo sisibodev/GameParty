@@ -40,4 +40,14 @@ export const GAMES: GameMeta[] = [
     tags: ['멀티', '스텔스', '대전'],
     players: '4~10명',
   },
+  {
+    id: 'training-arena',
+    name: '배틀 그랑프리',
+    description: '캐릭터를 성장시키며 매 라운드 토너먼트에 도전하는 싱글플레이 육성 자동전투 시뮬레이션',
+    thumbnail: '⚔️',
+    path: '/game/training-arena',
+    enabled: true,
+    tags: ['싱글', '육성', '전략', '자동전투'],
+    players: '1인',
+  },
 ]
