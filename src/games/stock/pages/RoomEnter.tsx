@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
 import { createRoom, joinRoom, subscribeRooms, unsubscribeRoom } from '../utils/rtdb'
-import type { RoomSettings, Player, Room } from '../types'
+import type { RoomSettings, Player } from '../types'
 import styles from './RoomEnter.module.css'
 
 const DEFAULT_SETTINGS: RoomSettings = {
@@ -71,7 +71,7 @@ export default function RoomEnter() {
   const [joinCode, setJoinCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [rooms, setRooms] = useState<Room[]>([])
+  const [rooms, setRooms] = useState<{ roomId: string; host: string; settings: RoomSettings; players: Record<string, Player> }[]>([])
 
   useEffect(() => {
     const ref = subscribeRooms(setRooms)
@@ -299,21 +299,19 @@ export default function RoomEnter() {
         </div>
       </div>
 
-      {/* ── Room list ── */}
-      <div className={styles.roomSection}>
-        <div className={styles.roomSectionHeader}>
-          <h3 className={styles.roomSectionTitle}>🔥 대기 중인 방</h3>
-          <span className={styles.roomCount}>{rooms.length}개</span>
-        </div>
-        {rooms.length === 0 ? (
-          <div className={styles.roomEmpty}>현재 대기 중인 방이 없습니다. 새 방을 만들어보세요!</div>
-        ) : (
+      {/* ── Room list — 방이 있을 때만 렌더링 ── */}
+      {rooms.length > 0 && (
+        <div className={styles.roomSection}>
+          <div className={styles.roomSectionHeader}>
+            <h3 className={styles.roomSectionTitle}>🔥 대기 중인 방</h3>
+            <span className={styles.roomCount}>{rooms.length}개</span>
+          </div>
           <div className={styles.roomGrid}>
             {rooms.map(room => {
               const players = Object.values(room.players ?? {})
               const host = players.find(p => p.uid === room.host)
               return (
-                <div key={room.host} className={styles.roomCard}>
+                <div key={room.roomId} className={styles.roomCard}>
                   <div className={styles.roomCardTop}>
                     <div className={styles.roomHostName}>{host?.name ?? '—'} 의 방</div>
                   </div>
@@ -329,7 +327,7 @@ export default function RoomEnter() {
                     <button
                       className={styles.roomJoinBtn}
                       onClick={() => {
-                        setJoinCode(room.host)
+                        setJoinCode(room.roomId)
                         setTab('join')
                         window.scrollTo({ top: 0, behavior: 'smooth' })
                       }}
@@ -341,8 +339,8 @@ export default function RoomEnter() {
               )
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
