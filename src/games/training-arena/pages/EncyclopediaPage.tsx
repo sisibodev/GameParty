@@ -29,7 +29,7 @@ const ARCHETYPE_COLORS: Record<Archetype, string> = {
 
 const ALL_ARCHETYPES = Object.keys(ARCHETYPE_LABELS) as Archetype[]
 
-function CharCard({ char, isNew, isLocked, isWinner }: { char: CharacterDef; isNew: boolean; isLocked: boolean; isWinner: boolean }) {
+function CharCard({ char, isNew, isLocked, isWinner, isFirstPlay }: { char: CharacterDef; isNew: boolean; isLocked: boolean; isWinner: boolean; isFirstPlay: boolean }) {
   const color = ARCHETYPE_COLORS[char.archetype]
   const b = char.baseCombat
   return (
@@ -37,6 +37,7 @@ function CharCard({ char, isNew, isLocked, isWinner }: { char: CharacterDef; isN
       {isLocked && <div style={s.lockOverlay}>🔒</div>}
       {isNew && !isLocked && <div style={s.newBadge}>NEW</div>}
       {isWinner && !isLocked && <div style={s.winBadge}>🏆</div>}
+      {!isNew && !isLocked && isFirstPlay && <div style={s.firstPlayBadge}>첫플</div>}
       <div style={s.cardTop}>
         <div>
           <div style={s.charName}>{isLocked ? '???' : char.name}</div>
@@ -89,7 +90,7 @@ function FilterBtn({ label, value, current, onSelect, color }: FilterBtnProps) {
 }
 
 export default function EncyclopediaPage() {
-  const { unlockedCharIds, newCharIds, clearNewChars, slots } = useGameStore()
+  const { unlockedCharIds, newCharIds, clearNewChars, slots, playedCharIds } = useGameStore()
   const winnerCharIds = slots.filter(s => s.bestClearRound != null).map(s => s.characterId)
   const [filter, setFilter] = useState<Archetype | 'all'>('all')
 
@@ -126,6 +127,7 @@ export default function EncyclopediaPage() {
             isNew={newCharIds.includes(c.id)}
             isLocked={!unlockedCharIds.includes(c.id)}
             isWinner={winnerCharIds.includes(c.id)}
+            isFirstPlay={!playedCharIds.includes(c.id)}
           />
         ))}
       </div>
@@ -152,7 +154,8 @@ const s: Record<string, React.CSSProperties> = {
   stat:      { background: '#0d0d1a', borderRadius: '4px', padding: '3px 5px', display: 'flex', flexDirection: 'column', alignItems: 'center' },
   statLabel:   { fontSize: '0.58rem', color: '#555', fontWeight: 700, letterSpacing: '0.05em' },
   statVal:     { fontSize: '0.8rem', color: '#aaa', fontWeight: 600 },
-  lockOverlay: { position: 'absolute', top: '8px', right: '8px', fontSize: '0.9rem' },
-  newBadge:    { position: 'absolute', top: '8px', right: '8px', fontSize: '0.6rem', background: '#ff4444', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 },
-  winBadge:    { position: 'absolute', top: '8px', left: '8px', fontSize: '0.75rem' },
+  lockOverlay:   { position: 'absolute', top: '8px', right: '8px', fontSize: '0.9rem' },
+  newBadge:      { position: 'absolute', top: '8px', right: '8px', fontSize: '0.6rem', background: '#ff4444', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 },
+  winBadge:      { position: 'absolute', bottom: '8px', left: '8px', fontSize: '0.75rem', background: '#ffd70033', padding: '2px 4px', borderRadius: '4px' },
+  firstPlayBadge:{ position: 'absolute', bottom: '8px', right: '8px', fontSize: '0.6rem', background: '#2244aa', color: '#88aaff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 },
 }

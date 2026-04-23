@@ -1,5 +1,5 @@
 import { useGameStore } from '../store/useGameStore'
-import type { Archetype, CharacterDef, CombatStats, GrowthStats, TournamentResult } from '../types'
+import type { Archetype, CharacterDef, CombatStats, GrowthStats, NpcStat, TournamentResult } from '../types'
 import { deriveStats } from '../engine/statDeriver'
 import { NPC_BASE_GROWTH } from '../constants'
 import charactersRaw from '../data/characters.json'
@@ -63,7 +63,11 @@ export default function MatchPreviewPage() {
   const opponentStats: CombatStats | null = opponentChar
     ? deriveStats(opponentChar.baseCombat, oppGrowth, opponentChar.archetype) : null
 
-  const achievement = lastTournament ? getOpponentAchievement(opponentId, lastTournament) : null
+  const rawAchievement = lastTournament ? getOpponentAchievement(opponentId, lastTournament) : null
+  const npcStat = activeSlot.npcStats?.[opponentId]
+  const achievement = rawAchievement && npcStat && npcStat.bestStageCount > 1
+    ? `${rawAchievement} ${npcStat.bestStageCount}회`
+    : rawAchievement
 
   const prevMatches = playerMatches.slice(0, playerMatchIndex)
   const h2h = prevMatches.filter(m => m.opponentId === opponentId)
@@ -90,6 +94,7 @@ export default function MatchPreviewPage() {
           achievement={achievement ?? undefined}
           h2hWins={h2hWins}
           h2hLosses={h2hLosses}
+          npcStat={npcStat}
         />
       </div>
 
@@ -111,7 +116,7 @@ export default function MatchPreviewPage() {
 }
 
 function CharCard({
-  char, maxHp, stats, isPlayer, achievement,
+  char, maxHp, stats, isPlayer, achievement, npcStat,
 }: {
   char: CharacterDef | undefined
   maxHp: number
@@ -120,6 +125,7 @@ function CharCard({
   achievement?: string
   h2hWins?: number
   h2hLosses?: number
+  npcStat?: NpcStat
 }) {
   const arch  = char?.archetype ?? 'warrior'
   const color = ARCHETYPE_COLOR[arch] ?? '#888'
@@ -154,6 +160,12 @@ function CharCard({
       {achievement && (
         <div style={s.achieveBadge}>{achievement}</div>
       )}
+      {npcStat && (
+        <div style={s.recordBadge}>
+          통산 <span style={{ color: '#44ff88' }}>{npcStat.totalWins}승</span>
+          {' '}<span style={{ color: '#ff6666' }}>{npcStat.totalLosses}패</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -186,6 +198,7 @@ const s: Record<string, React.CSSProperties> = {
   miniLabel:    { fontSize: '0.6rem', color: '#555' },
   miniVal:      { fontSize: '0.6rem', color: '#aaa', fontWeight: 700 },
   achieveBadge: { marginTop: '4px', background: '#1a2a1a', border: '1px solid #44aa66', borderRadius: '6px', padding: '3px 8px', fontSize: '0.7rem', color: '#44ff88', fontWeight: 700, textAlign: 'center' as const, width: '100%' },
+  recordBadge:  { marginTop: '2px', background: '#1a1a2e', border: '1px solid #334', borderRadius: '6px', padding: '3px 8px', fontSize: '0.68rem', color: '#aaa', textAlign: 'center' as const, width: '100%' },
   h2hBanner:    { background: '#1a1a2e', border: '1px solid #333', borderRadius: '8px', padding: '0.4rem 1.2rem', fontSize: '0.85rem', color: '#aaa' },
   btnFight:     { marginTop: '1rem', background: 'linear-gradient(135deg,#fc5c5c,#fc9c3c)', border: 'none', borderRadius: '12px', color: '#fff', padding: '1rem 3.5rem', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 700 },
 }

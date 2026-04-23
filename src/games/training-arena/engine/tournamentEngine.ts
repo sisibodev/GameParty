@@ -12,12 +12,37 @@ import {
   GROUP_COUNT,
   GROUP_SIZE,
   INTER_MATCH_HP_REGEN_RATIO,
+  MAX_SKILL_SLOTS,
   QUALIFIER_TARGET,
 } from '../constants'
 import { SeededRng } from '../utils/rng'
 import { shuffle, pickN } from '../utils/fisherYates'
 import { simulateMatch, regenHpBetweenMatches } from './battleEngine'
 import { deriveStats } from './statDeriver'
+import skillsRaw from '../data/skills.json'
+
+// ─── Skill Learning Helper ────────────────────────────────────────────────────
+
+const TIER_RANK: Record<string, number> = { common: 1, rare: 2, hero: 3, legend: 4 }
+const _skillMap = Object.fromEntries(
+  (skillsRaw as Array<{ id: string; tier: string }>).map(s => [s.id, s])
+)
+
+function pickSkillToLearn(
+  winnerSkills: string[],
+  loserSkills:  string[],
+  maxSlots:     number,
+): string | null {
+  if (winnerSkills.length >= maxSlots) return null
+  const candidates = loserSkills.filter(id => !winnerSkills.includes(id))
+  if (candidates.length === 0) return null
+  candidates.sort(
+    (a, b) =>
+      (TIER_RANK[_skillMap[b]?.tier ?? 'common'] ?? 1) -
+      (TIER_RANK[_skillMap[a]?.tier ?? 'common'] ?? 1),
+  )
+  return candidates[0]
+}
 
 // ─── State Factory ────────────────────────────────────────────────────────────
 
@@ -80,6 +105,8 @@ function runQualifier(
         deriveStats(charById[result.winnerId].baseCombat, growthMap[result.winnerId], charById[result.winnerId].archetype).maxHp,
         INTER_MATCH_HP_REGEN_RATIO,
       )
+      const learned = pickSkillToLearn(skillMap[result.winnerId], skillMap[result.loserId], MAX_SKILL_SLOTS)
+      if (learned) skillMap[result.winnerId] = [...skillMap[result.winnerId], learned]
       losers.push(result.loserId)
     }
 
@@ -103,18 +130,27 @@ function playGroupMatch(
   charById: Record<number, CharacterDef>,
   growthMap: Record<number, GrowthStats>,
   skillMap: Record<number, string[]>,
+  hpMap: Record<number, number>,
   rng: SeededRng,
   allMatches: MatchResult[],
 ): MatchResult {
-  const result = simulateMatch(
-    makeCharState(charById[id1], growthMap[id1], skillMap[id1]),
-    makeCharState(charById[id2], growthMap[id2], skillMap[id2]),
-    rng.int(0, 1_000_000),
-  )
+  const s1 = { ...makeCharState(charById[id1], growthMap[id1], skillMap[id1]), currentHp: hpMap[id1] }
+  const s2 = { ...makeCharState(charById[id2], growthMap[id2], skillMap[id2]), currentHp: hpMap[id2] }
+  const result = simulateMatch(s1, s2, rng.int(0, 1_000_000))
   result.stage          = 'group'
   result.groupId        = groupId
   result.groupMatchType = type
   allMatches.push(result)
+  // HP regen for winner
+  const winnerLastHp = result.log.at(-1)?.hpAfter[result.winnerId] ?? hpMap[result.winnerId]
+  hpMap[result.winnerId] = regenHpBetweenMatches(
+    winnerLastHp,
+    deriveStats(charById[result.winnerId].baseCombat, growthMap[result.winnerId], charById[result.winnerId].archetype).maxHp,
+    INTER_MATCH_HP_REGEN_RATIO,
+  )
+  // Skill learning for winner
+  const learned = pickSkillToLearn(skillMap[result.winnerId], skillMap[result.loserId], MAX_SKILL_SLOTS)
+  if (learned) skillMap[result.winnerId] = [...skillMap[result.winnerId], learned]
   return result
 }
 
@@ -128,8 +164,12 @@ function runGroup(
   allMatches: MatchResult[],
 ): GroupResult {
   const [a, b, c, d] = memberIds
+  const hpMap: Record<number, number> = {}
+  for (const id of memberIds) {
+    hpMap[id] = deriveStats(charById[id].baseCombat, growthMap[id], charById[id].archetype).maxHp
+  }
   const play = (id1: number, id2: number, type: GroupMatchType) =>
-    playGroupMatch(id1, id2, type, groupId, charById, growthMap, skillMap, rng, allMatches)
+    playGroupMatch(id1, id2, type, groupId, charById, growthMap, skillMap, hpMap, rng, allMatches)
 
   const m1 = play(a, b, 'initial')
   const m2 = play(c, d, 'initial')
@@ -172,20 +212,34 @@ function runBracket(
   let pool = shuffle(finalists, rng)
   let bracketRound = 1
 
+  // Initialize HP map at max HP for all finalists
+  const hpMap: Record<number, number> = {}
+  for (const id of finalists) {
+    hpMap[id] = deriveStats(charById[id].baseCombat, growthMap[id], charById[id].archetype).maxHp
+  }
+
   while (pool.length > 1) {
     const next: number[] = []
     for (let i = 0; i < pool.length; i += 2) {
       if (i + 1 >= pool.length) { next.push(pool[i]); continue }
       const seed   = rng.int(0, 1_000_000)
-      const result = simulateMatch(
-        makeCharState(charById[pool[i]],     growthMap[pool[i]],     skillMap[pool[i]]),
-        makeCharState(charById[pool[i + 1]], growthMap[pool[i + 1]], skillMap[pool[i + 1]]),
-        seed,
-      )
+      const s1 = { ...makeCharState(charById[pool[i]],     growthMap[pool[i]],     skillMap[pool[i]]),     currentHp: hpMap[pool[i]] }
+      const s2 = { ...makeCharState(charById[pool[i + 1]], growthMap[pool[i + 1]], skillMap[pool[i + 1]]), currentHp: hpMap[pool[i + 1]] }
+      const result = simulateMatch(s1, s2, seed)
       result.stage        = 'bracket'
       result.bracketRound = bracketRound
       allMatches.push(result)
       bracketEliminations[result.loserId] = bracketRound
+      // HP regen for winner
+      const winnerLastHp = result.log.at(-1)?.hpAfter[result.winnerId] ?? hpMap[result.winnerId]
+      hpMap[result.winnerId] = regenHpBetweenMatches(
+        winnerLastHp,
+        deriveStats(charById[result.winnerId].baseCombat, growthMap[result.winnerId], charById[result.winnerId].archetype).maxHp,
+        INTER_MATCH_HP_REGEN_RATIO,
+      )
+      // Skill learning for winner
+      const learned = pickSkillToLearn(skillMap[result.winnerId], skillMap[result.loserId], MAX_SKILL_SLOTS)
+      if (learned) skillMap[result.winnerId] = [...skillMap[result.winnerId], learned]
       next.push(result.winnerId)
     }
     pool = next

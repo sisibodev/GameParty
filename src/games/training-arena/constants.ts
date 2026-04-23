@@ -26,7 +26,7 @@ export const GACHA_GRADES: readonly GachaGrade[] = ['C', 'B', 'A', 'S', 'SS', 'S
 
 // ─── Skill ────────────────────────────────────────────────────────────────────
 
-export const MAX_SKILL_SLOTS = 8
+export const MAX_SKILL_SLOTS = 5
 export const INITIAL_SKILL_COUNT = 3
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
