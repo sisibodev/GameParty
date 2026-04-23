@@ -3,14 +3,14 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  color: var(--color-text-muted);
+  color: #9098b7;
 }
 
 .page {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg);
+  background: #0a0b12;
 }
 
 /* ── 헤더 ─────────────────────────────────────────── */
@@ -18,8 +18,8 @@
 .header {
   text-align: center;
   padding: 2rem 1.5rem 1.5rem;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: #161a2a;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .title {
@@ -30,7 +30,7 @@
 
 .subtitle {
   font-size: 0.85rem;
-  color: var(--color-text-muted);
+  color: #9098b7;
 }
 
 /* ── 바디 ─────────────────────────────────────────── */
@@ -74,7 +74,7 @@
 
 .winnerAssets {
   font-size: 0.95rem;
-  color: var(--color-text-muted);
+  color: #9098b7;
   margin-bottom: 0.4rem;
 }
 
@@ -88,8 +88,8 @@
 /* ── 공통 카드 ────────────────────────────────────── */
 
 .card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: #161a2a;
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
   padding: 1rem 1.1rem;
 }
@@ -99,7 +99,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-muted);
+  color: #9098b7;
   margin-bottom: 0.75rem;
 }
 
@@ -155,7 +155,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: #9d7aff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -201,7 +201,7 @@
   align-items: center;
   gap: 0.6rem;
   padding: 0.35rem 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   font-size: 0.85rem;
 }
 
@@ -219,7 +219,7 @@
 
 .stockEnd {
   font-variant-numeric: tabular-nums;
-  color: var(--color-text);
+  color: #d8dcef;
 }
 
 .stockTotal {
@@ -244,7 +244,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--color-text-muted);
+  color: #9098b7;
   margin-bottom: 0.5rem;
 }
 
@@ -286,9 +286,9 @@
   width: 100%;
   padding: 0.55rem;
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px;
-  color: var(--color-text-muted);
+  color: #9098b7;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -361,7 +361,7 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: rgba(255,255,255,0.3);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   margin-bottom: 0.15rem;
 }
 
@@ -424,7 +424,7 @@
 .exitBtn {
   width: 100%;
   padding: 0.9rem;
-  background: var(--color-primary);
+  background: #9d7aff;
   color: white;
   border: none;
   border-radius: 12px;
@@ -434,7 +434,7 @@
   transition: background 0.15s;
 }
 
-.exitBtn:hover { background: var(--color-primary-hover); }
+.exitBtn:hover { background: #b79bff; }
 
 .deleteBtn {
   width: 100%;

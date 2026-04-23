@@ -1,167 +1,223 @@
+/* GameLobby — Hi-Fi 다크 네온 레이아웃 */
+
 .loading {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  color: var(--color-text-muted);
+  color: #9098b7;
+  background: #0a0b12;
 }
 
 .page {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: #0a0b12;
+  color: #d8dcef;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
 }
 
+/* ── 헤더 ── */
 .header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: #111320;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
 }
 
-.backBtn {
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
+.headerLeft { display: flex; align-items: center; gap: 12px; }
+
+.logo {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: linear-gradient(135deg, #7c6dff, #ff4d5e);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; box-shadow: 0 0 20px rgba(124,109,255,0.45); flex-shrink: 0;
 }
 
-.title { font-size: 1.1rem; font-weight: 700; flex: 1; }
-
+.roomName { font-size: 15px; font-weight: 800; color: #f1f3ff; line-height: 1.2; }
+.headerSub { font-size: 11px; color: #9098b7; }
 .roomCode {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  background: var(--color-surface-2);
-  padding: 0.3rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
+  font-family: 'JetBrains Mono', monospace;
+  color: #5de3ff; font-weight: 700; letter-spacing: 0.1em; margin-left: 4px;
 }
 
-.roomCode strong { color: var(--color-primary); letter-spacing: 2px; }
+.headerRight { display: flex; align-items: center; gap: 8px; }
 
+.headerBtn {
+  appearance: none;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.10);
+  color: #9098b7; padding: 6px 12px; border-radius: 8px;
+  font-size: 12px; font-family: inherit; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.headerBtn:hover { background: rgba(255,255,255,0.08); color: #d8dcef; }
+
+.headerBtnDanger {
+  appearance: none; background: transparent;
+  border: 1px solid rgba(255,77,94,0.3); color: #ff4d5e;
+  padding: 6px 12px; border-radius: 8px;
+  font-size: 12px; font-family: inherit; cursor: pointer;
+  transition: background 0.12s;
+}
+.headerBtnDanger:hover { background: rgba(255,77,94,0.08); }
+
+/* ── 본문 ── */
 .body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem;
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
+  flex: 1; display: flex; flex-direction: column; gap: 16px;
+  padding: 24px 32px;
+  max-width: 1100px; width: 100%; margin: 0 auto; box-sizing: border-box;
 }
 
-.settingsCard, .playersCard {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 1.25rem;
+/* ── 플레이어 그리드 ── */
+.playerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
 }
 
-.sectionTitle {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 1rem;
+.playerCard {
+  background: linear-gradient(180deg, #161a2a, #111320);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+  transition: border-color 0.15s;
 }
 
-.settingRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.4rem 0;
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  border-bottom: 1px solid var(--color-border);
+.playerCardMe {
+  border-color: #9d7aff;
+  box-shadow: 0 0 20px rgba(157,122,255,0.3), 0 2px 8px rgba(0,0,0,0.35),
+              inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
-.settingRow:last-child { border-bottom: none; }
-.settingRow strong { color: var(--color-text); }
-
-.playerList { display: flex; flex-direction: column; gap: 0.75rem; }
-
-.playerRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.playerCardEmpty {
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 14px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 6px; min-height: 110px;
 }
 
-.playerInfo { display: flex; align-items: center; gap: 0.75rem; }
+.emptyPlus { font-size: 28px; opacity: 0.2; color: #d8dcef; }
+.emptyText { font-size: 12px; color: #5e6582; }
 
-.avatar { width: 36px; height: 36px; border-radius: 50%; }
+.playerCardRow { display: flex; align-items: center; gap: 12px; }
+.playerMeta { flex: 1; min-width: 0; }
 
-.avatarFallback {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.9rem;
+.playerNameRow {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.playerName { font-size: 15px; font-weight: 800; color: #f1f3ff; }
+.playerSub { font-size: 11px; color: #5e6582; margin-top: 2px; }
+
+/* ── 칩 ── */
+.chipAmber {
+  display: inline-flex; align-items: center;
+  padding: 2px 7px; border-radius: 999px;
+  font-size: 10px; font-weight: 700;
+  color: #ffc857; background: rgba(255,200,87,0.14);
+  border: 1px solid rgba(255,200,87,0.4);
 }
 
-.playerName { font-size: 0.95rem; font-weight: 500; }
-
-.hostBadge {
-  font-size: 0.7rem;
-  background: var(--color-primary);
-  color: white;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
+.chipPurple {
+  display: inline-flex; align-items: center;
+  padding: 2px 7px; border-radius: 999px;
+  font-size: 10px; font-weight: 700;
+  color: #9d7aff; background: rgba(157,122,255,0.14);
+  border: 1px solid rgba(157,122,255,0.4);
 }
 
-.readyBadge {
-  font-size: 0.8rem;
-  color: var(--color-success);
-  background: rgba(76, 175, 80, 0.1);
-  border: 1px solid rgba(76, 175, 80, 0.3);
-  padding: 0.2rem 0.65rem;
-  border-radius: 999px;
+.chipGreen {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  color: #4ade80; background: rgba(74,222,128,0.14);
+  border: 1px solid rgba(74,222,128,0.4);
 }
 
-.waitBadge {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
-  padding: 0.2rem 0.65rem;
-  border-radius: 999px;
+.chipGhost {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  color: #5e6582; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
-.actions { display: flex; flex-direction: column; }
-
-.startBtn, .readyBtn, .cancelReadyBtn {
-  width: 100%;
-  padding: 0.9rem;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s;
+/* ── 규칙 패널 ── */
+.rulesPanel {
+  background: linear-gradient(180deg, #161a2a, #111320);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
-.startBtn {
-  background: var(--color-primary);
-  color: white;
+.rulesPanelHeader { margin-bottom: 12px; }
+.rulesPanelTitle {
+  font-size: 11px; font-weight: 700; color: #9098b7;
+  text-transform: uppercase; letter-spacing: 0.06em;
 }
 
-.startBtn:hover:not(:disabled) { background: var(--color-primary-hover); }
-.startBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.rulesGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 
-.readyBtn { background: var(--color-success); color: white; }
-.readyBtn:hover { filter: brightness(1.1); }
-
-.cancelReadyBtn {
-  background: var(--color-surface-2);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
+.ruleItem {
+  background: #1e2236; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px; padding: 10px 12px;
 }
+.ruleLabel { font-size: 10px; color: #5e6582; margin-bottom: 4px; }
+.ruleValue {
+  font-size: 20px; font-weight: 800; color: #f1f3ff;
+  font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums;
+}
+.ruleUnit { font-size: 11px; font-weight: 500; color: #9098b7; margin-left: 3px; }
+
+/* ── CTA 바 ── */
+.ctaBar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px;
+  background: #161a2a; border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+}
+
+.ctaStatus { font-size: 13px; color: #9098b7; display: flex; align-items: center; }
+.ctaReadyCount {
+  color: #4ade80; font-weight: 800; font-size: 15px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.ctaBtns { display: flex; gap: 8px; }
+
+.btnReady {
+  appearance: none;
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  border: 1px solid rgba(74,222,128,0.6); border-radius: 10px;
+  color: #0a0b12; font-size: 14px; font-weight: 800;
+  font-family: inherit; padding: 10px 20px; cursor: pointer;
+  box-shadow: 0 0 24px rgba(74,222,128,0.4);
+  transition: filter 0.12s;
+}
+.btnReady:hover { filter: brightness(1.08); }
+
+.btnCancel {
+  appearance: none;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; color: #9098b7;
+  font-size: 14px; font-weight: 700; font-family: inherit;
+  padding: 10px 20px; cursor: pointer; transition: background 0.12s;
+}
+.btnCancel:hover { background: rgba(255,255,255,0.08); }
+
+.btnStart {
+  appearance: none;
+  background: linear-gradient(135deg, #7c6dff, #b79bff);
+  border: 1px solid rgba(157,146,255,0.6); border-radius: 10px;
+  color: #fff; font-size: 14px; font-weight: 800;
+  font-family: inherit; padding: 10px 24px; cursor: pointer;
+  box-shadow: 0 0 28px rgba(124,109,255,0.55);
+  transition: filter 0.12s, transform 0.08s;
+}
+.btnStart:hover:not(:disabled) { filter: brightness(1.1); }
+.btnStart:active:not(:disabled) { transform: translateY(1px); }
+.btnStart:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
