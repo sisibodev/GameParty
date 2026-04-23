@@ -1,6 +1,7 @@
 import type {
   BattleCharState,
   CharacterDef,
+  GroupMatchType,
   GrowthStats,
   GroupResult,
   MatchResult,
@@ -87,7 +88,34 @@ function runQualifier(
   return pool
 }
 
-// ─── Group Stage (32 → 16) ────────────────────────────────────────────────────
+// ─── Group Stage (32 → 16) — double-elimination format ───────────────────────
+// Match 1 (initial): a vs b
+// Match 2 (initial): c vs d
+// Match 3 (winners): w1 vs w2  → winner = rank1 (direct advance, skips match5)
+// Match 4 (losers):  l1 vs l2  → loser = eliminated
+// Match 5 (decider): losers3 vs winners4 → winner = rank2
+
+function playGroupMatch(
+  id1: number, id2: number,
+  type: GroupMatchType,
+  groupId: string,
+  charById: Record<number, CharacterDef>,
+  growthMap: Record<number, GrowthStats>,
+  skillMap: Record<number, string[]>,
+  rng: SeededRng,
+  allMatches: MatchResult[],
+): MatchResult {
+  const result = simulateMatch(
+    makeCharState(charById[id1], growthMap[id1], skillMap[id1]),
+    makeCharState(charById[id2], growthMap[id2], skillMap[id2]),
+    rng.int(0, 1_000_000),
+  )
+  result.stage          = 'group'
+  result.groupId        = groupId
+  result.groupMatchType = type
+  allMatches.push(result)
+  return result
+}
 
 function runGroup(
   groupId: string,
@@ -99,30 +127,33 @@ function runGroup(
   allMatches: MatchResult[],
 ): GroupResult {
   const [a, b, c, d] = memberIds
-  const wins: Record<number, number> = { [a]: 0, [b]: 0, [c]: 0, [d]: 0 }
+  const play = (id1: number, id2: number, type: GroupMatchType) =>
+    playGroupMatch(id1, id2, type, groupId, charById, growthMap, skillMap, rng, allMatches)
 
-  // 5 matches: match1(a-b), match2(c-d), winners(w1-w2), losers(l1-l2), final(wLoser-lWinner)
-  const pairs: [number, number][] = [[a, b], [c, d], [a, c], [b, d], [a, d]]
-  for (const [id1, id2] of pairs) {
-    const seed   = rng.int(0, 1_000_000)
-    const result = simulateMatch(
-      makeCharState(charById[id1], growthMap[id1], skillMap[id1]),
-      makeCharState(charById[id2], growthMap[id2], skillMap[id2]),
-      seed,
-    )
-    result.stage   = 'group'
-    result.groupId = groupId
-    allMatches.push(result)
-    wins[result.winnerId] = (wins[result.winnerId] ?? 0) + 1
-  }
+  const m1 = play(a, b, 'initial')
+  const m2 = play(c, d, 'initial')
 
-  const ranked = [...memberIds].sort((x, y) => (wins[y] ?? 0) - (wins[x] ?? 0))
+  const [w1, l1] = [m1.winnerId, m1.loserId]
+  const [w2, l2] = [m2.winnerId, m2.loserId]
+
+  const m3 = play(w1, w2, 'winners')
+  const m4 = play(l1, l2, 'losers')
+
+  const rank1        = m3.winnerId
+  const winnersLoser = m3.loserId
+  const losersWinner = m4.winnerId
+  const eliminated1  = m4.loserId
+
+  const m5   = play(winnersLoser, losersWinner, 'decider')
+  const rank2       = m5.winnerId
+  const eliminated2 = m5.loserId
+
   return {
     groupId,
     players:    memberIds,
-    rank1:      ranked[0],
-    rank2:      ranked[1],
-    eliminated: [ranked[2], ranked[3]],
+    rank1,
+    rank2,
+    eliminated: [eliminated1, eliminated2],
   }
 }
 

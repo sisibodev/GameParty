@@ -123,6 +123,8 @@ export interface MatchLogEntry {
   manaAfter: Record<number, number>
 }
 
+export type GroupMatchType = 'initial' | 'winners' | 'losers' | 'decider'
+
 export interface MatchResult {
   matchId: string
   seed: number
@@ -136,6 +138,7 @@ export interface MatchResult {
   initialMana: Record<number, number>
   stage?: MatchStage
   groupId?: string
+  groupMatchType?: GroupMatchType
   bracketRound?: number
 }
 

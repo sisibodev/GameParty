@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { CharacterDef, MatchLogEntry, SkillDef } from '../types'
+import type { CharacterDef, CombatStats, GrowthStats, MatchLogEntry, SkillDef } from '../types'
+import { deriveStats } from '../engine/statDeriver'
+import { NPC_BASE_GROWTH } from '../constants'
 import charactersRaw from '../data/characters.json'
 import skillsRaw    from '../data/skills.json'
 
@@ -12,6 +14,16 @@ const skillName = (id: string) => SKILLS.find(s => s.id === id)?.name ?? id
 
 const SPEED_MS: Record<string, number> = { '1x': 500, '2x': 220, '4x': 70 }
 
+function loadSpeed(): '1x' | '2x' | '4x' {
+  const v = localStorage.getItem('bgp_play_speed')
+  return v === '1x' || v === '2x' || v === '4x' ? v : '1x'
+}
+
+function npcGrowth(round: number): GrowthStats {
+  const b = NPC_BASE_GROWTH + (round - 1)
+  return { hp: b, str: b, agi: b, int: b, luk: b }
+}
+
 export default function BattlePage() {
   const { playerMatches, playerMatchIndex, activeSlot } = useGameStore()
 
@@ -19,7 +31,7 @@ export default function BattlePage() {
   const match     = matchInfo?.matchResult
 
   const [logCursor, setLogCursor] = useState(0)
-  const [speed, setSpeed]         = useState<'1x' | '2x' | '4x'>('1x')
+  const [speed, setSpeed]         = useState<'1x' | '2x' | '4x'>(loadSpeed)
   const [done, setDone]           = useState(false)
   const logRef = useRef<HTMLDivElement>(null)
 
@@ -53,6 +65,19 @@ export default function BattlePage() {
   const pid   = activeSlot.characterId
   const oppId = match.char1Id === pid ? match.char2Id : match.char1Id
 
+  const playerChar = CHARACTERS.find(c => c.id === pid)
+  const oppChar    = CHARACTERS.find(c => c.id === oppId)
+  const growth     = npcGrowth(activeSlot.currentRound)
+  const playerStats: CombatStats | null = playerChar
+    ? deriveStats(playerChar.baseCombat, activeSlot.growthStats) : null
+  const oppStats: CombatStats | null = oppChar
+    ? deriveStats(oppChar.baseCombat, growth) : null
+
+  function handleSetSpeed(sp: '1x' | '2x' | '4x') {
+    setSpeed(sp)
+    localStorage.setItem('bgp_play_speed', sp)
+  }
+
   const entry   = logCursor > 0 ? match.log[logCursor - 1] : null
   const pidHp   = Math.max(0, entry ? (entry.hpAfter[pid]   ?? match.initialHp[pid])   : match.initialHp[pid])
   const oppHp   = Math.max(0, entry ? (entry.hpAfter[oppId]  ?? match.initialHp[oppId]) : match.initialHp[oppId])
@@ -79,6 +104,7 @@ export default function BattlePage() {
           mana={pidMana}
           maxMana={match.initialMana[pid]}
           isActing={entry?.actorId === pid}
+          stats={playerStats}
         />
         <div style={s.vsDivider}>VS</div>
         <CharPanel
@@ -88,6 +114,7 @@ export default function BattlePage() {
           mana={oppMana}
           maxMana={match.initialMana[oppId]}
           isActing={entry?.actorId === oppId}
+          stats={oppStats}
         />
       </div>
 
@@ -96,7 +123,7 @@ export default function BattlePage() {
           <button
             key={sp}
             style={{ ...s.speedBtn, ...(speed === sp ? s.speedActive : {}) }}
-            onClick={() => setSpeed(sp)}
+            onClick={() => handleSetSpeed(sp)}
           >{sp}</button>
         ))}
         <button style={s.skipBtn} onClick={handleSkip} disabled={done}>스킵</button>
@@ -127,7 +154,7 @@ export default function BattlePage() {
 }
 
 function CharPanel({
-  charId, isPlayer, hp, maxHp, mana, maxMana, isActing,
+  charId, isPlayer, hp, maxHp, mana, maxMana, isActing, stats,
 }: {
   charId: number
   isPlayer?: boolean
@@ -136,6 +163,7 @@ function CharPanel({
   mana: number
   maxMana: number
   isActing: boolean
+  stats: CombatStats | null
 }) {
   const hpPct   = maxHp   > 0 ? (hp   / maxHp)   * 100 : 0
   const manaPct = maxMana > 0 ? (mana / maxMana) * 100 : 0
@@ -164,6 +192,24 @@ function CharPanel({
           <div style={{ ...s.bar, width: `${manaPct}%`, background: '#44aaff', transition: 'width 0.25s ease' }} />
         </div>
       </div>
+      {stats && (
+        <div style={s.statGrid}>
+          <StatChip label="공격" val={Math.round(stats.atk)} />
+          <StatChip label="방어" val={Math.round(stats.def)} />
+          <StatChip label="속도" val={Math.round(stats.spd)} />
+          <StatChip label="치명" val={`${stats.crit.toFixed(1)}%`} />
+          <StatChip label="회피" val={`${stats.eva.toFixed(1)}%`} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StatChip({ label, val }: { label: string; val: string | number }) {
+  return (
+    <div style={s.statChip}>
+      <span style={s.statChipLabel}>{label}</span>
+      <span style={s.statChipVal}>{val}</span>
     </div>
   )
 }
@@ -216,6 +262,10 @@ const s: Record<string, React.CSSProperties> = {
   logArrow:    { color: '#444' },
   logTarget:   { color: '#aaa', minWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
   logAction:   { color: '#ddd', flex: 1 },
-  logDone:     { textAlign: 'center' as const, color: '#ffd700', fontSize: '0.8rem', padding: '6px', marginTop: '2px', letterSpacing: '0.05em' },
-  btnResult:   { background: '#7c5cfc', border: 'none', borderRadius: '10px', color: '#fff', padding: '0.85rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },
+  logDone:      { textAlign: 'center' as const, color: '#ffd700', fontSize: '0.8rem', padding: '6px', marginTop: '2px', letterSpacing: '0.05em' },
+  btnResult:    { background: '#7c5cfc', border: 'none', borderRadius: '10px', color: '#fff', padding: '0.85rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },
+  statGrid:     { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px', marginTop: '4px', width: '100%' },
+  statChip:     { background: '#0d0d1a', borderRadius: '4px', padding: '2px 5px', display: 'flex', justifyContent: 'space-between', gap: '4px' },
+  statChipLabel:{ fontSize: '0.58rem', color: '#555' },
+  statChipVal:  { fontSize: '0.58rem', color: '#aaa', fontWeight: 700 },
 }

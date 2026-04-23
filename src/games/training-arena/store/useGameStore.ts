@@ -154,9 +154,10 @@ function extractPlayerMatches(result: TournamentResult, playerCharId: number): P
         qualCount++
         stageLabel = `예선 ${qualCount}경기`
       } else if (m.stage === 'group') {
-        const gId = m.groupId ?? '?'
-        groupMatchCounts[gId] = (groupMatchCounts[gId] ?? 0) + 1
-        stageLabel = `본선 ${groupMatchCounts[gId]}경기`
+        const typeLabel: Record<string, string> = {
+          initial: '1경기', winners: '승자전', losers: '패자전', decider: '최종전',
+        }
+        stageLabel = `본선 ${typeLabel[m.groupMatchType ?? 'initial'] ?? '경기'}`
       } else {
         const round = m.bracketRound ?? 1
         stageLabel = BRACKET_LABELS[round] ?? `${round}라운드`
