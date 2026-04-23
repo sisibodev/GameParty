@@ -113,30 +113,31 @@ export interface ArchetypeCoeffs {
   luk_to_eva:  number
   str_to_crit: number
   int_to_maxHp:number
+  str_to_spd:  number
 }
 
 const DEFAULT_COEFFS: ArchetypeCoeffs = {
   hp_to_maxHp: 10, str_to_atk: 3, str_to_def: 1, agi_to_spd: 2,
   agi_to_eva: 0.5, luk_to_crit: 0.5, int_to_mana: 5,
   hp_to_def: 0, int_to_atk: 0, int_to_spd: 0, luk_to_eva: 0,
-  str_to_crit: 0, int_to_maxHp: 0,
+  str_to_crit: 0, int_to_maxHp: 0, str_to_spd: 0,
 }
 
 export const ARCHETYPE_GROWTH_COEFFS: Record<string, ArchetypeCoeffs> = {
-  // 탱크: 높은 체력·방어, 낮은 공격
-  tank:      { ...DEFAULT_COEFFS, hp_to_maxHp: 12, str_to_atk: 2, str_to_def: 2, hp_to_def: 0.3 },
-  // 버서커: 매우 높은 공격·크리, 낮은 체력
-  berserker: { ...DEFAULT_COEFFS, hp_to_maxHp: 8,  str_to_atk: 5, luk_to_crit: 0.7, str_to_crit: 0.3 },
-  // 어쌔신: 빠른 속도·높은 회피·크리, 낮은 공격
-  assassin:  { ...DEFAULT_COEFFS, str_to_atk: 2,   agi_to_spd: 2.5, luk_to_crit: 0.7, luk_to_eva: 0.3 },
-  // 레인저: 크리 계수 너프 (OP 방지)
-  ranger:    { ...DEFAULT_COEFFS, luk_to_crit: 0.3 },
-  // 마법사: INT→공격·속도 보너스, 마나 대폭 증가, STR→공격 감소
-  mage:      { ...DEFAULT_COEFFS, str_to_atk: 1, int_to_mana: 8, int_to_atk: 2, int_to_spd: 0.5 },
+  // 탱크: 체력·방어 중심, 공격력 보강
+  tank:      { ...DEFAULT_COEFFS, hp_to_maxHp: 10, str_to_atk: 3.0, str_to_def: 1.5, hp_to_def: 0.1, str_to_spd: 0.3 },
+  // 버서커: 높은 공격·크리 (과도한 폭발 억제)
+  berserker: { ...DEFAULT_COEFFS, hp_to_maxHp: 8,  str_to_atk: 4, luk_to_crit: 0.7, str_to_crit: 0.2 },
+  // 어쌔신: 기본 스탯이 이미 강해 성장 배율 완화, 회피 강화
+  assassin:  { ...DEFAULT_COEFFS, str_to_atk: 2.2, agi_to_spd: 2.0, luk_to_crit: 0.5, luk_to_eva: 0.4 },
+  // 레인저: 크리 계수 소폭 상향 (LOW 구간 탈출)
+  ranger:    { ...DEFAULT_COEFFS, luk_to_crit: 0.4 },
+  // 마법사: INT→공격·속도 보너스, 마나 대폭 증가, STR→공격 소폭 상향
+  mage:      { ...DEFAULT_COEFFS, str_to_atk: 1.5, int_to_mana: 8, int_to_atk: 1.5, int_to_spd: 0.5 },
   // 성기사: 높은 체력·방어, INT→체력 보너스
   paladin:   { ...DEFAULT_COEFFS, hp_to_maxHp: 12, str_to_atk: 2, str_to_def: 2, int_to_maxHp: 3 },
-  // 서포트: INT→속도·마나, LUK→회피, 낮은 공격·크리
-  support:   { ...DEFAULT_COEFFS, str_to_atk: 2, luk_to_crit: 0.3, int_to_mana: 7, int_to_spd: 0.3, luk_to_eva: 0.3 },
-  // 워리어: 기본값 그대로 (균형)
-  warrior:   { ...DEFAULT_COEFFS },
+  // 서포트: INT→속도·마나·공격, LUK→회피
+  support:   { ...DEFAULT_COEFFS, str_to_atk: 2.5, luk_to_crit: 0.3, int_to_mana: 7, int_to_spd: 0.3, luk_to_eva: 0.3, int_to_atk: 0.4 },
+  // 워리어: STR→공격 소폭 상향 (균형)
+  warrior:   { ...DEFAULT_COEFFS, str_to_atk: 3.5 },
 }

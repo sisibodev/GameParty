@@ -76,6 +76,6 @@ function runCheck(label: string, round: number, runs: number) {
   }
 }
 
-runCheck('Round 1  (growth=30)', 1, 40)
-runCheck('Round 5  (growth=34)', 5, 40)
-runCheck('Round 10 (growth=39)', 10, 40)
+runCheck('Round 1  (growth=30)', 1, 1000)
+runCheck('Round 5  (growth=34)', 5, 1000)
+runCheck('Round 10 (growth=39)', 10, 1000)

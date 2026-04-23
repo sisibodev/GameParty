@@ -16,7 +16,7 @@ export function deriveStats(
   const maxHp   = base.maxHp   + growth.hp  * c.hp_to_maxHp + growth.int * c.int_to_maxHp
   const atk     = base.atk     + growth.str * c.str_to_atk   + growth.int * c.int_to_atk
   const def     = base.def     + growth.str * c.str_to_def   + growth.hp  * c.hp_to_def
-  const spd     = base.spd     + growth.agi * c.agi_to_spd   + growth.int * c.int_to_spd
+  const spd     = base.spd     + growth.agi * c.agi_to_spd   + growth.int * c.int_to_spd + growth.str * c.str_to_spd
   const crit    = Math.min(
     base.crit + growth.luk * c.luk_to_crit + growth.str * c.str_to_crit,
     100,
