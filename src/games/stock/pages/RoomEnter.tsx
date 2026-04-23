@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
-import { createRoom, joinRoom } from '../utils/rtdb'
-import type { RoomSettings, Player } from '../types'
+import { createRoom, joinRoom, subscribeRooms, unsubscribeRoom } from '../utils/rtdb'
+import type { RoomSettings, Player, Room } from '../types'
 import styles from './RoomEnter.module.css'
 
 const DEFAULT_SETTINGS: RoomSettings = {
@@ -71,6 +71,12 @@ export default function RoomEnter() {
   const [joinCode, setJoinCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [rooms, setRooms] = useState<Room[]>([])
+
+  useEffect(() => {
+    const ref = subscribeRooms(setRooms)
+    return () => unsubscribeRoom(ref)
+  }, [])
 
   if (!user) return null
 
@@ -152,7 +158,7 @@ export default function RoomEnter() {
           </h1>
 
           <p className={styles.heroDesc}>
-            4~8명이 함께 10라운드 동안 주식을 사고팔아 최고의 투자자가 되세요.
+            4~10명이 함께 10라운드 동안 주식을 사고팔아 최고의 투자자가 되세요.
             특수 카드로 상대를 방해하고, 정보 카드로 시장을 읽으세요.
           </p>
 
@@ -266,7 +272,7 @@ export default function RoomEnter() {
           </div>
 
           <div className={styles.gameInfo}>
-            <span>👥 4-8인</span>
+            <span>👥 4-10인</span>
             <span>⏱ 약 25분</span>
             <span>🎯 난이도 ★★★☆☆</span>
           </div>
@@ -291,6 +297,51 @@ export default function RoomEnter() {
             color="#9d7aff" rotate={-4} top={210} left={90}
           />
         </div>
+      </div>
+
+      {/* ── Room list ── */}
+      <div className={styles.roomSection}>
+        <div className={styles.roomSectionHeader}>
+          <h3 className={styles.roomSectionTitle}>🔥 대기 중인 방</h3>
+          <span className={styles.roomCount}>{rooms.length}개</span>
+        </div>
+        {rooms.length === 0 ? (
+          <div className={styles.roomEmpty}>현재 대기 중인 방이 없습니다. 새 방을 만들어보세요!</div>
+        ) : (
+          <div className={styles.roomGrid}>
+            {rooms.map(room => {
+              const players = Object.values(room.players ?? {})
+              const host = players.find(p => p.uid === room.host)
+              return (
+                <div key={room.host} className={styles.roomCard}>
+                  <div className={styles.roomCardTop}>
+                    <div className={styles.roomHostName}>{host?.name ?? '—'} 의 방</div>
+                  </div>
+                  <div className={styles.roomCardMeta}>
+                    <span>{room.settings.rounds}라운드</span>
+                    <span>·</span>
+                    <span>{room.settings.timerSeconds / 60}분</span>
+                    <span>·</span>
+                    <span>시작금 {(room.settings.startCash / 10000).toFixed(0)}만원</span>
+                  </div>
+                  <div className={styles.roomCardBottom}>
+                    <span className={styles.roomPlayerCount}>👥 {players.length}명 대기 중</span>
+                    <button
+                      className={styles.roomJoinBtn}
+                      onClick={() => {
+                        setJoinCode(room.host)
+                        setTab('join')
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      }}
+                    >
+                      입장
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

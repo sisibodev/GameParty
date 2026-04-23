@@ -524,6 +524,18 @@ export function unsubscribeRoom(roomRef: DatabaseReference) {
   off(roomRef)
 }
 
+/** 대기 중인 방 목록 실시간 구독 (status === 'waiting') */
+export function subscribeRooms(cb: (rooms: Room[]) => void): DatabaseReference {
+  const roomsRef = ref(db(), 'rooms')
+  onValue(roomsRef, snap => {
+    if (!snap.exists()) { cb([]); return }
+    const all = snap.val() as Record<string, Room>
+    const waiting = Object.values(all).filter(r => r.status === 'waiting')
+    cb(waiting)
+  })
+  return roomsRef
+}
+
 /** 정보 카드 사용 — 카드 used 처리 + usedInfoThisRound 증가 */
 export async function useInfoCard(
   roomId: string,
