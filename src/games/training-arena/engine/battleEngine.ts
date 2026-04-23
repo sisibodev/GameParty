@@ -292,16 +292,18 @@ export function simulateMatch(
   const loserId  = winnerId === s1.charId ? s2.charId : s1.charId
 
   return {
-    matchId:    `match_${seed}_${char1.charId}_${char2.charId}`,
+    matchId:     `match_${seed}_${char1.charId}_${char2.charId}`,
     seed,
-    char1Id:    char1.charId,
-    char2Id:    char2.charId,
+    char1Id:     char1.charId,
+    char2Id:     char2.charId,
     winnerId,
     loserId,
-    totalTurns: turn,
+    totalTurns:  turn,
     log,
     initialHp,
     initialMana,
+    char1Skills: char1.skills,
+    char2Skills: char2.skills,
   }
 }
 

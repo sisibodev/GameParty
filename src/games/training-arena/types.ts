@@ -136,6 +136,8 @@ export interface MatchResult {
   log: MatchLogEntry[]
   initialHp: Record<number, number>
   initialMana: Record<number, number>
+  char1Skills: string[]
+  char2Skills: string[]
   stage?: MatchStage
   groupId?: string
   groupMatchType?: GroupMatchType
