@@ -155,7 +155,7 @@ export function createCopBot(spawn: Vec2, frames?: CharFrames): CopBotHandle {
   view.label = 'cop-bot'
 
   const shadow = new Graphics()
-    .ellipse(0, PLAYER_RADIUS * 0.6, PLAYER_RADIUS * 0.9, PLAYER_RADIUS * 0.35)
+    .ellipse(0, PLAYER_RADIUS * 0.6, PLAYER_RADIUS * 1.8, PLAYER_RADIUS * 0.6)
     .fill({ color: 0x000000, alpha: 0.35 })
   view.addChild(shadow)
 

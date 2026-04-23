@@ -3,36 +3,40 @@ import { Assets, AnimatedSprite, Texture, Rectangle } from 'pixi.js'
 const DIR_COUNT = 8
 const FRAME_COUNT = 4
 
-// 스프라이트 시트 컬럼 순서 (사용자 확인):
-// col 0=위  col 1=위오른쪽  col 2=오른쪽  col 3=아래오른쪽
-// col 4=아래  col 5=아래왼쪽  col 6=왼쪽  col 7=위왼쪽
+// 새 시트 레이아웃: 행=방향(8), 열=프레임(4) — 360×1280
+// row 0=위  row 1=위오른쪽  row 2=오른쪽  row 3=아래오른쪽
+// row 4=아래  row 5=아래왼쪽  row 6=왼쪽  row 7=위왼쪽
 //
-// atan2 sector → col 매핑 (sector 0=오른쪽, 시계방향):
+// atan2 sector → row 매핑 (sector 0=오른쪽, 시계방향):
 // sector 0(0°,right)→2  sector 1(45°,SE)→3  sector 2(90°,down)→4
 // sector 3(135°,SW)→5  sector 4(180°,left)→6  sector 5(225°,NW)→7
 // sector 6(270°,up)→0  sector 7(315°,NE)→1
-const SECTOR_TO_COL = [2, 3, 4, 5, 6, 7, 0, 1] as const
+const SECTOR_TO_DIR = [2, 3, 4, 5, 6, 7, 0, 1] as const
 
-// CharFrames[col 0-7][frame 0-3]
+// CharFrames[dir 0-7][frame 0-3]
 export type CharFrames = Texture[][]
 
 export function dirToCol(dx: number, dy: number): number {
   const angle = Math.atan2(dy, dx) // -π~π, 0=오른쪽
   const sector = Math.round(((angle / (Math.PI / 4)) + 8)) % 8
-  return SECTOR_TO_COL[sector]
+  return SECTOR_TO_DIR[sector]
 }
 
 export async function loadCharFrames(role: 'thief' | 'cop'): Promise<CharFrames> {
-  const tex = await Assets.load<Texture>(`${import.meta.env.BASE_URL}assets/cops-and-robbers/${role}.png`)
-  const cellW = Math.round(tex.width / DIR_COUNT)
-  const cellH = Math.round(tex.height / FRAME_COUNT)
+  const url = `${import.meta.env.BASE_URL}assets/cops-and-robbers/${role}.png`
+  // nearest: atlas 경계 bilinear 블리딩 방지
+  Assets.add({ alias: `char-${role}`, src: url, data: { scaleMode: 'nearest' } })
+  const tex = await Assets.load<Texture>(`char-${role}`)
+  // 새 레이아웃: 가로=4프레임, 세로=8방향
+  const cellW = Math.round(tex.width / FRAME_COUNT)
+  const cellH = Math.round(tex.height / DIR_COUNT)
   const frames: CharFrames = []
-  for (let col = 0; col < DIR_COUNT; col++) {
-    frames[col] = []
-    for (let row = 0; row < FRAME_COUNT; row++) {
-      frames[col][row] = new Texture({
+  for (let dir = 0; dir < DIR_COUNT; dir++) {
+    frames[dir] = []
+    for (let frame = 0; frame < FRAME_COUNT; frame++) {
+      frames[dir][frame] = new Texture({
         source: tex.source,
-        frame: new Rectangle(col * cellW, row * cellH, cellW, cellH),
+        frame: new Rectangle(frame * cellW, dir * cellH, cellW, cellH),
       })
     }
   }
@@ -41,10 +45,10 @@ export async function loadCharFrames(role: 'thief' | 'cop'): Promise<CharFrames>
 
 export function createCharSprite(frames: CharFrames, col = 4): AnimatedSprite {
   const sprite = new AnimatedSprite(frames[col])
-  sprite.anchor.set(0.5, 0.8)
-  // PLAYER_RADIUS=12 기준 sprite 높이 ≈ 2.5×radius
-  const cellH = frames[col][0]?.height ?? 230
-  sprite.scale.set((12 * 2.5) / cellH)
+  sprite.anchor.set(0.5, 0.70)
+  // PLAYER_RADIUS=12 기준 sprite 높이 ≈ 5×radius (2배 스케일)
+  const cellH = frames[col][0]?.height ?? 160
+  sprite.scale.set((12 * 5) / cellH)
   sprite.animationSpeed = 0.15
   sprite.play()
   return sprite

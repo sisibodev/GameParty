@@ -26,7 +26,7 @@ export function createPlayer(
   view.label = `player-${role}`
 
   const shadow = new Graphics()
-    .ellipse(0, PLAYER_RADIUS * 0.6, PLAYER_RADIUS * 0.9, PLAYER_RADIUS * 0.35)
+    .ellipse(0, PLAYER_RADIUS * 0.6, PLAYER_RADIUS * 1.8, PLAYER_RADIUS * 0.6)
     .fill({ color: 0x000000, alpha: 0.35 })
   view.addChild(shadow)
 
