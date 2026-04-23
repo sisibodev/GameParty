@@ -1,6 +1,11 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { SlotId } from '../types'
+import type { CharacterDef, SlotId } from '../types'
+import type { GamePhase } from '../store/useGameStore'
+import charactersRaw from '../data/characters.json'
+
+const characters = charactersRaw as CharacterDef[]
+const charName = (id: number) => characters.find(c => c.id === id)?.name ?? `#${id}`
 
 const SLOT_IDS: SlotId[] = [1, 2, 3]
 
@@ -12,7 +17,8 @@ export default function SlotSelectPage() {
   function handleContinue(slotId: SlotId) {
     const slot = slots.find(s => s.slotId === slotId)
     if (!slot) return
-    useGameStore.setState({ activeSlot: slot, phase: 'gacha' })
+    const phase = (slot.savedPhase as GamePhase | undefined) ?? 'gacha'
+    useGameStore.setState({ activeSlot: slot, phase })
   }
 
   function handleNew(slotId: SlotId) {
@@ -36,7 +42,8 @@ export default function SlotSelectPage() {
               <div style={s.slotNum}>SLOT {id}</div>
               {slot ? (
                 <>
-                  <div style={s.charName}>캐릭터 #{slot.characterId}</div>
+                  <div style={s.charName}>{charName(slot.characterId)}</div>
+                  <div style={s.charId}>#{slot.characterId}</div>
                   <div style={s.info}>라운드 {slot.currentRound}</div>
                   {slot.bestClearRound != null && (
                     <div style={s.info}>최고 기록: R{slot.bestClearRound}</div>
@@ -64,16 +71,17 @@ export default function SlotSelectPage() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  root:      { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff' },
-  title:     { fontSize: '2.5rem', fontWeight: 900, letterSpacing: '0.05em', color: '#c0aaff', margin: '0 0 0.5rem' },
-  sub:       { color: '#888', marginBottom: '2rem' },
-  grid:      { display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' },
-  card:      { background: '#1a1a2e', border: '1px solid #333', borderRadius: '12px', padding: '1.5rem', width: '220px', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' },
-  slotNum:   { fontSize: '0.75rem', color: '#888', letterSpacing: '0.1em' },
-  charName:  { fontSize: '1.1rem', fontWeight: 700 },
-  info:      { fontSize: '0.85rem', color: '#aaa' },
-  btnRow:    { display: 'flex', gap: '0.5rem', marginTop: '0.5rem' },
-  btnPrimary:{ background: '#7c5cfc', border: 'none', borderRadius: '6px', color: '#fff', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 600 },
-  btnDanger: { background: '#5c1a1a', border: 'none', borderRadius: '6px', color: '#ff8888', padding: '0.5rem 0.75rem', cursor: 'pointer' },
-  btnNew:    { background: 'transparent', border: '1px dashed #555', borderRadius: '8px', color: '#888', padding: '0.75rem 1.5rem', cursor: 'pointer', fontSize: '1rem', marginTop: '1rem' },
+  root:       { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff' },
+  title:      { fontSize: '2.5rem', fontWeight: 900, letterSpacing: '0.05em', color: '#c0aaff', margin: '0 0 0.5rem' },
+  sub:        { color: '#888', marginBottom: '2rem' },
+  grid:       { display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' },
+  card:       { background: '#1a1a2e', border: '1px solid #333', borderRadius: '12px', padding: '1.5rem', width: '220px', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' },
+  slotNum:    { fontSize: '0.75rem', color: '#888', letterSpacing: '0.1em' },
+  charName:   { fontSize: '1.1rem', fontWeight: 700, color: '#c0aaff' },
+  charId:     { fontSize: '0.75rem', color: '#555' },
+  info:       { fontSize: '0.85rem', color: '#aaa' },
+  btnRow:     { display: 'flex', gap: '0.5rem', marginTop: '0.5rem' },
+  btnPrimary: { background: '#7c5cfc', border: 'none', borderRadius: '6px', color: '#fff', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 600 },
+  btnDanger:  { background: '#5c1a1a', border: 'none', borderRadius: '6px', color: '#ff8888', padding: '0.5rem 0.75rem', cursor: 'pointer' },
+  btnNew:     { background: 'transparent', border: '1px dashed #555', borderRadius: '8px', color: '#888', padding: '0.75rem 1.5rem', cursor: 'pointer', fontSize: '1rem', marginTop: '1rem' },
 }

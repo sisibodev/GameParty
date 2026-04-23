@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { TournamentResult } from '../types'
+import type { CharacterDef, TournamentResult } from '../types'
+import charactersRaw from '../data/characters.json'
+
+const characters = charactersRaw as CharacterDef[]
+const charName = (id: number) => {
+  const c = characters.find(c => c.id === id)
+  return c ? `${c.name}` : `#${id}`
+}
 
 type Stage = 'idle' | 'running' | 'done'
 
@@ -44,7 +51,7 @@ export default function TournamentPage() {
   return (
     <div style={s.root}>
       <h2 style={s.title}>토너먼트</h2>
-      <p style={s.sub}>Round {activeSlot.currentRound} — 캐릭터 #{pid}</p>
+      <p style={s.sub}>Round {activeSlot.currentRound} — {charName(pid)} (#{pid})</p>
 
       {stage === 'idle' && (
         <button style={s.btnStart} onClick={handleStart}>▶ 토너먼트 시작</button>
@@ -78,15 +85,15 @@ export default function TournamentPage() {
                   style={{ ...s.groupCard, border: (g.rank1 === pid || g.rank2 === pid) ? '1px solid #c0aaff' : '1px solid #333' }}
                 >
                   <div style={s.groupId}>조 {g.groupId}</div>
-                  <div style={s.groupRow}><span style={s.rank1}>1위</span> #{g.rank1}</div>
-                  <div style={s.groupRow}><span style={s.rank2}>2위</span> #{g.rank2}</div>
-                  <div style={s.groupRow}><span style={s.elim}>탈락</span> #{g.eliminated[0]}, #{g.eliminated[1]}</div>
+                  <div style={s.groupRow}><span style={s.rank1}>1위</span> {charName(g.rank1)}</div>
+                  <div style={s.groupRow}><span style={s.rank2}>2위</span> {charName(g.rank2)}</div>
+                  <div style={s.groupRow}><span style={s.elim}>탈락</span> {charName(g.eliminated[0])}, {charName(g.eliminated[1])}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div style={s.winner}>🏆 우승: 캐릭터 #{result.winner}</div>
+          <div style={s.winner}>🏆 우승: {charName(result.winner)} (#{result.winner})</div>
 
           <button style={s.btnNext} onClick={() => useGameStore.setState({ phase: 'reward' })}>
             보상 받기 →

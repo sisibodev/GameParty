@@ -228,7 +228,9 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       rewardSeed,
     )
 
-    set({ lastTournament: result, pendingReward: reward, phase: 'reward' })
+    const slotWithPhase: SaveSlot = { ...activeSlot, savedPhase: 'reward', updatedAt: Date.now() }
+    await saveSlot(slotWithPhase)
+    set({ activeSlot: slotWithPhase, lastTournament: result, pendingReward: reward, phase: 'reward' })
     return result
   },
 
@@ -254,15 +256,6 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         )
       : activeSlot.bestClearRound
 
-    const updated: SaveSlot = {
-      ...activeSlot,
-      growthStats:    newGrowth,
-      currentRound:   newRound,
-      bestClearRound: bestClear,
-    }
-    await saveSlot(updated)
-
-    // 추가 포인트 있으면 stat_alloc → confirmStatAlloc에서 skill_select/gacha 결정
     const extraPoints = pendingReward.playerExtraPoints
     const nextPhase: GamePhase =
       extraPoints > 0
@@ -270,6 +263,16 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         : pendingReward.skillChoices.length > 0
           ? 'skill_select'
           : 'gacha'
+
+    const updated: SaveSlot = {
+      ...activeSlot,
+      growthStats:    newGrowth,
+      currentRound:   newRound,
+      bestClearRound: bestClear,
+      savedPhase:     nextPhase,
+      updatedAt:      Date.now(),
+    }
+    await saveSlot(updated)
 
     set({
       activeSlot:        updated,
@@ -298,6 +301,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       ...activeSlot,
       initialSkills,
       acquiredSkills: [...acquiredSkills, skillId],
+      savedPhase:     'gacha',
+      updatedAt:      Date.now(),
     }
     await saveSlot(updated)
     set({ activeSlot: updated, pendingReward: null, phase: 'gacha' })
