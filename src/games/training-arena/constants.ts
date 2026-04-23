@@ -63,6 +63,14 @@ export const GROUP_QUALIFIERS_PER_GROUP = 2
 export const TOURNAMENT_SIZE = 16
 export const DARKHORSE_RATIO = 0.30
 
+// ─── Character Unlock ─────────────────────────────────────────────────────────
+
+// 처음 선택 가능한 5캐릭터 (탱커/버서커/어쌔신/레인저/마법사)
+export const INITIAL_UNLOCKED_CHAR_IDS = [1, 2, 3, 4, 5]
+
+// NPC 초기 성장 스탯 기본값
+export const NPC_BASE_GROWTH = 30
+
 // ─── Save Slots ───────────────────────────────────────────────────────────────
 
 export const MAX_SAVE_SLOTS = 3

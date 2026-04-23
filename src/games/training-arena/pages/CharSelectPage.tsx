@@ -1,11 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import type { CharacterDef, SlotId } from '../types'
 import charactersRaw from '../data/characters.json'
 
-const characters = charactersRaw as CharacterDef[]
-const originals   = characters.filter(c => !c.ipId)
-const ipChars     = characters.filter(c =>  c.ipId)
+const allOriginals = (charactersRaw as CharacterDef[]).filter(c => c.ipId == null)
 
 const ARCHETYPE_COLOR: Record<string, string> = {
   tank: '#4a9eff', warrior: '#ff6b35', mage: '#b44eff',
@@ -14,8 +12,12 @@ const ARCHETYPE_COLOR: Record<string, string> = {
 }
 
 export default function CharSelectPage() {
-  const { startNewGame } = useGameStore()
+  const { startNewGame, unlockedCharIds, newCharIds, clearNewChars } = useGameStore()
   const [selected, setSelected] = useState<number | null>(null)
+
+  useEffect(() => { clearNewChars() }, [clearNewChars])
+
+  const unlocked = allOriginals.filter(c => unlockedCharIds.includes(c.id))
 
   async function handleConfirm() {
     if (selected == null) return
@@ -25,6 +27,7 @@ export default function CharSelectPage() {
 
   function CharCard({ char }: { char: CharacterDef }) {
     const isSelected = selected === char.id
+    const isNew = newCharIds.includes(char.id)
     return (
       <button
         style={{
@@ -38,7 +41,7 @@ export default function CharSelectPage() {
           {char.archetype}
         </div>
         <div style={s.charName}>{char.name}</div>
-        {char.ipId && <div style={s.ipBadge}>IP</div>}
+        {isNew && <div style={s.newBadge}>NEW</div>}
         <div style={s.statRow}>
           <span>HP {char.baseCombat.maxHp}</span>
           <span>ATK {char.baseCombat.atk}</span>
@@ -58,18 +61,10 @@ export default function CharSelectPage() {
         </button>
       </div>
 
-      {ipChars.length > 0 && (
-        <>
-          <h3 style={s.section}>IP 캐릭터</h3>
-          <div style={s.grid}>
-            {ipChars.map(c => <CharCard key={c.id} char={c} />)}
-          </div>
-        </>
-      )}
+      <p style={s.hint}>해금된 캐릭터 {unlocked.length}개 · 토너먼트에서 싸운 캐릭터가 추가로 열립니다</p>
 
-      <h3 style={s.section}>오리지널 캐릭터</h3>
       <div style={s.grid}>
-        {originals.map(c => <CharCard key={c.id} char={c} />)}
+        {unlocked.map(c => <CharCard key={c.id} char={c} />)}
       </div>
 
       <div style={s.footer}>
@@ -79,7 +74,7 @@ export default function CharSelectPage() {
           onClick={handleConfirm}
         >
           {selected != null
-            ? `${characters.find(c => c.id === selected)?.name} 선택`
+            ? `${allOriginals.find(c => c.id === selected)?.name} 선택`
             : '캐릭터를 선택하세요'}
         </button>
       </div>
@@ -89,14 +84,14 @@ export default function CharSelectPage() {
 
 const s: Record<string, React.CSSProperties> = {
   root:      { display: 'flex', flexDirection: 'column', padding: '1.5rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff', paddingBottom: '6rem' },
-  header:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' },
+  header:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' },
   title:     { fontSize: '1.5rem', fontWeight: 700, color: '#c0aaff', margin: 0 },
-  section:   { color: '#888', fontSize: '0.85rem', letterSpacing: '0.1em', margin: '1.5rem 0 0.75rem' },
+  hint:      { color: '#555', fontSize: '0.78rem', margin: '0 0 1rem' },
   grid:      { display: 'flex', gap: '0.75rem', flexWrap: 'wrap' },
   charCard:  { display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '0.75rem', borderRadius: '10px', cursor: 'pointer', textAlign: 'left', position: 'relative', minWidth: '130px' },
   archBadge: { fontSize: '0.65rem', color: '#fff', padding: '2px 6px', borderRadius: '4px', alignSelf: 'flex-start', textTransform: 'uppercase' },
   charName:  { fontSize: '0.9rem', fontWeight: 700, color: '#e8e8ff' },
-  ipBadge:   { position: 'absolute', top: '6px', right: '6px', fontSize: '0.6rem', background: '#7c5cfc', color: '#fff', padding: '1px 5px', borderRadius: '3px' },
+  newBadge:  { position: 'absolute', top: '6px', right: '6px', fontSize: '0.6rem', background: '#ff4444', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 },
   statRow:   { display: 'flex', gap: '0.4rem', flexWrap: 'wrap', fontSize: '0.7rem', color: '#aaa' },
   footer:    { position: 'fixed', bottom: 0, left: 0, right: 0, padding: '1rem', background: '#0d0d1a', borderTop: '1px solid #222', display: 'flex', justifyContent: 'center' },
   btnConfirm:{ background: '#7c5cfc', border: 'none', borderRadius: '8px', color: '#fff', padding: '0.75rem 3rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },
