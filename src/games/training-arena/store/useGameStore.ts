@@ -37,6 +37,7 @@ export type GamePhase =
   | 'slot_select'
   | 'encyclopedia'
   | 'ranking'
+  | 'simulation'
   | 'char_select'
   | 'stat_alloc'
   | 'gacha'

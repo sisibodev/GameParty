@@ -41,6 +41,9 @@ export default function SlotSelectPage() {
         <button style={s.btnEncy} onClick={() => useGameStore.setState({ phase: 'ranking' })}>
           🏅 랭킹
         </button>
+        <button style={s.btnEncy} onClick={() => useGameStore.setState({ phase: 'simulation' })}>
+          🤖 시뮬
+        </button>
       </div>
       <p style={s.sub}>슬롯을 선택하세요</p>
       <div style={s.grid}>
