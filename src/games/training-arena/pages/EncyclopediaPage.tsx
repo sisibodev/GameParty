@@ -29,13 +29,14 @@ const ARCHETYPE_COLORS: Record<Archetype, string> = {
 
 const ALL_ARCHETYPES = Object.keys(ARCHETYPE_LABELS) as Archetype[]
 
-function CharCard({ char, isNew, isLocked }: { char: CharacterDef; isNew: boolean; isLocked: boolean }) {
+function CharCard({ char, isNew, isLocked, isWinner }: { char: CharacterDef; isNew: boolean; isLocked: boolean; isWinner: boolean }) {
   const color = ARCHETYPE_COLORS[char.archetype]
   const b = char.baseCombat
   return (
     <div style={{ ...s.card, opacity: isLocked ? 0.35 : 1, position: 'relative' }}>
       {isLocked && <div style={s.lockOverlay}>🔒</div>}
       {isNew && !isLocked && <div style={s.newBadge}>NEW</div>}
+      {isWinner && !isLocked && <div style={s.winBadge}>🏆</div>}
       <div style={s.cardTop}>
         <div>
           <div style={s.charName}>{isLocked ? '???' : char.name}</div>
@@ -88,7 +89,8 @@ function FilterBtn({ label, value, current, onSelect, color }: FilterBtnProps) {
 }
 
 export default function EncyclopediaPage() {
-  const { unlockedCharIds, newCharIds, clearNewChars } = useGameStore()
+  const { unlockedCharIds, newCharIds, clearNewChars, slots } = useGameStore()
+  const winnerCharIds = slots.filter(s => s.bestClearRound != null).map(s => s.characterId)
   const [filter, setFilter] = useState<Archetype | 'all'>('all')
 
   useEffect(() => { clearNewChars() }, [clearNewChars])
@@ -123,6 +125,7 @@ export default function EncyclopediaPage() {
             char={c}
             isNew={newCharIds.includes(c.id)}
             isLocked={!unlockedCharIds.includes(c.id)}
+            isWinner={winnerCharIds.includes(c.id)}
           />
         ))}
       </div>
@@ -151,4 +154,5 @@ const s: Record<string, React.CSSProperties> = {
   statVal:     { fontSize: '0.8rem', color: '#aaa', fontWeight: 600 },
   lockOverlay: { position: 'absolute', top: '8px', right: '8px', fontSize: '0.9rem' },
   newBadge:    { position: 'absolute', top: '8px', right: '8px', fontSize: '0.6rem', background: '#ff4444', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 },
+  winBadge:    { position: 'absolute', top: '8px', left: '8px', fontSize: '0.75rem' },
 }
