@@ -1,3 +1,6 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -5,20 +8,35 @@
 }
 
 :root {
-  --color-bg: #0f0f13;
-  --color-surface: #1a1a24;
-  --color-surface-2: #242433;
-  --color-border: #2e2e42;
-  --color-primary: #6c63ff;
-  --color-primary-hover: #857dff;
-  --color-text: #e8e8f0;
-  --color-text-muted: #888899;
-  --color-success: #4caf50;
+  --color-bg: #0a0b12;
+  --color-surface: #111320;
+  --color-surface-2: #1e2236;
+  --color-border: rgba(255,255,255,0.10);
+  --color-primary: #9d7aff;
+  --color-primary-hover: #b79bff;
+  --color-text: #d8dcef;
+  --color-text-hi: #f1f3ff;
+  --color-text-muted: #9098b7;
+  --color-text-faint: #5e6582;
+  --color-success: #4ade80;
   --color-danger: #f44336;
+  /* Korean market convention: 빨강=상승/매수, 파랑=하락/매도 */
+  --color-up: #ff4d5e;
+  --color-up-soft: rgba(255,77,94,0.16);
+  --color-up-glow: 0 0 20px rgba(255,77,94,0.45);
+  --color-down: #3b82f6;
+  --color-down-soft: rgba(59,130,246,0.16);
+  --color-down-glow: 0 0 20px rgba(59,130,246,0.45);
+  /* Neon accents */
+  --neon-purple: #9d7aff;
+  --neon-cyan: #5de3ff;
+  --neon-amber: #ffc857;
+  --neon-green: #4ade80;
+  --primary-glow: 0 0 28px rgba(157,122,255,0.55);
 }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Pretendard Variable', 'Pretendard', 'Segoe UI', system-ui, -apple-system, sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text);
   min-height: 100vh;
