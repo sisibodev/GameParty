@@ -10,7 +10,6 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg);
 }
 
 .header {
@@ -18,36 +17,32 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.5rem;
-  background: linear-gradient(180deg, #111320, #0d0f1c);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .backBtn {
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #9098b7;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
   padding: 0.4rem 0.8rem;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 0.85rem;
   cursor: pointer;
 }
 
-.backBtn:hover {
-  background: rgba(255,255,255,0.06);
-}
-
-.title { font-size: 1.1rem; font-weight: 800; flex: 1; color: #f1f3ff; }
+.title { font-size: 1.1rem; font-weight: 700; flex: 1; }
 
 .roomCode {
   font-size: 0.85rem;
-  color: #9098b7;
-  background: rgba(157,122,255,0.1);
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
   padding: 0.3rem 0.75rem;
   border-radius: 999px;
-  border: 1px solid rgba(157,122,255,0.3);
+  border: 1px solid var(--color-border);
 }
 
-.roomCode strong { color: #9d7aff; letter-spacing: 2px; }
+.roomCode strong { color: var(--color-primary); letter-spacing: 2px; }
 
 .body {
   flex: 1;
@@ -61,17 +56,16 @@
 }
 
 .settingsCard, .playersCard {
-  background: linear-gradient(180deg, #1e2236, #111320);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
   padding: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
 .sectionTitle {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #5e6582;
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 1rem;
@@ -88,7 +82,7 @@
 }
 
 .settingRow:last-child { border-bottom: none; }
-.settingRow strong { color: #f1f3ff; }
+.settingRow strong { color: var(--color-text); }
 
 .playerList { display: flex; flex-direction: column; gap: 0.75rem; }
 
@@ -106,7 +100,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #9d7aff, #ff4d5e);
+  background: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -114,11 +108,11 @@
   font-size: 0.9rem;
 }
 
-.playerName { font-size: 0.95rem; font-weight: 600; color: #f1f3ff; }
+.playerName { font-size: 0.95rem; font-weight: 500; }
 
 .hostBadge {
   font-size: 0.7rem;
-  background: linear-gradient(135deg, #9d7aff, #b79bff);
+  background: var(--color-primary);
   color: white;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
@@ -126,18 +120,18 @@
 
 .readyBadge {
   font-size: 0.8rem;
-  color: #4ade80;
-  background: rgba(74,222,128,0.12);
-  border: 1px solid rgba(74,222,128,0.35);
+  color: var(--color-success);
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
 }
 
 .waitBadge {
   font-size: 0.8rem;
-  color: #9098b7;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10);
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
 }
@@ -156,28 +150,18 @@
 }
 
 .startBtn {
-  background: linear-gradient(135deg, #9d7aff, #b79bff);
+  background: var(--color-primary);
   color: white;
-  border: 1px solid rgba(157,146,255,0.6);
-  border-radius: 12px;
-  box-shadow: 0 0 28px rgba(157,122,255,0.55);
 }
 
-.startBtn:hover:not(:disabled) { filter: brightness(1.08); }
-.startBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.startBtn:hover:not(:disabled) { background: var(--color-primary-hover); }
+.startBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.readyBtn {
-  background: linear-gradient(135deg, #4ade80, #86efac);
-  color: #0a0b12;
-  border: none;
-  border-radius: 12px;
-  box-shadow: 0 0 20px rgba(74,222,128,0.4);
-}
+.readyBtn { background: var(--color-success); color: white; }
 .readyBtn:hover { filter: brightness(1.1); }
 
 .cancelReadyBtn {
-  background: rgba(255,255,255,0.05);
-  color: #9098b7;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 12px;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
 }
