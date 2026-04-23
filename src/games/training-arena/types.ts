@@ -168,6 +168,7 @@ export interface SaveSlot {
   acquiredSkills: string[]    // 우승 후 습득 스킬 누적
   currentRound: number
   bestClearRound: number | null
+  savedPhase?: string         // 마지막으로 저장된 게임 페이즈
   createdAt: number
   updatedAt: number
 }
