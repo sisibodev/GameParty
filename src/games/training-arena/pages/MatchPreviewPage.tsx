@@ -59,9 +59,9 @@ export default function MatchPreviewPage() {
   const round         = activeSlot.currentRound
   const oppGrowth     = npcGrowth(round)
   const playerStats: CombatStats | null  = playerChar
-    ? deriveStats(playerChar.baseCombat, activeSlot.growthStats) : null
+    ? deriveStats(playerChar.baseCombat, activeSlot.growthStats, playerChar.archetype) : null
   const opponentStats: CombatStats | null = opponentChar
-    ? deriveStats(opponentChar.baseCombat, oppGrowth) : null
+    ? deriveStats(opponentChar.baseCombat, oppGrowth, opponentChar.archetype) : null
 
   const achievement = lastTournament ? getOpponentAchievement(opponentId, lastTournament) : null
 

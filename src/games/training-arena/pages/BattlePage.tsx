@@ -15,7 +15,7 @@ const skillName = (id: string) => SKILLS.find(s => s.id === id)?.name ?? id
 const SPEED_MS: Record<string, number> = { '1x': 500, '2x': 220, '4x': 70 }
 
 function loadSpeed(): '1x' | '2x' | '4x' {
-  const v = localStorage.getItem('bgp_play_speed')
+  const v = localStorage.getItem('bgp_battle_speed')
   return v === '1x' || v === '2x' || v === '4x' ? v : '1x'
 }
 
@@ -62,20 +62,22 @@ export default function BattlePage() {
 
   if (!match || !activeSlot || !matchInfo) return null
 
-  const pid   = activeSlot.characterId
-  const oppId = match.char1Id === pid ? match.char2Id : match.char1Id
+  const pid        = activeSlot.characterId
+  const oppId      = match.char1Id === pid ? match.char2Id : match.char1Id
+  const playerSkills = match.char1Id === pid ? (match.char1Skills ?? []) : (match.char2Skills ?? [])
+  const oppSkills    = match.char1Id === pid ? (match.char2Skills ?? []) : (match.char1Skills ?? [])
 
   const playerChar = CHARACTERS.find(c => c.id === pid)
   const oppChar    = CHARACTERS.find(c => c.id === oppId)
   const growth     = npcGrowth(activeSlot.currentRound)
   const playerStats: CombatStats | null = playerChar
-    ? deriveStats(playerChar.baseCombat, activeSlot.growthStats) : null
+    ? deriveStats(playerChar.baseCombat, activeSlot.growthStats, playerChar.archetype) : null
   const oppStats: CombatStats | null = oppChar
-    ? deriveStats(oppChar.baseCombat, growth) : null
+    ? deriveStats(oppChar.baseCombat, growth, oppChar.archetype) : null
 
   function handleSetSpeed(sp: '1x' | '2x' | '4x') {
     setSpeed(sp)
-    localStorage.setItem('bgp_play_speed', sp)
+    localStorage.setItem('bgp_battle_speed', sp)
   }
 
   const entry   = logCursor > 0 ? match.log[logCursor - 1] : null
@@ -105,6 +107,7 @@ export default function BattlePage() {
           maxMana={match.initialMana[pid]}
           isActing={entry?.actorId === pid}
           stats={playerStats}
+          skills={playerSkills}
         />
         <div style={s.vsDivider}>VS</div>
         <CharPanel
@@ -115,6 +118,7 @@ export default function BattlePage() {
           maxMana={match.initialMana[oppId]}
           isActing={entry?.actorId === oppId}
           stats={oppStats}
+          skills={oppSkills}
         />
       </div>
 
@@ -154,7 +158,7 @@ export default function BattlePage() {
 }
 
 function CharPanel({
-  charId, isPlayer, hp, maxHp, mana, maxMana, isActing, stats,
+  charId, isPlayer, hp, maxHp, mana, maxMana, isActing, stats, skills,
 }: {
   charId: number
   isPlayer?: boolean
@@ -164,6 +168,7 @@ function CharPanel({
   maxMana: number
   isActing: boolean
   stats: CombatStats | null
+  skills: string[]
 }) {
   const hpPct   = maxHp   > 0 ? (hp   / maxHp)   * 100 : 0
   const manaPct = maxMana > 0 ? (mana / maxMana) * 100 : 0
@@ -199,6 +204,13 @@ function CharPanel({
           <StatChip label="속도" val={Math.round(stats.spd)} />
           <StatChip label="치명" val={`${stats.crit.toFixed(1)}%`} />
           <StatChip label="회피" val={`${stats.eva.toFixed(1)}%`} />
+        </div>
+      )}
+      {skills.length > 0 && (
+        <div style={s.skillList}>
+          {skills.map(id => (
+            <div key={id} style={s.skillTag}>{skillName(id)}</div>
+          ))}
         </div>
       )}
     </div>
@@ -268,4 +280,6 @@ const s: Record<string, React.CSSProperties> = {
   statChip:     { background: '#0d0d1a', borderRadius: '4px', padding: '2px 5px', display: 'flex', justifyContent: 'space-between', gap: '4px' },
   statChipLabel:{ fontSize: '0.58rem', color: '#555' },
   statChipVal:  { fontSize: '0.58rem', color: '#aaa', fontWeight: 700 },
+  skillList:    { display: 'flex', flexDirection: 'column' as const, gap: '2px', marginTop: '4px', width: '100%' },
+  skillTag:     { fontSize: '0.58rem', background: '#0d1a2e', border: '1px solid #2a3a5e', borderRadius: '3px', padding: '2px 5px', color: '#88aaff', textAlign: 'center' as const, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
 }

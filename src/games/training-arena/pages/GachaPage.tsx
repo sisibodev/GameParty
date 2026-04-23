@@ -22,7 +22,7 @@ export default function GachaPage() {
   const [running, setRunning]   = useState(false)
   const [revealed, setRevealed] = useState(0)
   const [speed, setSpeed]       = useState<'1x' | '2x' | '4x'>(() => {
-    const v = localStorage.getItem('bgp_play_speed')
+    const v = localStorage.getItem('bgp_gacha_speed')
     return (v === '1x' || v === '2x' || v === '4x') ? v : '1x'
   })
   const [starting, setStarting] = useState(false)
@@ -99,7 +99,7 @@ export default function GachaPage() {
             <button
               key={sp}
               style={{ ...s.speedBtn, ...(speed === sp ? s.speedActive : {}) }}
-              onClick={() => { setSpeed(sp); localStorage.setItem('bgp_play_speed', sp) }}
+              onClick={() => { setSpeed(sp); localStorage.setItem('bgp_gacha_speed', sp) }}
             >{sp}</button>
           ))}
           <button style={s.skipBtn} onClick={handleSkip}>스킵</button>

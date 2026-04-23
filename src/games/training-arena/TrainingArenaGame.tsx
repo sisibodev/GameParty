@@ -15,6 +15,33 @@ import SkillSelectPage   from './pages/SkillSelectPage'
 import ReplayPage        from './pages/ReplayPage'
 import SimulationPage    from './pages/SimulationPage'
 
+const GAMEPLAY_PHASES = new Set([
+  'char_select', 'stat_alloc', 'gacha', 'match_preview',
+  'battle', 'match_result', 'tournament', 'bracket',
+  'reward', 'skill_select', 'replay',
+])
+
+function ExitButton() {
+  function handleExit() {
+    if (confirm('메인 화면으로 나가시겠습니까?\n현재까지의 진행은 저장되어 있습니다.')) {
+      useGameStore.setState({ phase: 'slot_select' })
+    }
+  }
+  return (
+    <button
+      onClick={handleExit}
+      style={{
+        position: 'fixed', top: '10px', right: '12px', zIndex: 9999,
+        background: 'rgba(20,20,40,0.85)', border: '1px solid #444',
+        borderRadius: '6px', color: '#888', padding: '4px 10px',
+        cursor: 'pointer', fontSize: '0.75rem', backdropFilter: 'blur(4px)',
+      }}
+    >
+      ✕ 나가기
+    </button>
+  )
+}
+
 export default function TrainingArenaGame() {
   const phase = useGameStore(s => s.phase)
 
@@ -23,16 +50,21 @@ export default function TrainingArenaGame() {
     case 'encyclopedia':  return <EncyclopediaPage />
     case 'ranking':       return <RankingPage />
     case 'simulation':    return <SimulationPage />
-    case 'char_select':   return <CharSelectPage />
-    case 'stat_alloc':    return <StatAllocPage />
-    case 'gacha':         return <GachaPage />
-    case 'match_preview': return <MatchPreviewPage />
-    case 'battle':        return <BattlePage />
-    case 'match_result':  return <MatchResultPage />
-    case 'tournament':    return <TournamentPage />
-    case 'bracket':       return <BracketPage />
-    case 'reward':        return <RewardPage />
-    case 'skill_select':  return <SkillSelectPage />
-    case 'replay':        return <ReplayPage />
+    default: return (
+      <>
+        {GAMEPLAY_PHASES.has(phase) && <ExitButton />}
+        {phase === 'char_select'   && <CharSelectPage />}
+        {phase === 'stat_alloc'    && <StatAllocPage />}
+        {phase === 'gacha'         && <GachaPage />}
+        {phase === 'match_preview' && <MatchPreviewPage />}
+        {phase === 'battle'        && <BattlePage />}
+        {phase === 'match_result'  && <MatchResultPage />}
+        {phase === 'tournament'    && <TournamentPage />}
+        {phase === 'bracket'       && <BracketPage />}
+        {phase === 'reward'        && <RewardPage />}
+        {phase === 'skill_select'  && <SkillSelectPage />}
+        {phase === 'replay'        && <ReplayPage />}
+      </>
+    )
   }
 }

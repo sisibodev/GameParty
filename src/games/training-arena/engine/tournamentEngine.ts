@@ -28,7 +28,7 @@ function makeCharState(
 ): BattleCharState {
   return {
     charId:      char.id,
-    currentHp:   deriveStats(char.baseCombat, growth).maxHp,
+    currentHp:   deriveStats(char.baseCombat, growth, char.archetype).maxHp,
     currentMana: 0,
     gauge:       0,
     buffs:       [],
@@ -37,6 +37,7 @@ function makeCharState(
     skills,
     growthStats: growth,
     baseCombat:  char.baseCombat,
+    archetype:   char.archetype,
   }
 }
 
@@ -53,7 +54,7 @@ function runQualifier(
   const charById = Object.fromEntries(participants.map(c => [c.id, c]))
   const hpMap: Record<number, number> = {}
   for (const c of participants) {
-    hpMap[c.id] = deriveStats(c.baseCombat, growthMap[c.id]).maxHp
+    hpMap[c.id] = deriveStats(c.baseCombat, growthMap[c.id], c.archetype).maxHp
   }
 
   while (pool.length > QUALIFIER_TARGET) {
@@ -76,7 +77,7 @@ function runQualifier(
       const winnerLastHp = result.log.at(-1)?.hpAfter[result.winnerId] ?? hpMap[result.winnerId]
       hpMap[result.winnerId] = regenHpBetweenMatches(
         winnerLastHp,
-        deriveStats(charById[result.winnerId].baseCombat, growthMap[result.winnerId]).maxHp,
+        deriveStats(charById[result.winnerId].baseCombat, growthMap[result.winnerId], charById[result.winnerId].archetype).maxHp,
         INTER_MATCH_HP_REGEN_RATIO,
       )
       losers.push(result.loserId)
