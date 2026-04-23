@@ -2,18 +2,18 @@ import {
   doc, getDoc, getDocs, setDoc, deleteDoc,
   collection, serverTimestamp,
 } from 'firebase/firestore'
-import { db as fdb, auth } from '../../../firebase/config'
+import { db, auth } from '../../../firebase/config'
 import type { SaveSlot, SlotId } from '../types'
 import { getDb } from './db'
 
 const STORE_NAME = 'save-slots'
 
 function slotsCol(uid: string) {
-  return collection(fdb, 'users', uid, 'bgp_slots')
+  return collection(db, 'users', uid, 'bgp_slots')
 }
 
 function slotDoc(uid: string, slotId: SlotId) {
-  return doc(fdb, 'users', uid, 'bgp_slots', String(slotId))
+  return doc(db, 'users', uid, 'bgp_slots', String(slotId))
 }
 
 export async function listSlots(): Promise<SaveSlot[]> {
@@ -24,7 +24,10 @@ export async function listSlots(): Promise<SaveSlot[]> {
       const slots = snap.docs.map(d => d.data() as SaveSlot)
       const idb = await getDb()
       const tx = idb.transaction(STORE_NAME, 'readwrite')
-      await Promise.all([...slots.map(s => tx.store.put(s)), tx.done])
+      await Promise.all([
+        ...slots.map(s => tx.store.put(s)),
+        tx.done,
+      ])
       return slots
     } catch {
       // fall through to IndexedDB
@@ -62,7 +65,7 @@ export async function saveSlot(slot: SaveSlot): Promise<void> {
         _serverTs: serverTimestamp(),
       })
     } catch {
-      // Firestore 실패해도 IndexedDB 데이터 유지
+      // Firestore 실패해도 IndexedDB 데이터는 유지됨
     }
   }
 }

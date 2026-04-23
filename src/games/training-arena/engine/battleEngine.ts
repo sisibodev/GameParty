@@ -211,6 +211,15 @@ export function simulateMatch(
     cooldowns:    {},
   }
 
+  const initialHp: Record<number, number> = {
+    [char1.charId]: st1.maxHp,
+    [char2.charId]: st2.maxHp,
+  }
+  const initialMana: Record<number, number> = {
+    [char1.charId]: Math.floor(st1.maxMana * INITIAL_MANA_RATIO),
+    [char2.charId]: Math.floor(st2.maxMana * INITIAL_MANA_RATIO),
+  }
+
   const log: MatchLogEntry[] = []
   let turn = 0
 
@@ -291,6 +300,8 @@ export function simulateMatch(
     loserId,
     totalTurns: turn,
     log,
+    initialHp,
+    initialMana,
   }
 }
 
