@@ -297,3 +297,114 @@
   position: relative;
   height: 380px;
 }
+
+/* ── Room list section ── */
+.roomSection {
+  padding: 0 48px 48px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.roomSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.roomSectionTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: #f1f3ff;
+  margin: 0;
+}
+
+.roomCount {
+  font-size: 12px;
+  color: #9098b7;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.roomEmpty {
+  text-align: center;
+  color: #5e6582;
+  font-size: 14px;
+  padding: 32px;
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed rgba(255,255,255,0.08);
+  border-radius: 12px;
+}
+
+.roomGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.roomCard {
+  background: linear-gradient(180deg, #161a2a, #111320);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.roomCard:hover {
+  border-color: rgba(157,122,255,0.4);
+  background: linear-gradient(180deg, #1b1f33, #141826);
+}
+
+.roomCardTop {
+  margin-bottom: 8px;
+}
+
+.roomHostName {
+  font-size: 15px;
+  font-weight: 800;
+  color: #f1f3ff;
+}
+
+.roomCardMeta {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  color: #9098b7;
+  margin-bottom: 12px;
+}
+
+.roomCardBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.roomPlayerCount {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f3ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.roomJoinBtn {
+  appearance: none;
+  background: linear-gradient(135deg, #7c6dff, #b79bff);
+  border: 1px solid rgba(157,146,255,0.6);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: filter 0.12s;
+}
+
+.roomJoinBtn:hover {
+  filter: brightness(1.12);
+}
