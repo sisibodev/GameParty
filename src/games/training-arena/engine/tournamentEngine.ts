@@ -69,6 +69,7 @@ function runQualifier(
       const s2 = { ...makeCharState(charById[id2], growthMap[id2], skillMap[id2]), currentHp: hpMap[id2] }
 
       const result = simulateMatch(s1, s2, seed)
+      result.stage = 'qualifier'
       allMatches.push(result)
 
       const winnerLastHp = result.log.at(-1)?.hpAfter[result.winnerId] ?? hpMap[result.winnerId]
@@ -109,6 +110,8 @@ function runGroup(
       makeCharState(charById[id2], growthMap[id2], skillMap[id2]),
       seed,
     )
+    result.stage   = 'group'
+    result.groupId = groupId
     allMatches.push(result)
     wins[result.winnerId] = (wins[result.winnerId] ?? 0) + 1
   }
@@ -147,6 +150,8 @@ function runBracket(
         makeCharState(charById[pool[i + 1]], growthMap[pool[i + 1]], skillMap[pool[i + 1]]),
         seed,
       )
+      result.stage        = 'bracket'
+      result.bracketRound = bracketRound
       allMatches.push(result)
       bracketEliminations[result.loserId] = bracketRound
       next.push(result.winnerId)

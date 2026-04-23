@@ -86,6 +86,8 @@ export interface GachaResult {
 
 // ─── Battle ───────────────────────────────────────────────────────────────────
 
+export type MatchStage = 'qualifier' | 'group' | 'bracket'
+
 export interface BuffEntry {
   id: string
   effectType: string
@@ -130,6 +132,18 @@ export interface MatchResult {
   loserId: number
   totalTurns: number
   log: MatchLogEntry[]
+  initialHp: Record<number, number>
+  initialMana: Record<number, number>
+  stage?: MatchStage
+  groupId?: string
+  bracketRound?: number
+}
+
+export interface PlayerMatchInfo {
+  matchResult: MatchResult
+  stageLabel: string
+  opponentId: number
+  playerWon: boolean
 }
 
 // ─── Tournament ───────────────────────────────────────────────────────────────

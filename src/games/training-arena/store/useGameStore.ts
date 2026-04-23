@@ -4,6 +4,7 @@ import type {
   GachaResult,
   GrowthStatKey,
   GrowthStats,
+  PlayerMatchInfo,
   PlayerTournamentResult,
   RewardPackage,
   SaveSlot,
@@ -41,6 +42,9 @@ export type GamePhase =
   | 'char_select'
   | 'stat_alloc'
   | 'gacha'
+  | 'match_preview'
+  | 'battle'
+  | 'match_result'
   | 'tournament'
   | 'bracket'
   | 'reward'
@@ -57,20 +61,24 @@ interface GameState {
   lastRandomStatKey: GrowthStatKey | null
   unlockedCharIds:   number[]
   newCharIds:        number[]
+  playerMatches:     PlayerMatchInfo[]
+  playerMatchIndex:  number
 }
 
 interface GameActions {
-  initSlots:        () => Promise<void>
-  startNewGame:     (slotId: SlotId, charId: number, seed: number) => Promise<void>
-  removeSlot:       (slotId: SlotId) => Promise<void>
-  allocateStat:     (key: GrowthStatKey) => void
-  confirmStatAlloc: () => Promise<void>
-  runGachaPhase:    (seed: number) => Promise<GachaResult>
-  startTournament:  (seed: number) => Promise<TournamentResult>
-  claimReward:      () => Promise<void>
-  acquireSkill:     (skillId: string, replaceId?: string) => Promise<void>
-  setPhase:         (phase: GamePhase) => void
-  clearNewChars:    () => void
+  initSlots:               () => Promise<void>
+  startNewGame:            (slotId: SlotId, charId: number, seed: number) => Promise<void>
+  removeSlot:              (slotId: SlotId) => Promise<void>
+  allocateStat:            (key: GrowthStatKey) => void
+  confirmStatAlloc:        () => Promise<void>
+  runGachaPhase:           (seed: number) => Promise<GachaResult>
+  startTournament:         (seed: number) => Promise<TournamentResult>
+  startTournamentAndBattle:(seed: number) => Promise<void>
+  advancePlayerMatch:      () => void
+  claimReward:             () => Promise<void>
+  acquireSkill:            (skillId: string, replaceId?: string) => Promise<void>
+  setPhase:                (phase: GamePhase) => void
+  clearNewChars:           () => void
 }
 
 // ─── Static data ──────────────────────────────────────────────────────────────
@@ -112,7 +120,6 @@ function npcSkills(charId: number, round: number): string[] {
   return pickN(allSkillIds, INITIAL_SKILL_COUNT, rng)
 }
 
-// 16명 브래킷 기준: round 4 탈락 = 결승 패배(준우승)
 const FINALIST_BRACKET_ROUND = 4
 
 function derivePlayerResult(
@@ -130,6 +137,60 @@ function derivePlayerResult(
   return 'qualifier_out'
 }
 
+function extractPlayerMatches(result: TournamentResult, playerCharId: number): PlayerMatchInfo[] {
+  const pid = playerCharId
+  let qualCount = 0
+  const groupMatchCounts: Record<string, number> = {}
+  const BRACKET_LABELS: Record<number, string> = { 1: '16강', 2: '8강', 3: '4강', 4: '결승' }
+
+  return result.allMatches
+    .filter(m => m.char1Id === pid || m.char2Id === pid)
+    .map(m => {
+      const opponentId = m.char1Id === pid ? m.char2Id : m.char1Id
+      const playerWon  = m.winnerId === pid
+      let stageLabel: string
+
+      if (m.stage === 'qualifier') {
+        qualCount++
+        stageLabel = `예선 ${qualCount}경기`
+      } else if (m.stage === 'group') {
+        const gId = m.groupId ?? '?'
+        groupMatchCounts[gId] = (groupMatchCounts[gId] ?? 0) + 1
+        stageLabel = `본선 ${groupMatchCounts[gId]}경기`
+      } else {
+        const round = m.bracketRound ?? 1
+        stageLabel = BRACKET_LABELS[round] ?? `${round}라운드`
+      }
+
+      return { matchResult: m, stageLabel, opponentId, playerWon }
+    })
+}
+
+function buildTournamentState(
+  activeSlot: SaveSlot,
+  seed: number,
+  result: TournamentResult,
+  reward: RewardPackage,
+  currentUnlocked: number[],
+): {
+  slotWithPhase: SaveSlot
+  playerMatches: PlayerMatchInfo[]
+  newUnlocked: number[]
+  newlyUnlocked: number[]
+} {
+  const pid        = activeSlot.characterId
+  const opponents  = result.allMatches
+    .filter(m => m.char1Id === pid || m.char2Id === pid)
+    .map(m => m.char1Id === pid ? m.char2Id : m.char1Id)
+  const newlyUnlocked = opponents.filter(id => !currentUnlocked.includes(id))
+  const newUnlocked   = newlyUnlocked.length > 0 ? [...currentUnlocked, ...newlyUnlocked] : currentUnlocked
+
+  const slotWithPhase: SaveSlot = { ...activeSlot, savedPhase: 'reward', updatedAt: Date.now() }
+  const playerMatches = extractPlayerMatches(result, pid)
+
+  return { slotWithPhase, playerMatches, newUnlocked, newlyUnlocked }
+}
+
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useGameStore = create<GameState & GameActions>((set, get) => ({
@@ -142,6 +203,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   lastRandomStatKey: null,
   unlockedCharIds:   loadUnlocked(),
   newCharIds:        loadNewChars(),
+  playerMatches:     [],
+  playerMatchIndex:  0,
 
   initSlots: async () => {
     const slots = await listSlots()
@@ -199,7 +262,6 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const { activeSlot, pendingReward } = get()
     if (!activeSlot) return
     await saveSlot(activeSlot)
-    // 라운드 루프 중 스탯 배분 후: 대기 스킬이 있으면 skill_select, 아니면 gacha
     const nextPhase: GamePhase =
       (pendingReward?.skillChoices.length ?? 0) > 0 ? 'skill_select' : 'gacha'
     set({ phase: nextPhase })
@@ -218,7 +280,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     const updated: SaveSlot = { ...activeSlot, growthStats: newGrowth }
     await saveSlot(updated)
-    set({ activeSlot: updated, phase: 'tournament' })
+    set({ activeSlot: updated })
     return result
   },
 
@@ -246,9 +308,9 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const result = runTournament(characters, growthMap, skillMap, seed, round)
     await appendMatchLog(result.tournamentId, result.allMatches)
 
-    const plResult    = derivePlayerResult(activeSlot, result)
-    const rewardSeed  = seed ^ activeSlot.characterId
-    const reward      = calcReward(
+    const plResult   = derivePlayerResult(activeSlot, result)
+    const rewardSeed = seed ^ activeSlot.characterId
+    const reward     = calcReward(
       plResult,
       result.darkhorses.includes(activeSlot.characterId),
       allSkillIds,
@@ -256,33 +318,92 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       rewardSeed,
     )
 
-    const slotWithPhase: SaveSlot = { ...activeSlot, savedPhase: 'reward', updatedAt: Date.now() }
+    const { unlockedCharIds } = get()
+    const { slotWithPhase, newUnlocked, newlyUnlocked } =
+      buildTournamentState(activeSlot, seed, result, reward, unlockedCharIds)
+
     await saveSlot(slotWithPhase)
 
-    // 플레이어가 직접 싸운 상대 캐릭터 잠금 해제
-    const { unlockedCharIds } = get()
-    const pid2 = activeSlot.characterId
-    const opponents = result.allMatches
-      .filter(m => m.char1Id === pid2 || m.char2Id === pid2)
-      .map(m => m.char1Id === pid2 ? m.char2Id : m.char1Id)
-    const newlyUnlocked = opponents.filter(id => !unlockedCharIds.includes(id))
     if (newlyUnlocked.length > 0) {
-      const updated = [...unlockedCharIds, ...newlyUnlocked]
-      saveUnlocked(updated)
+      saveUnlocked(newUnlocked)
       saveNewChars(newlyUnlocked)
-      set({ unlockedCharIds: updated, newCharIds: newlyUnlocked })
+      set({ unlockedCharIds: newUnlocked, newCharIds: newlyUnlocked })
     }
 
-    // phase는 TournamentPage에서 버튼으로 전환 (여기서 변경 금지 — 변경 시 결과 화면이 렌더 전에 언마운트됨)
     set({ activeSlot: slotWithPhase, lastTournament: result, pendingReward: reward })
     return result
+  },
+
+  startTournamentAndBattle: async (seed) => {
+    const { activeSlot } = get()
+    if (!activeSlot) throw new Error('No active slot')
+
+    const round      = activeSlot.currentRound
+    const growthMap: Record<number, GrowthStats> = {}
+    const skillMap:  Record<number, string[]>    = {}
+
+    for (const c of characters) {
+      if (c.id === activeSlot.characterId) {
+        growthMap[c.id] = activeSlot.growthStats
+        skillMap[c.id]  = [
+          ...activeSlot.initialSkills,
+          ...activeSlot.acquiredSkills,
+        ].slice(0, 8)
+      } else {
+        growthMap[c.id] = npcGrowth(round)
+        skillMap[c.id]  = npcSkills(c.id, round)
+      }
+    }
+
+    const result = runTournament(characters, growthMap, skillMap, seed, round)
+    await appendMatchLog(result.tournamentId, result.allMatches)
+
+    const plResult   = derivePlayerResult(activeSlot, result)
+    const rewardSeed = seed ^ activeSlot.characterId
+    const reward     = calcReward(
+      plResult,
+      result.darkhorses.includes(activeSlot.characterId),
+      allSkillIds,
+      [...activeSlot.initialSkills, ...activeSlot.acquiredSkills],
+      rewardSeed,
+    )
+
+    const { unlockedCharIds } = get()
+    const { slotWithPhase, playerMatches, newUnlocked, newlyUnlocked } =
+      buildTournamentState(activeSlot, seed, result, reward, unlockedCharIds)
+
+    await saveSlot(slotWithPhase)
+
+    if (newlyUnlocked.length > 0) {
+      saveUnlocked(newUnlocked)
+      saveNewChars(newlyUnlocked)
+      set({ unlockedCharIds: newUnlocked, newCharIds: newlyUnlocked })
+    }
+
+    set({
+      activeSlot:       slotWithPhase,
+      lastTournament:   result,
+      pendingReward:    reward,
+      playerMatches,
+      playerMatchIndex: 0,
+      phase:            'match_preview',
+    })
+  },
+
+  advancePlayerMatch: () => {
+    const { playerMatchIndex, playerMatches } = get()
+    const nextIndex = playerMatchIndex + 1
+    if (nextIndex >= playerMatches.length) {
+      set({ phase: 'tournament' })
+    } else {
+      set({ playerMatchIndex: nextIndex, phase: 'match_preview' })
+    }
   },
 
   claimReward: async () => {
     const { activeSlot, pendingReward, lastTournament } = get()
     if (!activeSlot || !pendingReward) return
 
-    // 랜덤 스탯 자동 배정
     const randomIdx     = Math.floor(Math.random() * GROWTH_STAT_KEYS.length)
     const randomStatKey = GROWTH_STAT_KEYS[randomIdx]
 

@@ -1,43 +1,35 @@
-import { useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { CharacterDef, TournamentResult } from '../types'
+import type { CharacterDef } from '../types'
 import charactersRaw from '../data/characters.json'
 
 const characters = charactersRaw as CharacterDef[]
 const charName = (id: number) => {
   const c = characters.find(c => c.id === id)
-  return c ? `${c.name}` : `#${id}`
+  return c ? c.name : `#${id}`
 }
 
-type Stage = 'idle' | 'running' | 'done'
+const BRACKET_LABELS: Record<number, string> = {
+  1: '16강 탈락', 2: '8강 탈락', 3: '4강 탈락', 4: '준우승',
+}
 
 export default function TournamentPage() {
-  const { activeSlot, startTournament } = useGameStore()
-  const [stage, setStage]               = useState<Stage>('idle')
-  const [result, setResult]             = useState<TournamentResult | null>(null)
+  const { activeSlot, lastTournament } = useGameStore()
 
-  if (!activeSlot) return null
+  if (!activeSlot || !lastTournament) return (
+    <div style={s.root}>
+      <p style={{ color: '#666' }}>토너먼트 데이터 없음</p>
+    </div>
+  )
 
-  const pid = activeSlot.characterId
-
-  async function handleStart() {
-    setStage('running')
-    const r = await startTournament(Date.now())
-    setResult(r)
-    setStage('done')
-  }
-
-  const BRACKET_LABELS: Record<number, string> = {
-    1: '16강 탈락', 2: '8강 탈락', 3: '4강 탈락', 4: '준우승',
-  }
+  const pid    = activeSlot.characterId
+  const result = lastTournament
 
   function PlayerBadge() {
-    if (!result) return null
     if (result.winner === pid) {
       return <span style={{ ...s.badge, background: '#ffd700', color: '#000' }}>🏆 우승!</span>
     }
     if (result.finalists.includes(pid)) {
-      const r = result.bracketEliminations[pid] ?? 0
+      const r  = result.bracketEliminations[pid] ?? 0
       const label = BRACKET_LABELS[r] ?? '토너먼트 탈락'
       const bg = r === 4 ? '#b8860b' : r === 3 ? '#7c5cfc' : '#336699'
       return <span style={{ ...s.badge, background: bg }}>⚔️ {label}</span>
@@ -50,61 +42,46 @@ export default function TournamentPage() {
 
   return (
     <div style={s.root}>
-      <h2 style={s.title}>토너먼트</h2>
-      <p style={s.sub}>Round {activeSlot.currentRound} — {charName(pid)} (#{pid})</p>
+      <h2 style={s.title}>토너먼트 결과</h2>
+      <p style={s.sub}>Round {activeSlot.currentRound} — {charName(pid)}</p>
 
-      {stage === 'idle' && (
-        <button style={s.btnStart} onClick={handleStart}>▶ 토너먼트 시작</button>
-      )}
-
-      {stage === 'running' && (
-        <div style={s.running}>
-          <div style={s.spinner} />
-          <p>시뮬레이션 진행 중…</p>
+      <div style={s.resultBox}>
+        <PlayerBadge />
+        <div style={s.stats}>
+          <div style={s.statItem}>총 경기 수<strong>{result.allMatches.length}</strong></div>
+          <div style={s.statItem}>예선 통과<strong>{result.qualifiers.length}명</strong></div>
+          <div style={s.statItem}>본선 진출<strong>{result.finalists.length}명</strong></div>
+          <div style={s.statItem}>다크호스<strong>{result.darkhorses.length}명</strong></div>
         </div>
-      )}
+      </div>
 
-      {stage === 'done' && result && (
-        <>
-          <div style={s.resultBox}>
-            <PlayerBadge />
-            <div style={s.stats}>
-              <div style={s.statItem}>총 경기 수<strong>{result.allMatches.length}</strong></div>
-              <div style={s.statItem}>예선 통과<strong>{result.qualifiers.length}명</strong></div>
-              <div style={s.statItem}>본선 진출<strong>{result.finalists.length}명</strong></div>
-              <div style={s.statItem}>다크호스<strong>{result.darkhorses.length}명</strong></div>
+      <div style={s.groupBox}>
+        <h3 style={s.sectionTitle}>조별 결과</h3>
+        <div style={s.groupGrid}>
+          {result.groups.map(g => (
+            <div
+              key={g.groupId}
+              style={{ ...s.groupCard, border: (g.rank1 === pid || g.rank2 === pid) ? '1px solid #c0aaff' : '1px solid #333' }}
+            >
+              <div style={s.groupId}>조 {g.groupId}</div>
+              <div style={s.groupRow}><span style={s.rank1}>1위</span> {charName(g.rank1)}</div>
+              <div style={s.groupRow}><span style={s.rank2}>2위</span> {charName(g.rank2)}</div>
+              <div style={s.groupRow}><span style={s.elim}>탈락</span> {charName(g.eliminated[0])}, {charName(g.eliminated[1])}</div>
             </div>
-          </div>
+          ))}
+        </div>
+      </div>
 
-          <div style={s.groupBox}>
-            <h3 style={s.sectionTitle}>조별 결과</h3>
-            <div style={s.groupGrid}>
-              {result.groups.map(g => (
-                <div
-                  key={g.groupId}
-                  style={{ ...s.groupCard, border: (g.rank1 === pid || g.rank2 === pid) ? '1px solid #c0aaff' : '1px solid #333' }}
-                >
-                  <div style={s.groupId}>조 {g.groupId}</div>
-                  <div style={s.groupRow}><span style={s.rank1}>1위</span> {charName(g.rank1)}</div>
-                  <div style={s.groupRow}><span style={s.rank2}>2위</span> {charName(g.rank2)}</div>
-                  <div style={s.groupRow}><span style={s.elim}>탈락</span> {charName(g.eliminated[0])}, {charName(g.eliminated[1])}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div style={s.winner}>🏆 우승: {charName(result.winner)} (#{result.winner})</div>
 
-          <div style={s.winner}>🏆 우승: {charName(result.winner)} (#{result.winner})</div>
-
-          <div style={s.btnRow}>
-            <button style={s.btnBracket} onClick={() => useGameStore.setState({ phase: 'bracket' })}>
-              📊 대진표 보기
-            </button>
-            <button style={s.btnNext} onClick={() => useGameStore.setState({ phase: 'reward' })}>
-              보상 받기 →
-            </button>
-          </div>
-        </>
-      )}
+      <div style={s.btnRow}>
+        <button style={s.btnBracket} onClick={() => useGameStore.setState({ phase: 'bracket' })}>
+          📊 대진표 보기
+        </button>
+        <button style={s.btnNext} onClick={() => useGameStore.setState({ phase: 'reward' })}>
+          보상 받기 →
+        </button>
+      </div>
     </div>
   )
 }
@@ -113,9 +90,6 @@ const s: Record<string, React.CSSProperties> = {
   root:        { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff', gap: '1.25rem' },
   title:       { fontSize: '1.5rem', fontWeight: 700, color: '#c0aaff', margin: 0 },
   sub:         { color: '#888', margin: 0 },
-  btnStart:    { background: 'linear-gradient(135deg,#fc5c5c,#fc9c3c)', border: 'none', borderRadius: '12px', color: '#fff', padding: '1rem 3rem', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 700 },
-  running:     { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', color: '#888' },
-  spinner:     { width: '40px', height: '40px', border: '4px solid #333', borderTopColor: '#7c5cfc', borderRadius: '50%' },
   resultBox:   { background: '#1a1a2e', border: '1px solid #333', borderRadius: '12px', padding: '1.25rem', width: '100%', maxWidth: '420px', display: 'flex', flexDirection: 'column', gap: '1rem' },
   badge:       { borderRadius: '6px', padding: '4px 12px', fontWeight: 700, alignSelf: 'flex-start', color: '#fff' },
   stats:       { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' },
