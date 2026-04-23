@@ -86,53 +86,62 @@ async function detectActualBoundaries(file) {
     return dark
   }
 
-  // Find gap groups (runs of near-empty rows/cols)
-  function findGapGroups(counts, totalLen) {
+  // Find significant gap groups only (minWidth filters tiny in-label gaps)
+  function findSigGaps(counts, totalLen, minWidth) {
     const groups = []
     let inGap = false, start = 0
     for (let i = 0; i < totalLen; i++) {
       if (counts[i] < 10 && !inGap) { inGap = true; start = i }
-      else if (counts[i] >= 10 && inGap) { groups.push({ start, end: i - 1 }); inGap = false }
+      else if (counts[i] >= 10 && inGap) {
+        if (i - start >= minWidth) groups.push({ start, end: i - 1 })
+        inGap = false
+      }
     }
-    if (inGap) groups.push({ start, end: totalLen - 1 })
+    if (inGap && totalLen - start >= minWidth) groups.push({ start, end: totalLen - 1 })
     return groups
+  }
+
+  // From significant gaps extract sprite starts:
+  // skip initial margin (gap starting at 0), first remaining = label sep,
+  // intermediate = sprite seps, last = trailing margin (skip)
+  function spriteStartsFrom(sigGaps) {
+    const startIdx = sigGaps[0]?.start === 0 ? 1 : 0
+    const starts = []
+    for (let i = startIdx; i < sigGaps.length - 1; i++) starts.push(sigGaps[i].end + 1)
+    return starts
   }
 
   const rowCounts = Array.from({ length: height }, (_, y) => rowDarkCount(y))
   const colCounts = Array.from({ length: width }, (_, x) => colDarkCount(x))
 
-  const rowGaps = findGapGroups(rowCounts, height)
-  const colGaps = findGapGroups(colCounts, width)
+  const rowStarts = spriteStartsFrom(findSigGaps(rowCounts, height, 20))
+  const colStarts = spriteStartsFrom(findSigGaps(colCounts, width, 20))
 
-  // Image structure: [empty_top | label_text | label_sep_gap | sprite0 | gap | sprite1 | gap | ... | empty_bottom]
-  // If image starts with empty rows (rowGaps[0].start===0), skip 2 top gaps; else skip 1
-  const labelGapIdx = rowGaps[0].start === 0 ? 1 : 0
-  const topLabel = rowGaps[labelGapIdx].end + 1
-  const rowStarts = [topLabel]
-  for (let i = labelGapIdx + 1; i < rowGaps.length - 1; i++) rowStarts.push(rowGaps[i].end + 1)
+  const topLabel = rowStarts[0]
+  const leftLabel = colStarts[0]
   const cellH = rowStarts.length > 1
     ? Math.round((rowStarts[rowStarts.length - 1] - rowStarts[0]) / (rowStarts.length - 1))
     : Math.round((height - topLabel) / 4)
+  const cellW = colStarts.length > 1
+    ? Math.round((colStarts[colStarts.length - 1] - colStarts[0]) / (colStarts.length - 1))
+    : Math.round((width - leftLabel) / 8)
 
-  // Col starts: first gap end+1 after the left label
-  const leftLabel = colGaps[0].end + 1
-  const cellW = Math.round((width - leftLabel) / 8)
-
-  return { topLabel, leftLabel, cellW, cellH, rowStarts }
+  return { topLabel, leftLabel, cellW, cellH, rowStarts, colStarts }
 }
 
 async function cropSpriteSheet(srcFile, dstFile, label) {
   console.log(`\n처리 중: ${label}`)
-  const { topLabel, leftLabel, cellW, cellH, rowStarts } = await detectActualBoundaries(srcFile)
+  const { topLabel, leftLabel, cellW, cellH, rowStarts, colStarts } = await detectActualBoundaries(srcFile)
   console.log(`  레이블: top=${topLabel}px, left=${leftLabel}px`)
   console.log(`  셀 크기: ${cellW}×${cellH}px`)
   console.log(`  행 시작: ${rowStarts.join(', ')}`)
+  console.log(`  열 시작: ${colStarts.join(', ')}`)
 
   const { width: imgW, height: imgH } = await sharp(srcFile).metadata()
   const cells = []
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 8; col++) {
-      const x = leftLabel + col * cellW
+      const x = colStarts[col] ?? (leftLabel + col * cellW)
       const y = rowStarts[row] ?? (topLabel + row * cellH)
       const w = Math.min(cellW, imgW - x)
       const h = Math.min(cellH, imgH - y)
