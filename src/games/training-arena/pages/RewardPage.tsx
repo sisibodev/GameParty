@@ -1,12 +1,30 @@
 import { useGameStore } from '../store/useGameStore'
-import type { GrowthStatKey } from '../types'
+import type { GrowthStatKey, TournamentResult } from '../types'
 
 const STAT_LABELS: Record<GrowthStatKey, string> = {
   hp: 'HP', str: 'STR', agi: 'AGI', int: 'INT', luk: 'LUK',
 }
 
+const BRACKET_LABELS: Record<number, string> = {
+  1: '16강 탈락', 2: '8강 탈락', 3: '4강 탈락', 4: '준우승',
+}
+
+function getResultLabel(result: TournamentResult, charId: number): { label: string; color: string } {
+  if (result.winner === charId)
+    return { label: '🏆 우승!', color: '#ffd700' }
+  if (result.finalists.includes(charId)) {
+    const r = result.bracketEliminations[charId] ?? 0
+    const label = BRACKET_LABELS[r] ?? '토너먼트 탈락'
+    const color = r === 4 ? '#e0c040' : r === 3 ? '#b44eff' : '#44aaff'
+    return { label: `⚔️ ${label}`, color }
+  }
+  if (result.qualifiers.includes(charId))
+    return { label: '🛡 조별리그 탈락', color: '#6688cc' }
+  return { label: '💀 예선 탈락', color: '#cc4444' }
+}
+
 export default function RewardPage() {
-  const { pendingReward, activeSlot, lastRandomStatKey, claimReward } = useGameStore()
+  const { pendingReward, activeSlot, lastRandomStatKey, lastTournament, claimReward } = useGameStore()
 
   if (!pendingReward || !activeSlot) return null
 
@@ -15,11 +33,20 @@ export default function RewardPage() {
   const nextLabel   = extraPoints > 0
     ? '스탯 배분 →'
     : hasSkills ? '스킬 선택 →' : '다음 라운드 →'
+  const resultInfo  = lastTournament
+    ? getResultLabel(lastTournament, activeSlot.characterId)
+    : null
 
   return (
     <div style={s.root}>
       <h2 style={s.title}>보상</h2>
       <p style={s.sub}>캐릭터 #{activeSlot.characterId} · 라운드 {activeSlot.currentRound}</p>
+
+      {resultInfo && (
+        <div style={{ ...s.resultBadge, color: resultInfo.color, borderColor: resultInfo.color }}>
+          {resultInfo.label}
+        </div>
+      )}
 
       <div style={s.box}>
         <div style={s.rewardRow}>
@@ -61,6 +88,7 @@ const s: Record<string, React.CSSProperties> = {
   rewardRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   label:     { color: '#aaa', fontSize: '0.9rem' },
   val:       { color: '#44ffaa', fontWeight: 700, fontSize: '1rem' },
+  resultBadge: { fontSize: '1.3rem', fontWeight: 700, border: '2px solid', borderRadius: '10px', padding: '0.5rem 1.5rem' },
   hint:      { color: '#888', fontSize: '0.8rem', textAlign: 'center' },
   btnClaim:  { background: '#7c5cfc', border: 'none', borderRadius: '8px', color: '#fff', padding: '0.75rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },
 }
