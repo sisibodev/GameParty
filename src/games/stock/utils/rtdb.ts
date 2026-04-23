@@ -524,13 +524,15 @@ export function unsubscribeRoom(roomRef: DatabaseReference) {
   off(roomRef)
 }
 
-/** 대기 중인 방 목록 실시간 구독 (status === 'waiting') */
-export function subscribeRooms(cb: (rooms: Room[]) => void): DatabaseReference {
+/** 대기 중인 방 목록 실시간 구독 (status === 'waiting', 플레이어 1명 이상) */
+export function subscribeRooms(cb: (rooms: (Room & { roomId: string })[]) => void): DatabaseReference {
   const roomsRef = ref(db(), 'rooms')
   onValue(roomsRef, snap => {
     if (!snap.exists()) { cb([]); return }
     const all = snap.val() as Record<string, Room>
-    const waiting = Object.values(all).filter(r => r.status === 'waiting')
+    const waiting = Object.entries(all)
+      .filter(([, r]) => r.status === 'waiting' && Object.keys(r.players ?? {}).length >= 1)
+      .map(([roomId, r]) => ({ ...r, roomId }))
     cb(waiting)
   })
   return roomsRef
