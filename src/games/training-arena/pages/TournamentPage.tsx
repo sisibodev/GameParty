@@ -95,9 +95,14 @@ export default function TournamentPage() {
 
           <div style={s.winner}>🏆 우승: {charName(result.winner)} (#{result.winner})</div>
 
-          <button style={s.btnNext} onClick={() => useGameStore.setState({ phase: 'reward' })}>
-            보상 받기 →
-          </button>
+          <div style={s.btnRow}>
+            <button style={s.btnBracket} onClick={() => useGameStore.setState({ phase: 'bracket' })}>
+              📊 대진표 보기
+            </button>
+            <button style={s.btnNext} onClick={() => useGameStore.setState({ phase: 'reward' })}>
+              보상 받기 →
+            </button>
+          </div>
         </>
       )}
     </div>
@@ -125,5 +130,7 @@ const s: Record<string, React.CSSProperties> = {
   rank2:       { color: '#aaa', fontWeight: 700, minWidth: '20px' },
   elim:        { color: '#666', minWidth: '20px' },
   winner:      { fontSize: '1.1rem', fontWeight: 700, color: '#ffd700' },
+  btnRow:      { display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' },
+  btnBracket:  { background: '#1a3a5c', border: '1px solid #44aaff', borderRadius: '8px', color: '#44aaff', padding: '0.75rem 1.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },
   btnNext:     { background: '#7c5cfc', border: 'none', borderRadius: '8px', color: '#fff', padding: '0.75rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },
 }

@@ -37,6 +37,7 @@ export type GamePhase =
   | 'stat_alloc'
   | 'gacha'
   | 'tournament'
+  | 'bracket'
   | 'reward'
   | 'skill_select'
   | 'replay'

@@ -4,6 +4,7 @@ import CharSelectPage  from './pages/CharSelectPage'
 import StatAllocPage   from './pages/StatAllocPage'
 import GachaPage       from './pages/GachaPage'
 import TournamentPage  from './pages/TournamentPage'
+import BracketPage     from './pages/BracketPage'
 import RewardPage      from './pages/RewardPage'
 import SkillSelectPage from './pages/SkillSelectPage'
 
@@ -16,6 +17,7 @@ export default function TrainingArenaGame() {
     case 'stat_alloc':   return <StatAllocPage />
     case 'gacha':        return <GachaPage />
     case 'tournament':   return <TournamentPage />
+    case 'bracket':      return <BracketPage />
     case 'reward':       return <RewardPage />
     case 'skill_select': return <SkillSelectPage />
   }
