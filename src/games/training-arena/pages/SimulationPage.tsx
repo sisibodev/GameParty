@@ -128,22 +128,29 @@ function SimStats({ result }: { result: TournamentResult }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-type Stage = 'idle' | 'running' | 'done'
+type Stage = 'idle' | 'running' | 'done' | 'error'
 
 export default function SimulationPage() {
   const [round, setRound] = useState(1)
   const [stage, setStage] = useState<Stage>('idle')
   const [result, setResult] = useState<TournamentResult | null>(null)
+  const [errMsg, setErrMsg] = useState('')
 
   async function handleStart() {
     setStage('running')
     setResult(null)
-    await new Promise(r => setTimeout(r, 30))
-    const seed = Date.now()
-    const { growthMap, skillMap } = buildMaps(round)
-    const r = runTournament(characters, growthMap, skillMap, seed, round)
-    setResult(r)
-    setStage('done')
+    setErrMsg('')
+    await new Promise(r => setTimeout(r, 100))
+    try {
+      const seed = Date.now()
+      const { growthMap, skillMap } = buildMaps(round)
+      const r = runTournament(characters, growthMap, skillMap, seed, round)
+      setResult(r)
+      setStage('done')
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : String(e))
+      setStage('error')
+    }
   }
 
   return (
@@ -182,6 +189,13 @@ export default function SimulationPage() {
         <div style={s.running}>
           <div style={s.spinner} />
           <p>시뮬레이션 진행 중…</p>
+        </div>
+      )}
+
+      {stage === 'error' && (
+        <div style={s.idleBody}>
+          <p style={{ color: '#ff5555', fontSize: '0.85rem' }}>오류: {errMsg}</p>
+          <button style={s.btnStart} onClick={handleStart}>↺ 다시 시도</button>
         </div>
       )}
 

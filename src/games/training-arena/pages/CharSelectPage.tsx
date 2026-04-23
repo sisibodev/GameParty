@@ -12,7 +12,8 @@ const ARCHETYPE_COLOR: Record<string, string> = {
 }
 
 export default function CharSelectPage() {
-  const { startNewGame, unlockedCharIds, newCharIds, clearNewChars } = useGameStore()
+  const { startNewGame, unlockedCharIds, newCharIds, clearNewChars, slots } = useGameStore()
+  const winnerCharIds = slots.filter(s => s.bestClearRound != null).map(s => s.characterId)
   const [selected, setSelected] = useState<number | null>(null)
 
   useEffect(() => { clearNewChars() }, [clearNewChars])
@@ -27,12 +28,13 @@ export default function CharSelectPage() {
 
   function CharCard({ char }: { char: CharacterDef }) {
     const isSelected = selected === char.id
-    const isNew = newCharIds.includes(char.id)
+    const isNew      = newCharIds.includes(char.id)
+    const isWinner   = winnerCharIds.includes(char.id)
     return (
       <button
         style={{
           ...s.charCard,
-          border: isSelected ? '2px solid #c0aaff' : '1px solid #333',
+          border: isSelected ? '2px solid #c0aaff' : isWinner ? '1px solid #ffd70066' : '1px solid #333',
           background: isSelected ? '#2a1a4e' : '#1a1a2e',
         }}
         onClick={() => setSelected(char.id)}
@@ -41,6 +43,7 @@ export default function CharSelectPage() {
           {char.archetype}
         </div>
         <div style={s.charName}>{char.name}</div>
+        {isWinner && <div style={s.winBadge}>🏆</div>}
         {isNew && <div style={s.newBadge}>NEW</div>}
         <div style={s.statRow}>
           <span>HP {char.baseCombat.maxHp}</span>
@@ -92,6 +95,7 @@ const s: Record<string, React.CSSProperties> = {
   archBadge: { fontSize: '0.65rem', color: '#fff', padding: '2px 6px', borderRadius: '4px', alignSelf: 'flex-start', textTransform: 'uppercase' },
   charName:  { fontSize: '0.9rem', fontWeight: 700, color: '#e8e8ff' },
   newBadge:  { position: 'absolute', top: '6px', right: '6px', fontSize: '0.6rem', background: '#ff4444', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 },
+  winBadge:  { position: 'absolute', top: '6px', left: '6px', fontSize: '0.75rem' },
   statRow:   { display: 'flex', gap: '0.4rem', flexWrap: 'wrap', fontSize: '0.7rem', color: '#aaa' },
   footer:    { position: 'fixed', bottom: 0, left: 0, right: 0, padding: '1rem', background: '#0d0d1a', borderTop: '1px solid #222', display: 'flex', justifyContent: 'center' },
   btnConfirm:{ background: '#7c5cfc', border: 'none', borderRadius: '8px', color: '#fff', padding: '0.75rem 3rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },
