@@ -21,15 +21,15 @@
   align-items: center;
   gap: 1rem;
   padding: 0.6rem 1rem;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, #111320, #0d0f1c);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   flex-shrink: 0;
 }
 
 .roundLabel {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--color-text-muted);
+  color: var(--neon-purple);
   white-space: nowrap;
 }
 
@@ -61,7 +61,7 @@
 .taxLabel {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #ff9800;
+  color: var(--neon-amber);
   background: rgba(255, 152, 0, 0.1);
   border: 1px solid rgba(255, 152, 0, 0.3);
   border-radius: 6px;
@@ -73,7 +73,8 @@
 .cashLabel {
   font-size: 0.9rem;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--color-text-hi);
+  font-family: 'JetBrains Mono', monospace;
   white-space: nowrap;
 }
 
@@ -105,11 +106,11 @@
   border-left: 3px solid transparent;
 }
 
-.companyRow:hover { background: var(--color-surface-2); }
+.companyRow:hover { background: rgba(157,122,255,0.06); }
 
 .companyRowSelected {
-  background: rgba(99, 102, 241, 0.08);
-  border-left-color: var(--color-primary);
+  background: rgba(157,122,255,0.1);
+  border-left-color: var(--neon-purple);
 }
 
 .companyRowFrozen {
@@ -133,7 +134,7 @@
   z-index: 50;
   background: rgba(255, 152, 0, 0.15);
   border-bottom: 1px solid rgba(255, 152, 0, 0.4);
-  color: #ff9800;
+  color: var(--neon-amber);
   font-size: 0.82rem;
   font-weight: 600;
   padding: 0.55rem 1rem;
@@ -152,7 +153,8 @@
 
 .companyName {
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--color-text-hi);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -178,12 +180,14 @@
 .price {
   font-size: 0.78rem;
   font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
 }
 
 .change {
   font-size: 0.68rem;
   font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -201,8 +205,8 @@
 /* ── 차트 ─────────────────────────────────────────── */
 
 .chartArea {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, #111320, #0d0f1c);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 10px;
   min-height: 120px;
   display: flex;
@@ -239,8 +243,8 @@
 /* ── 매매 영역 ────────────────────────────────────── */
 
 .tradeArea {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, #1e2236, #111320);
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 10px;
   padding: 0.75rem;
   flex-shrink: 0;
@@ -272,8 +276,8 @@
   height: 30px;
   min-width: 36px;
   padding: 0 0.4rem;
-  background: var(--color-surface-2);
-  border: 1px solid var(--color-border);
+  background: #1e2236;
+  border: 1px solid rgba(255,255,255,0.12);
   color: var(--color-text);
   border-radius: 7px;
   font-size: 0.78rem;
@@ -315,8 +319,8 @@
 .qtyShortBtn {
   flex: 1;
   height: 30px;
-  background: var(--color-surface-2);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #1e2236;
+  border: 1px solid rgba(255,255,255,0.12);
   color: var(--color-text);
   border-radius: 6px;
   font-size: 0.75rem;
@@ -353,9 +357,9 @@
 .pctBtn {
   flex: 1;
   height: 26px;
-  background: var(--color-surface-2);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--color-text-muted);
+  background: #1e2236;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--color-text);
   border-radius: 5px;
   font-size: 0.7rem;
   font-weight: 700;
@@ -378,21 +382,24 @@
 .buyBtn, .sellBtn {
   flex: 1;
   padding: 0.6rem;
-  border: none;
   border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  transition: filter 0.15s;
+  transition: filter 0.15s, box-shadow 0.15s;
 }
 
 .buyBtn {
-  background: #ef5350;
+  background: linear-gradient(135deg, #ff4d5e, #ff7788);
+  box-shadow: 0 0 20px rgba(255,77,94,0.45);
+  border: 1px solid rgba(255,120,135,0.6);
   color: white;
 }
 
 .sellBtn {
-  background: #1565c0;
+  background: linear-gradient(135deg, #3b82f6, #6ba7ff);
+  box-shadow: 0 0 20px rgba(59,130,246,0.45);
+  border: 1px solid rgba(107,167,255,0.6);
   color: white;
 }
 
@@ -417,8 +424,8 @@
 }
 
 .cardGroup {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, #1e2236, #111320);
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 10px;
   padding: 0.65rem 0.75rem;
 }
@@ -465,9 +472,9 @@
 .handCard {
   width: 84px;
   min-height: 96px;
-  background: var(--color-surface-2);
-  border: 1.5px solid var(--color-border);
-  border-radius: 10px;
+  background: linear-gradient(180deg, #1e2236, #111320);
+  border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
   padding: 0.45rem 0.4rem 0.5rem;
   cursor: pointer;
   display: flex;
@@ -485,6 +492,7 @@
 .handCardName {
   font-size: 0.75rem;
   font-weight: 800;
+  color: var(--color-text-hi);
   line-height: 1.2;
 }
 
@@ -506,8 +514,8 @@
 }
 
 .draftArea {
-  background: rgba(255, 193, 7, 0.05);
-  border: 1px solid rgba(255, 193, 7, 0.4);
+  background: rgba(255,200,87,0.06);
+  border: 1px solid rgba(255,200,87,0.35);
   border-radius: 10px;
   padding: 0.65rem 0.75rem;
 }
@@ -557,8 +565,8 @@
 /* ── 스캔 정보 패널 ───────────────────────────────── */
 
 .scanPanel {
-  background: rgba(13, 27, 42, 0.9);
-  border: 1px solid rgba(33, 150, 243, 0.3);
+  background: rgba(10,11,28,0.9);
+  border: 1px solid rgba(93,227,255,0.3);
   border-radius: 10px;
   padding: 0.6rem 0.75rem;
   display: flex;
@@ -574,7 +582,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #2196f3;
+  color: var(--neon-cyan);
   margin-bottom: 0.2rem;
 }
 
@@ -618,15 +626,15 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(15, 15, 25, 0.97);
-  border: 1px solid var(--color-border);
+  background: rgba(10,11,18,0.97);
+  border: 1px solid rgba(157,122,255,0.25);
   border-radius: 16px;
   padding: 1.25rem 1.5rem;
   min-width: 320px;
   max-width: 520px;
   width: 90vw;
   z-index: 100;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.7), 0 0 60px rgba(157,122,255,0.12);
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -710,7 +718,7 @@
   font-size: 0.9rem;
 }
 
-.rankRowMe { color: var(--color-primary); font-weight: 700; }
+.rankRowMe { color: var(--neon-purple); font-weight: 700; }
 
 .rankNum {
   min-width: 2.5rem;
@@ -741,8 +749,8 @@
 }
 
 .modal {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: #111320;
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 14px;
   padding: 1.5rem;
   max-width: 360px;
@@ -825,10 +833,10 @@
   background: rgba(10, 12, 22, 0.88);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(157,122,255,0.3);
   border-radius: 999px;
   padding: 0.45rem 0.75rem 0.45rem 1rem;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 40px rgba(157,122,255,0.12);
 }
 
 .readyBtn {
@@ -844,23 +852,23 @@
 }
 
 .readyBtn:hover {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: var(--color-primary);
+  background: rgba(157,122,255,0.2);
+  border-color: var(--neon-purple);
   color: white;
 }
 
 .readyBtnOn {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: linear-gradient(135deg, #9d7aff, #b79bff);
+  border-color: rgba(157,122,255,0.8);
   color: white;
-  box-shadow: 0 0 18px rgba(99, 102, 241, 0.55);
+  box-shadow: 0 0 24px rgba(157,122,255,0.6);
 }
 
 .readyBtnOn:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  background: linear-gradient(135deg, #b79bff, #9d7aff);
+  border-color: rgba(183,155,255,0.9);
   color: white;
-  box-shadow: 0 0 24px rgba(99, 102, 241, 0.7);
+  box-shadow: 0 0 32px rgba(157,122,255,0.75);
 }
 
 .readyCount {
@@ -901,7 +909,7 @@
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
   flex-shrink: 0;
 }
 
@@ -909,15 +917,16 @@
   background: rgba(244, 67, 54, 0.28);
   border-color: #f44336;
   color: #ff8a80;
+  box-shadow: 0 0 14px rgba(244,67,54,0.4);
 }
 
 /* ── 게임 정보 (?) 버튼 ──────────────────────────────── */
 
 .infoBtn {
   padding: 0.3rem 0.6rem;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.4);
-  color: #a5b4fc;
+  background: rgba(157,122,255,0.12);
+  border: 1px solid rgba(157,122,255,0.4);
+  color: var(--neon-purple);
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 700;
@@ -928,9 +937,9 @@
 }
 
 .infoBtn:hover {
-  background: rgba(99, 102, 241, 0.25);
-  border-color: #6366f1;
-  color: #c7d2fe;
+  background: rgba(157,122,255,0.25);
+  border-color: var(--neon-purple);
+  color: #b79bff;
 }
 
 /* ── 게임 정보 모달 ──────────────────────────────────── */
@@ -946,8 +955,8 @@
 }
 
 .infoModal {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: #111320;
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 12px;
   width: min(540px, 94vw);
   max-height: 80vh;

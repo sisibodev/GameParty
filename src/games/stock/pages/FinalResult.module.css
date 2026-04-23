@@ -10,7 +10,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg);
+  background: #0a0b12;
 }
 
 /* ── 헤더 ─────────────────────────────────────────── */
@@ -18,19 +18,20 @@
 .header {
   text-align: center;
   padding: 2rem 1.5rem 1.5rem;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, #111320, #0d0f1c);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
 .title {
   font-size: 1.6rem;
-  font-weight: 800;
+  font-weight: 900;
+  color: #f1f3ff;
   margin-bottom: 0.3rem;
 }
 
 .subtitle {
   font-size: 0.85rem;
-  color: var(--color-text-muted);
+  color: #9098b7;
 }
 
 /* ── 바디 ─────────────────────────────────────────── */
@@ -49,9 +50,9 @@
 /* ── 우승자 배너 ──────────────────────────────────── */
 
 .winnerBanner {
-  background: linear-gradient(135deg, rgba(255,193,7,0.12), rgba(255,152,0,0.12));
-  border: 1px solid rgba(255, 193, 7, 0.4);
-  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255,200,87,0.12), rgba(255,152,0,0.10));
+  border: 1px solid rgba(255,200,87,0.4);
+  border-radius: 18px;
   padding: 1.5rem;
   text-align: center;
   opacity: 0;
@@ -68,7 +69,8 @@
 
 .winnerName {
   font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: 900;
+  color: #f1f3ff;
   margin-bottom: 0.3rem;
 }
 
@@ -81,17 +83,18 @@
 .winnerYou {
   font-size: 1rem;
   font-weight: 700;
-  color: #ffc107;
+  color: #ffc857;
   margin-top: 0.5rem;
 }
 
 /* ── 공통 카드 ────────────────────────────────────── */
 
 .card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  background: linear-gradient(180deg, #1e2236, #111320);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
   padding: 1rem 1.1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
 }
 
 .sectionTitle {
@@ -99,7 +102,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-muted);
+  color: #5e6582;
   margin-bottom: 0.75rem;
 }
 
@@ -128,7 +131,7 @@
 }
 
 .rankRowMe {
-  background: rgba(99, 102, 241, 0.08);
+  background: rgba(157,122,255,0.10);
 }
 
 .rankEmoji {
@@ -155,7 +158,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: linear-gradient(135deg, #9d7aff, #ff4d5e);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -166,6 +169,7 @@
 .playerName {
   font-size: 0.9rem;
   font-weight: 500;
+  color: #f1f3ff;
 }
 
 .assetInfo {
@@ -179,12 +183,15 @@
 .totalAssets {
   font-size: 0.9rem;
   font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
+  color: #f1f3ff;
 }
 
 .cashChange {
   font-size: 0.75rem;
   font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -201,7 +208,7 @@
   align-items: center;
   gap: 0.6rem;
   padding: 0.35rem 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   font-size: 0.85rem;
 }
 
@@ -232,9 +239,9 @@
 /* ── 내 결과 요약 ─────────────────────────────────── */
 
 .mySummary {
-  background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.1));
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(157,122,255,0.12), rgba(168,85,247,0.10));
+  border: 1px solid rgba(157,122,255,0.35);
+  border-radius: 16px;
   padding: 1.25rem;
   text-align: center;
 }
@@ -254,16 +261,18 @@
 }
 
 .mySummaryAssets {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
+  color: #f1f3ff;
   margin-bottom: 0.3rem;
 }
 
 .mySummaryRefill {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #ff9800;
+  color: #ffc857;
   font-variant-numeric: tabular-nums;
   margin-bottom: 0.2rem;
 }
@@ -277,6 +286,7 @@
 .mySummaryChange {
   font-size: 0.95rem;
   font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -286,9 +296,9 @@
   width: 100%;
   padding: 0.55rem;
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 8px;
-  color: var(--color-text-muted);
+  color: #9098b7;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -324,8 +334,8 @@
   font-size: 0.65rem;
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
-  background: rgba(244,67,54,0.2);
-  color: #f44336;
+  background: rgba(255,77,94,0.18);
+  color: #ff4d5e;
   font-weight: 700;
   vertical-align: middle;
 }
@@ -361,7 +371,7 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: rgba(255,255,255,0.3);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   margin-bottom: 0.15rem;
 }
 
@@ -376,7 +386,7 @@
 }
 
 .statsRowMe {
-  background: rgba(99,102,241,0.08);
+  background: rgba(157,122,255,0.08);
 }
 
 .statsColRank {
@@ -397,6 +407,7 @@
 .statsColNum {
   text-align: right;
   font-size: 0.78rem;
+  font-family: 'JetBrains Mono', monospace;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -406,8 +417,9 @@
   font-size: 0.6rem;
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
-  background: rgba(255,152,0,0.2);
-  color: #ff9800;
+  background: rgba(255,200,87,0.15);
+  color: #ffc857;
+  border: 1px solid rgba(255,200,87,0.35);
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -424,24 +436,25 @@
 .exitBtn {
   width: 100%;
   padding: 0.9rem;
-  background: var(--color-primary);
+  background: linear-gradient(135deg, #9d7aff, #b79bff);
   color: white;
-  border: none;
-  border-radius: 12px;
+  border: 1px solid rgba(157,146,255,0.6);
+  border-radius: 14px;
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s;
+  box-shadow: 0 0 28px rgba(157,122,255,0.55);
+  transition: background 0.15s, box-shadow 0.15s;
 }
 
-.exitBtn:hover { background: var(--color-primary-hover); }
+.exitBtn:hover { background: linear-gradient(135deg, #b79bff, #9d7aff); }
 
 .deleteBtn {
   width: 100%;
   padding: 0.7rem;
   background: transparent;
-  border: 1px solid rgba(244, 67, 54, 0.4);
-  color: rgba(244, 67, 54, 0.7);
+  border: 1px solid rgba(255,77,94,0.35);
+  color: rgba(255,77,94,0.7);
   border-radius: 10px;
   font-size: 0.88rem;
   cursor: pointer;
@@ -449,5 +462,5 @@
 }
 
 .deleteBtn:hover {
-  background: rgba(244, 67, 54, 0.08);
+  background: rgba(255,77,94,0.08);
 }
