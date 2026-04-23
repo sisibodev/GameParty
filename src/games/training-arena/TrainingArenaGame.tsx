@@ -9,6 +9,7 @@ import EncyclopediaPage  from './pages/EncyclopediaPage'
 import RankingPage       from './pages/RankingPage'
 import RewardPage        from './pages/RewardPage'
 import SkillSelectPage from './pages/SkillSelectPage'
+import ReplayPage     from './pages/ReplayPage'
 
 export default function TrainingArenaGame() {
   const phase = useGameStore(s => s.phase)
@@ -24,5 +25,6 @@ export default function TrainingArenaGame() {
     case 'bracket':      return <BracketPage />
     case 'reward':       return <RewardPage />
     case 'skill_select': return <SkillSelectPage />
+    case 'replay':       return <ReplayPage />
   }
 }

@@ -82,9 +82,14 @@ export default function BracketPage() {
         </div>
       </div>
 
-      <button style={s.btnNext} onClick={() => useGameStore.setState({ phase: 'reward' })}>
-        보상 받기 →
-      </button>
+      <div style={s.btnRow}>
+        <button style={s.btnReplay} onClick={() => useGameStore.setState({ phase: 'replay' })}>
+          📋 전적 보기
+        </button>
+        <button style={s.btnNext} onClick={() => useGameStore.setState({ phase: 'reward' })}>
+          보상 받기 →
+        </button>
+      </div>
     </div>
   )
 }
@@ -102,5 +107,7 @@ const s: Record<string, React.CSSProperties> = {
   win:        { color: '#7c5cfc', fontSize: '0.6rem', flexShrink: 0 },
   playerName: { color: '#c0aaff', fontWeight: 700 },
   winnerCard: { background: '#1a1400', border: '1px solid #ffd700', borderRadius: '8px', padding: '0.6rem 0.8rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', fontSize: '0.85rem', color: '#ffd700', fontWeight: 700 },
-  btnNext:    { background: '#7c5cfc', border: 'none', borderRadius: '8px', color: '#fff', padding: '0.75rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, marginTop: '0.5rem' },
+  btnRow:     { display: 'flex', gap: '0.75rem', marginTop: '0.5rem' },
+  btnReplay:  { background: 'transparent', border: '1px solid #444', borderRadius: '8px', color: '#aaa', padding: '0.75rem 1.5rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 },
+  btnNext:    { background: '#7c5cfc', border: 'none', borderRadius: '8px', color: '#fff', padding: '0.75rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },
 }
