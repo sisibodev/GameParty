@@ -77,10 +77,10 @@ export const MAX_SAVE_SLOTS = 3
 
 // ─── Rewards ─────────────────────────────────────────────────────────────────
 
-export const REWARD_WINNER = 5
-export const REWARD_FINALIST = 4
-export const REWARD_TOURNAMENT_OUT = 2
-export const REWARD_DARKHORSE = 3
+export const REWARD_WINNER = 10
+export const REWARD_FINALIST = 7
+export const REWARD_TOURNAMENT_OUT = 4
+export const REWARD_DARKHORSE = 8
 export const PLAYER_EXTRA_STAT_POINTS = 4
 
 // ─── Archetype Growth Coefficients ───────────────────────────────────────────

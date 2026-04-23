@@ -70,6 +70,9 @@ interface GameActions {
   startNewGame:            (slotId: SlotId, charId: number, seed: number) => Promise<void>
   removeSlot:              (slotId: SlotId) => Promise<void>
   allocateStat:            (key: GrowthStatKey) => void
+  allocateStatBy:          (key: GrowthStatKey, n: number) => void
+  resetStat:               (key: GrowthStatKey) => void
+  resetAllStats:           () => void
   confirmStatAlloc:        () => Promise<void>
   runGachaPhase:           (seed: number) => Promise<GachaResult>
   startTournament:         (seed: number) => Promise<TournamentResult>
@@ -256,6 +259,50 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         },
       },
       statPointsLeft: statPointsLeft - 1,
+    })
+  },
+
+  allocateStatBy: (key, n) => {
+    const { activeSlot, statPointsLeft } = get()
+    if (!activeSlot || statPointsLeft <= 0) return
+    const actual = Math.min(n, statPointsLeft)
+    set({
+      activeSlot: {
+        ...activeSlot,
+        growthStats: {
+          ...activeSlot.growthStats,
+          [key]: activeSlot.growthStats[key] + actual,
+        },
+      },
+      statPointsLeft: statPointsLeft - actual,
+    })
+  },
+
+  resetStat: (key) => {
+    const { activeSlot, statPointsLeft } = get()
+    if (!activeSlot) return
+    const current = activeSlot.growthStats[key]
+    if (current <= 0) return
+    set({
+      activeSlot: {
+        ...activeSlot,
+        growthStats: { ...activeSlot.growthStats, [key]: 0 },
+      },
+      statPointsLeft: statPointsLeft + current,
+    })
+  },
+
+  resetAllStats: () => {
+    const { activeSlot, statPointsLeft } = get()
+    if (!activeSlot) return
+    const g = activeSlot.growthStats
+    const returned = g.hp + g.str + g.agi + g.int + g.luk
+    set({
+      activeSlot: {
+        ...activeSlot,
+        growthStats: { hp: 0, str: 0, agi: 0, int: 0, luk: 0 },
+      },
+      statPointsLeft: statPointsLeft + returned,
     })
   },
 
