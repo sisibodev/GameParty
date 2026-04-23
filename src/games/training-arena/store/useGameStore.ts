@@ -14,6 +14,8 @@ import {
   GROWTH_STAT_KEYS,
   INITIAL_PLAYER_STAT_POINTS,
   INITIAL_SKILL_COUNT,
+  INITIAL_UNLOCKED_CHAR_IDS,
+  NPC_BASE_GROWTH,
 } from '../constants'
 import { runTournament } from '../engine/tournamentEngine'
 import { runGacha }      from '../engine/gachaEngine'
@@ -52,6 +54,8 @@ interface GameState {
   pendingReward:     RewardPackage | null
   statPointsLeft:    number
   lastRandomStatKey: GrowthStatKey | null
+  unlockedCharIds:   number[]
+  newCharIds:        number[]
 }
 
 interface GameActions {
@@ -65,13 +69,31 @@ interface GameActions {
   claimReward:      () => Promise<void>
   acquireSkill:     (skillId: string, replaceId?: string) => Promise<void>
   setPhase:         (phase: GamePhase) => void
+  clearNewChars:    () => void
 }
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
-const characters = charactersRaw as CharacterDef[]
-const allCharIds = characters.map(c => c.id)
-const allSkillIds = (skillsRaw as Array<{ id: string }>).map(s => s.id)
+const characters    = (charactersRaw as CharacterDef[]).filter(c => c.ipId == null)
+const allCharIds    = characters.map(c => c.id)
+const allSkillIds   = (skillsRaw as Array<{ id: string }>).map(s => s.id)
+
+// ─── Unlock helpers (localStorage) ───────────────────────────────────────────
+
+function loadUnlocked(): number[] {
+  try { return JSON.parse(localStorage.getItem('bgp_unlocked') ?? 'null') ?? INITIAL_UNLOCKED_CHAR_IDS }
+  catch { return INITIAL_UNLOCKED_CHAR_IDS }
+}
+function saveUnlocked(ids: number[]) {
+  localStorage.setItem('bgp_unlocked', JSON.stringify(ids))
+}
+function loadNewChars(): number[] {
+  try { return JSON.parse(localStorage.getItem('bgp_new_chars') ?? '[]') }
+  catch { return [] }
+}
+function saveNewChars(ids: number[]) {
+  localStorage.setItem('bgp_new_chars', JSON.stringify(ids))
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -80,7 +102,7 @@ function emptyGrowth(): GrowthStats {
 }
 
 function npcGrowth(round: number): GrowthStats {
-  const b = round - 1
+  const b = NPC_BASE_GROWTH + (round - 1)
   return { hp: b, str: b, agi: b, int: b, luk: b }
 }
 
@@ -117,6 +139,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   pendingReward:     null,
   statPointsLeft:    0,
   lastRandomStatKey: null,
+  unlockedCharIds:   loadUnlocked(),
+  newCharIds:        loadNewChars(),
 
   initSlots: async () => {
     const slots = await listSlots()
@@ -233,7 +257,23 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     const slotWithPhase: SaveSlot = { ...activeSlot, savedPhase: 'reward', updatedAt: Date.now() }
     await saveSlot(slotWithPhase)
-    set({ activeSlot: slotWithPhase, lastTournament: result, pendingReward: reward, phase: 'reward' })
+
+    // 플레이어가 직접 싸운 상대 캐릭터 잠금 해제
+    const { unlockedCharIds } = get()
+    const pid2 = activeSlot.characterId
+    const opponents = result.allMatches
+      .filter(m => m.char1Id === pid2 || m.char2Id === pid2)
+      .map(m => m.char1Id === pid2 ? m.char2Id : m.char1Id)
+    const newlyUnlocked = opponents.filter(id => !unlockedCharIds.includes(id))
+    if (newlyUnlocked.length > 0) {
+      const updated = [...unlockedCharIds, ...newlyUnlocked]
+      saveUnlocked(updated)
+      saveNewChars(newlyUnlocked)
+      set({ unlockedCharIds: updated, newCharIds: newlyUnlocked })
+    }
+
+    // phase는 TournamentPage에서 버튼으로 전환 (여기서 변경 금지 — 변경 시 결과 화면이 렌더 전에 언마운트됨)
+    set({ activeSlot: slotWithPhase, lastTournament: result, pendingReward: reward })
     return result
   },
 
@@ -312,6 +352,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   },
 
   setPhase: (phase) => set({ phase }),
+
+  clearNewChars: () => {
+    saveNewChars([])
+    set({ newCharIds: [] })
+  },
 }))
 
 export { GROWTH_STAT_KEYS }

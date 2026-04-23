@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import type { Archetype, CharacterDef } from '../types'
 import charactersRaw from '../data/characters.json'
@@ -29,29 +29,35 @@ const ARCHETYPE_COLORS: Record<Archetype, string> = {
 
 const ALL_ARCHETYPES = Object.keys(ARCHETYPE_LABELS) as Archetype[]
 
-function CharCard({ char }: { char: CharacterDef }) {
+function CharCard({ char, isNew, isLocked }: { char: CharacterDef; isNew: boolean; isLocked: boolean }) {
   const color = ARCHETYPE_COLORS[char.archetype]
   const b = char.baseCombat
   return (
-    <div style={s.card}>
+    <div style={{ ...s.card, opacity: isLocked ? 0.35 : 1, position: 'relative' }}>
+      {isLocked && <div style={s.lockOverlay}>🔒</div>}
+      {isNew && !isLocked && <div style={s.newBadge}>NEW</div>}
       <div style={s.cardTop}>
         <div>
-          <div style={s.charName}>{char.name}</div>
+          <div style={s.charName}>{isLocked ? '???' : char.name}</div>
           <div style={{ ...s.archBadge, background: color + '33', color, borderColor: color }}>
             {ARCHETYPE_LABELS[char.archetype]}
           </div>
         </div>
         <div style={s.charId}>#{char.id}</div>
       </div>
-      <div style={s.desc}>{char.description}</div>
-      <div style={s.statGrid}>
-        {([['HP', b.maxHp], ['ATK', b.atk], ['DEF', b.def], ['SPD', b.spd], ['CRIT', b.crit], ['EVA', b.eva]] as [string, number][]).map(([label, val]) => (
-          <div key={label} style={s.stat}>
-            <span style={s.statLabel}>{label}</span>
-            <span style={s.statVal}>{val}</span>
+      {!isLocked && (
+        <>
+          <div style={s.desc}>{char.description}</div>
+          <div style={s.statGrid}>
+            {([['HP', b.maxHp], ['ATK', b.atk], ['DEF', b.def], ['SPD', b.spd], ['CRIT', b.crit], ['EVA', b.eva]] as [string, number][]).map(([label, val]) => (
+              <div key={label} style={s.stat}>
+                <span style={s.statLabel}>{label}</span>
+                <span style={s.statVal}>{val}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </div>
   )
 }
@@ -82,11 +88,16 @@ function FilterBtn({ label, value, current, onSelect, color }: FilterBtnProps) {
 }
 
 export default function EncyclopediaPage() {
+  const { unlockedCharIds, newCharIds, clearNewChars } = useGameStore()
   const [filter, setFilter] = useState<Archetype | 'all'>('all')
+
+  useEffect(() => { clearNewChars() }, [clearNewChars])
 
   const filtered = filter === 'all'
     ? characters
     : characters.filter(c => c.archetype === filter)
+
+  const unlockedCount = characters.filter(c => unlockedCharIds.includes(c.id)).length
 
   return (
     <div style={s.root}>
@@ -95,7 +106,7 @@ export default function EncyclopediaPage() {
           ← 돌아가기
         </button>
         <h2 style={s.title}>캐릭터 도감</h2>
-        <span style={s.count}>{filtered.length} / {characters.length}</span>
+        <span style={s.count}>{unlockedCount} / {characters.length}</span>
       </div>
 
       <div style={s.filters}>
@@ -106,7 +117,14 @@ export default function EncyclopediaPage() {
       </div>
 
       <div style={s.grid}>
-        {filtered.map(c => <CharCard key={c.id} char={c} />)}
+        {filtered.map(c => (
+          <CharCard
+            key={c.id}
+            char={c}
+            isNew={newCharIds.includes(c.id)}
+            isLocked={!unlockedCharIds.includes(c.id)}
+          />
+        ))}
       </div>
     </div>
   )
@@ -129,6 +147,8 @@ const s: Record<string, React.CSSProperties> = {
   desc:      { fontSize: '0.72rem', color: '#777', lineHeight: 1.4 },
   statGrid:  { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '3px' },
   stat:      { background: '#0d0d1a', borderRadius: '4px', padding: '3px 5px', display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  statLabel: { fontSize: '0.58rem', color: '#555', fontWeight: 700, letterSpacing: '0.05em' },
-  statVal:   { fontSize: '0.8rem', color: '#aaa', fontWeight: 600 },
+  statLabel:   { fontSize: '0.58rem', color: '#555', fontWeight: 700, letterSpacing: '0.05em' },
+  statVal:     { fontSize: '0.8rem', color: '#aaa', fontWeight: 600 },
+  lockOverlay: { position: 'absolute', top: '8px', right: '8px', fontSize: '0.9rem' },
+  newBadge:    { position: 'absolute', top: '8px', right: '8px', fontSize: '0.6rem', background: '#ff4444', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 },
 }
