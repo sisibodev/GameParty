@@ -132,8 +132,10 @@ function runBracket(
   skillMap:  Record<number, string[]>,
   rng: SeededRng,
   allMatches: MatchResult[],
+  bracketEliminations: Record<number, number>,
 ): number {
   let pool = shuffle(finalists, rng)
+  let bracketRound = 1
 
   while (pool.length > 1) {
     const next: number[] = []
@@ -146,9 +148,11 @@ function runBracket(
         seed,
       )
       allMatches.push(result)
+      bracketEliminations[result.loserId] = bracketRound
       next.push(result.winnerId)
     }
     pool = next
+    bracketRound++
   }
 
   return pool[0]
@@ -181,7 +185,8 @@ export function runTournament(
     finalists.push(result.rank1, result.rank2)
   }
 
-  const winner     = runBracket(finalists, charById, growthMap, skillMap, rng, allMatches)
+  const bracketEliminations: Record<number, number> = {}
+  const winner     = runBracket(finalists, charById, growthMap, skillMap, rng, allMatches, bracketEliminations)
 
   const eliminated = qualifiers.filter(id => !finalists.includes(id))
   const darkhorseCount = Math.floor(finalists.length * DARKHORSE_RATIO)
@@ -195,6 +200,7 @@ export function runTournament(
     qualifiers,
     groups,
     finalists,
+    bracketEliminations,
     winner,
     darkhorses,
     allMatches,

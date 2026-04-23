@@ -150,6 +150,7 @@ export interface TournamentResult {
   qualifiers: number[]        // 32명
   groups: GroupResult[]       // 8개 조
   finalists: number[]         // 16명
+  bracketEliminations: Record<number, number>  // charId → 탈락 라운드 (1=16강, 2=8강, 3=4강, 4=결승)
   winner: number
   darkhorses: number[]
   allMatches: MatchResult[]

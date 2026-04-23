@@ -20,11 +20,24 @@ export default function TournamentPage() {
     setStage('done')
   }
 
+  const BRACKET_LABELS: Record<number, string> = {
+    1: '16강 탈락', 2: '8강 탈락', 3: '4강 탈락', 4: '준우승',
+  }
+
   function PlayerBadge() {
     if (!result) return null
-    if (result.winner === pid)           return <span style={{ ...s.badge, background: '#ffd700', color: '#000' }}>🏆 우승</span>
-    if (result.finalists.includes(pid))  return <span style={{ ...s.badge, background: '#7c5cfc' }}>⚔️ 토너먼트 진출</span>
-    if (result.qualifiers.includes(pid)) return <span style={{ ...s.badge, background: '#336' }}>🛡 본선 진출</span>
+    if (result.winner === pid) {
+      return <span style={{ ...s.badge, background: '#ffd700', color: '#000' }}>🏆 우승!</span>
+    }
+    if (result.finalists.includes(pid)) {
+      const r = result.bracketEliminations[pid] ?? 0
+      const label = BRACKET_LABELS[r] ?? '토너먼트 탈락'
+      const bg = r === 4 ? '#b8860b' : r === 3 ? '#7c5cfc' : '#336699'
+      return <span style={{ ...s.badge, background: bg }}>⚔️ {label}</span>
+    }
+    if (result.qualifiers.includes(pid)) {
+      return <span style={{ ...s.badge, background: '#1a3366' }}>🛡 조별리그 탈락</span>
+    }
     return <span style={{ ...s.badge, background: '#5c1a1a' }}>💀 예선 탈락</span>
   }
 
