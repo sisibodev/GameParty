@@ -1,7 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { Archetype, CharacterDef } from '../types'
+import type { Archetype, CharacterDef, SaveSlot } from '../types'
 import charactersRaw from '../data/characters.json'
+
+// Build charId → best score across all slots' runRecords
+function buildBestScores(slots: SaveSlot[]): Record<number, number> {
+  const map: Record<number, number> = {}
+  for (const slot of slots) {
+    for (const rec of slot.runRecords ?? []) {
+      if (map[rec.characterId] === undefined || rec.score > map[rec.characterId]) {
+        map[rec.characterId] = rec.score
+      }
+    }
+  }
+  return map
+}
 
 const characters = charactersRaw as CharacterDef[]
 
@@ -29,7 +42,13 @@ const ARCHETYPE_COLORS: Record<Archetype, string> = {
 
 const ALL_ARCHETYPES = Object.keys(ARCHETYPE_LABELS) as Archetype[]
 
-function CharCard({ char, isNew, isLocked, isWinner }: { char: CharacterDef; isNew: boolean; isLocked: boolean; isWinner: boolean }) {
+function CharCard({ char, isNew, isLocked, isWinner, bestScore }: {
+  char: CharacterDef
+  isNew: boolean
+  isLocked: boolean
+  isWinner: boolean
+  bestScore?: number
+}) {
   const color = ARCHETYPE_COLORS[char.archetype]
   const b = char.baseCombat
   return (
@@ -37,6 +56,9 @@ function CharCard({ char, isNew, isLocked, isWinner }: { char: CharacterDef; isN
       {isLocked && <div style={s.lockOverlay}>🔒</div>}
       {isNew && !isLocked && <div style={s.newBadge}>NEW</div>}
       {isWinner && !isLocked && <div style={s.winBadge}>🏆</div>}
+      {bestScore !== undefined && !isLocked && (
+        <div style={s.scoreBadge}>⭐ {bestScore.toLocaleString()}pt</div>
+      )}
       <div style={s.cardTop}>
         <div>
           <div style={s.charName}>{isLocked ? '???' : char.name}</div>
@@ -91,6 +113,7 @@ function FilterBtn({ label, value, current, onSelect, color }: FilterBtnProps) {
 export default function EncyclopediaPage() {
   const { unlockedCharIds, newCharIds, clearNewChars, slots } = useGameStore()
   const winnerCharIds = slots.filter(s => s.bestClearRound != null).map(s => s.characterId)
+  const bestScores = buildBestScores(slots)
   const [filter, setFilter] = useState<Archetype | 'all'>('all')
 
   useEffect(() => { clearNewChars() }, [clearNewChars])
@@ -126,6 +149,7 @@ export default function EncyclopediaPage() {
             isNew={newCharIds.includes(c.id)}
             isLocked={!unlockedCharIds.includes(c.id)}
             isWinner={winnerCharIds.includes(c.id)}
+            bestScore={bestScores[c.id]}
           />
         ))}
       </div>
@@ -155,4 +179,5 @@ const s: Record<string, React.CSSProperties> = {
   lockOverlay: { position: 'absolute', top: '8px', right: '8px', fontSize: '0.9rem' },
   newBadge:    { position: 'absolute', top: '8px', right: '8px', fontSize: '0.6rem', background: '#ff4444', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 },
   winBadge:    { position: 'absolute', top: '8px', left: '8px', fontSize: '0.75rem' },
+  scoreBadge:  { alignSelf: 'flex-end', fontSize: '0.65rem', color: '#ffd700', background: '#1a1500', border: '1px solid #ffd70044', borderRadius: '3px', padding: '1px 6px', fontWeight: 700 },
 }

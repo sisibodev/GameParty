@@ -1,6 +1,6 @@
 import type { PlayerTournamentResult, RewardPackage } from '../types'
 import {
-  PLAYER_EXTRA_STAT_POINTS,
+  GOLD_BY_RESULT,
   REWARD_DARKHORSE,
   REWARD_FINALIST,
   REWARD_TOURNAMENT_OUT,
@@ -8,6 +8,7 @@ import {
 } from '../constants'
 import { SeededRng } from '../utils/rng'
 import { pickN } from '../utils/fisherYates'
+import { sumGoldMultiplier } from '../data/items'
 
 const SKILL_CHOICE_COUNT = 3
 
@@ -25,6 +26,7 @@ export function calcReward(
   availableSkillIds: string[],
   acquiredSkillIds: string[],
   seed: number,
+  playerItems: readonly string[] = [],
 ): RewardPackage {
   const rng = new SeededRng(seed)
 
@@ -34,9 +36,12 @@ export function calcReward(
   const unowned      = availableSkillIds.filter(id => !acquiredSkillIds.includes(id))
   const skillChoices = pickN(unowned, Math.min(SKILL_CHOICE_COUNT, unowned.length), rng)
 
+  const goldMult   = sumGoldMultiplier(playerItems)
+  const goldEarned = Math.floor(GOLD_BY_RESULT[result] * goldMult)
+
   return {
     randomStatGain,
-    playerExtraPoints: PLAYER_EXTRA_STAT_POINTS,
     skillChoices,
+    goldEarned,
   }
 }

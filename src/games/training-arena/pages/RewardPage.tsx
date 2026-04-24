@@ -28,11 +28,6 @@ export default function RewardPage() {
 
   if (!pendingReward || !activeSlot) return null
 
-  const extraPoints = pendingReward.playerExtraPoints
-  const hasSkills   = pendingReward.skillChoices.length > 0
-  const nextLabel   = extraPoints > 0
-    ? '스탯 배분 →'
-    : hasSkills ? '스킬 선택 →' : '다음 라운드 →'
   const resultInfo  = lastTournament
     ? getResultLabel(lastTournament, activeSlot.characterId)
     : null
@@ -58,23 +53,13 @@ export default function RewardPage() {
           </span>
         </div>
         <div style={s.rewardRow}>
-          <span style={s.label}>추가 배분 포인트</span>
-          <span style={s.val}>+{extraPoints} pt</span>
+          <span style={s.label}>획득 골드</span>
+          <span style={s.val}>+{pendingReward.goldEarned} G</span>
         </div>
-        {hasSkills && (
-          <div style={s.rewardRow}>
-            <span style={s.label}>스킬 선택 후보</span>
-            <span style={s.val}>{pendingReward.skillChoices.length}개</span>
-          </div>
-        )}
       </div>
 
-      {extraPoints > 0 && (
-        <p style={s.hint}>수령 후 추가 포인트 {extraPoints}pt를 직접 분배합니다.</p>
-      )}
-
       <button style={s.btnClaim} onClick={claimReward}>
-        {nextLabel}
+        다음 라운드 →
       </button>
     </div>
   )

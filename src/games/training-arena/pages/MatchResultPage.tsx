@@ -6,7 +6,7 @@ const CHARACTERS = charactersRaw as CharacterDef[]
 const charName = (id: number) => CHARACTERS.find(c => c.id === id)?.name ?? `#${id}`
 
 export default function MatchResultPage() {
-  const { playerMatches, playerMatchIndex, activeSlot, advancePlayerMatch } = useGameStore()
+  const { playerMatches, playerMatchIndex, activeSlot } = useGameStore()
 
   const matchInfo = playerMatches[playerMatchIndex]
   const match     = matchInfo?.matchResult
@@ -15,8 +15,8 @@ export default function MatchResultPage() {
 
   const pid    = activeSlot.characterId
   const oppId  = matchInfo.opponentId
-  const won    = matchInfo.playerWon
-  const isLast = playerMatchIndex >= playerMatches.length - 1
+  // match.winnerId is the authoritative source — same value shown in battle log
+  const won    = match.winnerId === pid
 
   const lastEntry  = match.log.length > 0 ? match.log[match.log.length - 1] : null
   const myFinalHp  = Math.max(0, lastEntry ? (lastEntry.hpAfter[pid]   ?? match.initialHp[pid])   : match.initialHp[pid])
@@ -29,10 +29,11 @@ export default function MatchResultPage() {
   const oppEvades  = match.log.filter(e => e.targetId === oppId && e.evaded).length
 
   function handleNext() {
-    if (won && !isLast) {
-      advancePlayerMatch()
+    if (won) {
+      // 승리 시: 상대 스킬 학습 페이지로 이동
+      useGameStore.setState({ phase: 'skill_learn' })
     } else {
-      useGameStore.setState({ phase: 'tournament' })
+      useGameStore.getState().completeMatchAndAdvance(false)
     }
   }
 
@@ -65,8 +66,8 @@ export default function MatchResultPage() {
         <StatRow label="회피"        myVal={myEvades}  oppVal={oppEvades}  higher />
       </div>
 
-      <button style={won && !isLast ? s.btnNext : s.btnTournament} onClick={handleNext}>
-        {won && !isLast ? '다음 경기 →' : '토너먼트 결과 →'}
+      <button style={won ? s.btnNext : s.btnTournament} onClick={handleNext}>
+        {won ? '스킬 학습 →' : '토너먼트 결과 →'}
       </button>
     </div>
   )

@@ -140,7 +140,12 @@ export default function BattlePage() {
         ))}
         {done && (
           <div style={s.logDone}>
-            ── 전투 종료 · 승자: {charName(match.winnerId)} ──
+            <span style={{ color: match.winnerId === pid ? '#44ff88' : '#ff4444', fontWeight: 900, fontSize: '1rem' }}>
+              {match.winnerId === pid ? '🏆 승리!' : '💀 패배'}
+            </span>
+            <span style={{ color: '#aaa', marginLeft: '0.5rem' }}>
+              {'(승자: '}{charName(match.winnerId)}{match.winnerId === pid ? ' · 나)' : ')'}
+            </span>
           </div>
         )}
       </div>

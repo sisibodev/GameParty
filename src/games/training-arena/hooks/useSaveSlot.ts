@@ -8,7 +8,7 @@ import type { SaveSlot, SlotId } from '../types'
 
 const DB_NAME    = 'battle-grandprix'
 const STORE_NAME = 'save-slots'
-const DB_VERSION = 1
+const DB_VERSION = 3   // must stay in sync with useMatchLog.ts
 
 async function getDb(): Promise<IDBPDatabase> {
   return openDB(DB_NAME, DB_VERSION, {
@@ -16,6 +16,7 @@ async function getDb(): Promise<IDBPDatabase> {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: 'slotId' })
       }
+      // v2: match-logs store is owned by useMatchLog — nothing to do here
     },
   })
 }

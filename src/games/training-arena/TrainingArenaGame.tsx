@@ -1,7 +1,6 @@
 import { useGameStore } from './store/useGameStore'
 import SlotSelectPage    from './pages/SlotSelectPage'
 import CharSelectPage    from './pages/CharSelectPage'
-import StatAllocPage     from './pages/StatAllocPage'
 import GachaPage         from './pages/GachaPage'
 import MatchPreviewPage  from './pages/MatchPreviewPage'
 import BattlePage        from './pages/BattlePage'
@@ -11,14 +10,17 @@ import BracketPage       from './pages/BracketPage'
 import EncyclopediaPage  from './pages/EncyclopediaPage'
 import RankingPage       from './pages/RankingPage'
 import RewardPage        from './pages/RewardPage'
+import SkillLearnPage    from './pages/SkillLearnPage'
 import SkillSelectPage   from './pages/SkillSelectPage'
+import ShopPage          from './pages/ShopPage'
 import ReplayPage        from './pages/ReplayPage'
 import SimulationPage    from './pages/SimulationPage'
+import MyRecordsPage     from './pages/MyRecordsPage'
 
 const GAMEPLAY_PHASES = new Set([
-  'char_select', 'stat_alloc', 'gacha', 'match_preview',
-  'battle', 'match_result', 'tournament', 'bracket',
-  'reward', 'skill_select', 'replay',
+  'char_select', 'gacha', 'match_preview',
+  'battle', 'match_result', 'skill_learn', 'tournament', 'bracket',
+  'reward', 'skill_select', 'shop', 'replay', 'my_records',
 ])
 
 function ExitButton() {
@@ -54,16 +56,18 @@ export default function TrainingArenaGame() {
       <>
         {GAMEPLAY_PHASES.has(phase) && <ExitButton />}
         {phase === 'char_select'   && <CharSelectPage />}
-        {phase === 'stat_alloc'    && <StatAllocPage />}
         {phase === 'gacha'         && <GachaPage />}
         {phase === 'match_preview' && <MatchPreviewPage />}
         {phase === 'battle'        && <BattlePage />}
         {phase === 'match_result'  && <MatchResultPage />}
+        {phase === 'skill_learn'   && <SkillLearnPage />}
         {phase === 'tournament'    && <TournamentPage />}
         {phase === 'bracket'       && <BracketPage />}
         {phase === 'reward'        && <RewardPage />}
         {phase === 'skill_select'  && <SkillSelectPage />}
+        {phase === 'shop'          && <ShopPage />}
         {phase === 'replay'        && <ReplayPage />}
+        {phase === 'my_records'    && <MyRecordsPage />}
       </>
     )
   }

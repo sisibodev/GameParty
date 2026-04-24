@@ -68,6 +68,14 @@ export default function SlotSelectPage() {
                       삭제
                     </button>
                   </div>
+                  {(slot.runRecords?.length ?? 0) > 0 && (
+                    <button
+                      style={s.btnRecords}
+                      onClick={() => useGameStore.setState({ activeSlot: slot, phase: 'my_records' })}
+                    >
+                      📋 내 기록 ({slot.runRecords!.length})
+                    </button>
+                  )}
                 </>
               ) : (
                 <button style={s.btnNew} onClick={() => handleNew(id)}>
@@ -98,4 +106,5 @@ const s: Record<string, React.CSSProperties> = {
   btnPrimary: { background: '#7c5cfc', border: 'none', borderRadius: '6px', color: '#fff', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 600 },
   btnDanger:  { background: '#5c1a1a', border: 'none', borderRadius: '6px', color: '#ff8888', padding: '0.5rem 0.75rem', cursor: 'pointer' },
   btnNew:     { background: 'transparent', border: '1px dashed #555', borderRadius: '8px', color: '#888', padding: '0.75rem 1.5rem', cursor: 'pointer', fontSize: '1rem', marginTop: '1rem' },
+  btnRecords: { background: 'transparent', border: '1px solid #3a3a5e', borderRadius: '6px', color: '#9988cc', padding: '0.3rem 0.75rem', cursor: 'pointer', fontSize: '0.78rem', width: '100%' },
 }

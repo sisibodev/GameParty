@@ -5,6 +5,7 @@ import type {
   GrowthStats,
   GroupResult,
   MatchResult,
+  TacticCardId,
   TournamentResult,
 } from '../types'
 import {
@@ -25,6 +26,8 @@ function makeCharState(
   char: CharacterDef,
   growth: GrowthStats,
   skills: string[],
+  items: string[] = [],
+  tacticCardId?: TacticCardId,
 ): BattleCharState {
   return {
     charId:      char.id,
@@ -38,7 +41,14 @@ function makeCharState(
     growthStats: growth,
     baseCombat:  char.baseCombat,
     archetype:   char.archetype,
+    items,
+    tactic:      tacticCardId ? { cardId: tacticCardId } : undefined,
   }
+}
+
+// 플레이어 캐릭터에만 전술 카드 적용 (playerId + cardId 주어질 때)
+function tacticFor(id: number, playerCharId?: number, tacticId?: TacticCardId): TacticCardId | undefined {
+  return playerCharId !== undefined && id === playerCharId ? tacticId : undefined
 }
 
 // ─── Qualifier (survival rounds → QUALIFIER_TARGET advance) ──────────────────
@@ -47,8 +57,11 @@ function runQualifier(
   participants: CharacterDef[],
   growthMap: Record<number, GrowthStats>,
   skillMap:  Record<number, string[]>,
+  itemsMap:  Record<number, string[]>,
   rng: SeededRng,
   allMatches: MatchResult[],
+  playerCharId?: number,
+  tacticCardId?: TacticCardId,
 ): number[] {
   let pool     = participants.map(c => c.id)
   const charById = Object.fromEntries(participants.map(c => [c.id, c]))
@@ -67,8 +80,8 @@ function runQualifier(
       const id2  = shuffled[i * 2 + 1]
       const seed = rng.int(0, 1_000_000)
 
-      const s1 = { ...makeCharState(charById[id1], growthMap[id1], skillMap[id1]), currentHp: hpMap[id1] }
-      const s2 = { ...makeCharState(charById[id2], growthMap[id2], skillMap[id2]), currentHp: hpMap[id2] }
+      const s1 = { ...makeCharState(charById[id1], growthMap[id1], skillMap[id1], itemsMap[id1] ?? [], tacticFor(id1, playerCharId, tacticCardId)), currentHp: hpMap[id1] }
+      const s2 = { ...makeCharState(charById[id2], growthMap[id2], skillMap[id2], itemsMap[id2] ?? [], tacticFor(id2, playerCharId, tacticCardId)), currentHp: hpMap[id2] }
 
       const result = simulateMatch(s1, s2, seed)
       result.stage = 'qualifier'
@@ -103,12 +116,15 @@ function playGroupMatch(
   charById: Record<number, CharacterDef>,
   growthMap: Record<number, GrowthStats>,
   skillMap: Record<number, string[]>,
+  itemsMap: Record<number, string[]>,
   rng: SeededRng,
   allMatches: MatchResult[],
+  playerCharId?: number,
+  tacticCardId?: TacticCardId,
 ): MatchResult {
   const result = simulateMatch(
-    makeCharState(charById[id1], growthMap[id1], skillMap[id1]),
-    makeCharState(charById[id2], growthMap[id2], skillMap[id2]),
+    makeCharState(charById[id1], growthMap[id1], skillMap[id1], itemsMap[id1] ?? [], tacticFor(id1, playerCharId, tacticCardId)),
+    makeCharState(charById[id2], growthMap[id2], skillMap[id2], itemsMap[id2] ?? [], tacticFor(id2, playerCharId, tacticCardId)),
     rng.int(0, 1_000_000),
   )
   result.stage          = 'group'
@@ -124,12 +140,15 @@ function runGroup(
   charById: Record<number, CharacterDef>,
   growthMap: Record<number, GrowthStats>,
   skillMap:  Record<number, string[]>,
+  itemsMap:  Record<number, string[]>,
   rng: SeededRng,
   allMatches: MatchResult[],
+  playerCharId?: number,
+  tacticCardId?: TacticCardId,
 ): GroupResult {
   const [a, b, c, d] = memberIds
   const play = (id1: number, id2: number, type: GroupMatchType) =>
-    playGroupMatch(id1, id2, type, groupId, charById, growthMap, skillMap, rng, allMatches)
+    playGroupMatch(id1, id2, type, groupId, charById, growthMap, skillMap, itemsMap, rng, allMatches, playerCharId, tacticCardId)
 
   const m1 = play(a, b, 'initial')
   const m2 = play(c, d, 'initial')
@@ -165,9 +184,12 @@ function runBracket(
   charById: Record<number, CharacterDef>,
   growthMap: Record<number, GrowthStats>,
   skillMap:  Record<number, string[]>,
+  itemsMap:  Record<number, string[]>,
   rng: SeededRng,
   allMatches: MatchResult[],
   bracketEliminations: Record<number, number>,
+  playerCharId?: number,
+  tacticCardId?: TacticCardId,
 ): number {
   let pool = shuffle(finalists, rng)
   let bracketRound = 1
@@ -178,8 +200,8 @@ function runBracket(
       if (i + 1 >= pool.length) { next.push(pool[i]); continue }
       const seed   = rng.int(0, 1_000_000)
       const result = simulateMatch(
-        makeCharState(charById[pool[i]],     growthMap[pool[i]],     skillMap[pool[i]]),
-        makeCharState(charById[pool[i + 1]], growthMap[pool[i + 1]], skillMap[pool[i + 1]]),
+        makeCharState(charById[pool[i]],     growthMap[pool[i]],     skillMap[pool[i]],     itemsMap[pool[i]]     ?? [], tacticFor(pool[i],     playerCharId, tacticCardId)),
+        makeCharState(charById[pool[i + 1]], growthMap[pool[i + 1]], skillMap[pool[i + 1]], itemsMap[pool[i + 1]] ?? [], tacticFor(pool[i + 1], playerCharId, tacticCardId)),
         seed,
       )
       result.stage        = 'bracket'
@@ -203,12 +225,15 @@ export function runTournament(
   skillMap:  Record<number, string[]>,
   seed: number,
   round: number,
+  itemsMap:  Record<number, string[]> = {},
+  playerCharId?: number,
+  tacticCardId?: TacticCardId,
 ): TournamentResult {
   const rng        = new SeededRng(seed)
   const allMatches: MatchResult[] = []
   const charById   = Object.fromEntries(participants.map(c => [c.id, c]))
 
-  const qualifiers = runQualifier(participants, growthMap, skillMap, rng, allMatches)
+  const qualifiers = runQualifier(participants, growthMap, skillMap, itemsMap, rng, allMatches, playerCharId, tacticCardId)
 
   const shuffledQ  = shuffle(qualifiers, rng)
   const groups: GroupResult[] = []
@@ -217,13 +242,13 @@ export function runTournament(
 
   for (let g = 0; g < GROUP_COUNT; g++) {
     const memberIds = shuffledQ.slice(g * GROUP_SIZE, g * GROUP_SIZE + GROUP_SIZE) as [number, number, number, number]
-    const result    = runGroup(groupLabels[g], memberIds, charById, growthMap, skillMap, rng, allMatches)
+    const result    = runGroup(groupLabels[g], memberIds, charById, growthMap, skillMap, itemsMap, rng, allMatches, playerCharId, tacticCardId)
     groups.push(result)
     finalists.push(result.rank1, result.rank2)
   }
 
   const bracketEliminations: Record<number, number> = {}
-  const winner     = runBracket(finalists, charById, growthMap, skillMap, rng, allMatches, bracketEliminations)
+  const winner     = runBracket(finalists, charById, growthMap, skillMap, itemsMap, rng, allMatches, bracketEliminations, playerCharId, tacticCardId)
 
   const eliminated = qualifiers.filter(id => !finalists.includes(id))
   const darkhorseCount = Math.floor(finalists.length * DARKHORSE_RATIO)
