@@ -156,7 +156,6 @@ function derivePlayerResult(
 function extractPlayerMatches(result: TournamentResult, playerCharId: number): PlayerMatchInfo[] {
   const pid = playerCharId
   let qualCount = 0
-  const groupMatchCounts: Record<string, number> = {}
   const BRACKET_LABELS: Record<number, string> = { 1: '16강', 2: '8강', 3: '4강', 4: '결승' }
 
   return result.allMatches
@@ -185,9 +184,9 @@ function extractPlayerMatches(result: TournamentResult, playerCharId: number): P
 
 function buildTournamentState(
   activeSlot: SaveSlot,
-  seed: number,
+  _seed: number,
   result: TournamentResult,
-  reward: RewardPackage,
+  _reward: RewardPackage,
   currentUnlocked: number[],
 ): {
   slotWithPhase: SaveSlot
