@@ -1,8 +1,9 @@
-import type { GachaGrade, GrowthStatKey } from './types'
+import type { GachaGrade, GrowthStatKey, ItemTier, PlayerTournamentResult, SkillTier } from './types'
 
 // ─── Gacha ────────────────────────────────────────────────────────────────────
 
-export const GACHA_PULL_COUNT = 100
+// v0.4.1: 본 게임은 매 라운드 시작 시 모든 캐릭터가 1장씩 뽑음 (등급별 수치 범위).
+// 시뮬레이션 모드는 기존 로직(GACHA_STAT_GAINS 고정값) 유지.
 
 export const GACHA_PROBABILITIES: Record<GachaGrade, number> = {
   C:   0.40,
@@ -13,6 +14,17 @@ export const GACHA_PROBABILITIES: Record<GachaGrade, number> = {
   SSS: 0.06,
 }
 
+// 본 게임 v0.4.1 — 등급별 스탯 증가 범위 [min, max]
+export const GACHA_STAT_RANGES: Record<GachaGrade, readonly [number, number]> = {
+  C:   [1, 2],
+  B:   [2, 4],
+  A:   [4, 6],
+  S:   [6, 9],
+  SS:  [9, 13],
+  SSS: [13, 18],
+}
+
+// 레거시 (시뮬레이션 모드 전용) — 고정값
 export const GACHA_STAT_GAINS: Record<GachaGrade, number> = {
   C:   1,
   B:   2,
@@ -26,13 +38,16 @@ export const GACHA_GRADES: readonly GachaGrade[] = ['C', 'B', 'A', 'S', 'SS', 'S
 
 // ─── Skill ────────────────────────────────────────────────────────────────────
 
-export const MAX_SKILL_SLOTS = 8
+export const MAX_SKILL_SLOTS = 5
 export const INITIAL_SKILL_COUNT = 3
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 export const MAX_GROWTH_STAT = 9999
-export const INITIAL_PLAYER_STAT_POINTS = 140
+
+// v0.4.1: 초기 스탯 고정 — 플레이어 1/1/1/1/1, NPC 10/10/10/10/10
+export const INITIAL_PLAYER_STAT = 1
+export const INITIAL_NPC_STAT = 10
 
 export const GROWTH_STAT_KEYS: GrowthStatKey[] = ['hp', 'str', 'agi', 'int', 'luk']
 
@@ -49,6 +64,15 @@ export const MAX_TURNS = 50
 
 // 데미지: atk × multiplier × DEF_FORMULA_BASE / (DEF_FORMULA_BASE + def)
 export const DEF_FORMULA_BASE = 100
+
+// INT → 스킬 쿨다운 감소: INT 성장치 INT_CD_REDUCTION_PER 당 -1턴 (최대 -3)
+export const INT_CD_REDUCTION_PER = 40
+
+// 회피 상쇄: 공격자 SPD × 이 계수만큼 수비자 EVA 감소
+export const AGI_EVA_COUNTER_COEFF = 0.3
+
+// 행동 시 자연 회복: maxHp × 이 비율 (HP가 높은 직업일수록 유리)
+export const HP_REGEN_PER_TURN_RATIO = 0.008
 
 // ─── HP 회복 ──────────────────────────────────────────────────────────────────
 
@@ -68,8 +92,8 @@ export const DARKHORSE_RATIO = 0.30
 // 처음 선택 가능한 5캐릭터 (탱커/버서커/어쌔신/레인저/마법사)
 export const INITIAL_UNLOCKED_CHAR_IDS = [1, 2, 3, 4, 5]
 
-// NPC 초기 성장 스탯 기본값
-export const NPC_BASE_GROWTH = 30
+// v0.4.1: NPC 초기 성장 스탯 — 10 (전 스탯 공통, 라운드마다 +1씩 추가)
+export const NPC_BASE_GROWTH = INITIAL_NPC_STAT
 
 // ─── Save Slots ───────────────────────────────────────────────────────────────
 
@@ -81,7 +105,52 @@ export const REWARD_WINNER = 10
 export const REWARD_FINALIST = 7
 export const REWARD_TOURNAMENT_OUT = 4
 export const REWARD_DARKHORSE = 8
-export const PLAYER_EXTRA_STAT_POINTS = 4
+// v0.4.1: PLAYER_EXTRA_STAT_POINTS 제거 (스탯 배분 UI 삭제)
+
+// ─── Gold / Shop (v0.4.2) ────────────────────────────────────────────────────
+// 라운드 종료 시 플레이어 성적에 따른 일괄 골드 지급 (MVP: per-match 아님)
+
+export const GOLD_BY_RESULT: Record<PlayerTournamentResult, number> = {
+  winner:         400,
+  finalist:       200,
+  tournament_out: 100,
+  group_out:       60,
+  qualifier_out:   30,
+}
+
+// 상점 진열 수 및 리롤 비용 (UI 숨김)
+export const SHOP_SIZE = 6
+export const SHOP_REROLL_COST = 30
+
+// 등급별 진열 확률 (라운드에 따라 상위 등급 확률 증가 로직은 Phase 2.5에서)
+export const ITEM_TIER_PROBS: Record<ItemTier, number> = {
+  common: 0.50,
+  rare:   0.30,
+  hero:   0.15,
+  legend: 0.05,
+}
+
+export const ITEM_TIERS: readonly ItemTier[] = ['common', 'rare', 'hero', 'legend']
+
+export const MAX_INVENTORY_SIZE = 100
+
+// ─── Rival System (v0.4.3) ───────────────────────────────────────────────────
+// 캐릭터 선택 시 랜덤 NPC 3명을 라이벌로 지정.
+// 라이벌은 매 라운드 +5 스탯 누적 (라운드 N에서 누적 +5N).
+// 라이벌전 승리 시 최종 골드 보상 ×2 배율 (MVP: 라운드 골드에 적용).
+
+export const RIVAL_COUNT = 3
+export const RIVAL_STAT_PER_ROUND = 5
+export const RIVAL_GOLD_MULTIPLIER = 2
+
+// ─── Skill Learn (v0.4.3) ────────────────────────────────────────────────────
+// 전투 횟수 기반 학습 대기 (전투 1회 = 1차감)
+export const SKILL_LEARN_TURNS: Record<SkillTier, number> = {
+  common: 1,
+  rare:   3,
+  hero:   5,
+  legend: 10,
+}
 
 // ─── Archetype Growth Coefficients ───────────────────────────────────────────
 // 각 계수의 의미:
@@ -132,12 +201,12 @@ export const ARCHETYPE_GROWTH_COEFFS: Record<string, ArchetypeCoeffs> = {
   assassin:  { ...DEFAULT_COEFFS, str_to_atk: 2.2, agi_to_spd: 2.0, luk_to_crit: 0.5, luk_to_eva: 0.4 },
   // 레인저: 크리 계수 소폭 상향 (LOW 구간 탈출)
   ranger:    { ...DEFAULT_COEFFS, luk_to_crit: 0.4 },
-  // 마법사: INT→공격·속도 보너스, 마나 대폭 증가, STR→공격 소폭 상향
-  mage:      { ...DEFAULT_COEFFS, str_to_atk: 1.5, int_to_mana: 8, int_to_atk: 1.5, int_to_spd: 0.5 },
-  // 성기사: 높은 체력·방어, INT→체력 보너스
-  paladin:   { ...DEFAULT_COEFFS, hp_to_maxHp: 12, str_to_atk: 2, str_to_def: 2, int_to_maxHp: 3 },
+  // 마법사: INT쌓을수록 속도·공격 증가 (느린 초반 → 강한 후반)
+  mage:      { ...DEFAULT_COEFFS, str_to_atk: 1.5, int_to_mana: 8, int_to_atk: 2.0, int_to_spd: 1.2 },
+  // 성기사: 높은 체력·방어, INT→체력·속도 보너스
+  paladin:   { ...DEFAULT_COEFFS, hp_to_maxHp: 12, str_to_atk: 2, str_to_def: 2, int_to_maxHp: 3, int_to_spd: 0.7 },
   // 서포트: INT→속도·마나·공격, LUK→회피
-  support:   { ...DEFAULT_COEFFS, str_to_atk: 2.5, luk_to_crit: 0.3, int_to_mana: 7, int_to_spd: 0.3, luk_to_eva: 0.3, int_to_atk: 0.4 },
+  support:   { ...DEFAULT_COEFFS, str_to_atk: 2.5, luk_to_crit: 0.3, int_to_mana: 7, int_to_spd: 0.8, luk_to_eva: 0.3, int_to_atk: 0.4 },
   // 워리어: STR→공격 소폭 상향 (균형)
   warrior:   { ...DEFAULT_COEFFS, str_to_atk: 3.5 },
 }
