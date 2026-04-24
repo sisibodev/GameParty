@@ -56,7 +56,7 @@ export default function GameLobby() {
   const players = Object.values(room.players)
   const me = room.players[user.uid]
   const isHost = room.host === user.uid
-  const allReady = players.length >= 2 && players.every(p => p.uid === room.host || p.ready)
+  const allReady = players.length >= 1 && players.every(p => p.uid === room.host || p.ready)
   const readyCount = players.filter(p => p.uid === room.host || p.ready).length
 
   async function handleReady() {

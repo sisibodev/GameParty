@@ -876,7 +876,7 @@ export default function GamePlay() {
               {Object.values(room.players).filter(p => p.uid !== user.uid).map(p => (
                 <button key={p.uid} className={styles.modalCompanyBtn} onClick={() => confirmPlayerTarget(p.uid)}>
                   {p.name}
-                  {p.rank > 0 && <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginLeft: '0.4rem' }}>{p.rank}위</span>}
+                  {p.rank > 0 && <span style={{ color: '#9098b7', fontSize: '0.8em', marginLeft: '0.4rem' }}>{p.rank}위</span>}
                 </button>
               ))}
             </div>
@@ -929,7 +929,7 @@ export default function GamePlay() {
                     }}
                   >
                     <span style={{ fontWeight: 700 }}>{meta?.label ?? type}</span>
-                    <span style={{ fontSize: '0.8em', color: 'var(--color-text-muted)', marginLeft: '0.5rem' }}>{meta?.desc}</span>
+                    <span style={{ fontSize: '0.8em', color: '#9098b7', marginLeft: '0.5rem' }}>{meta?.desc}</span>
                   </button>
                 )
               })}
@@ -943,7 +943,7 @@ export default function GamePlay() {
       {infoResult && (
         <div className={styles.modalOverlay} onClick={() => setInfoResult(null)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
-            <h3 style={{ color: infoResult.color ?? 'var(--color-text)' }}>{infoResult.title}</h3>
+            <h3 style={{ color: infoResult.color ?? '#d8dcef' }}>{infoResult.title}</h3>
             {infoResult.body.split('\n').map((line, i) => (
               <p key={i} className={i === 0 ? styles.infoResultName : styles.infoResultDesc}>{line}</p>
             ))}

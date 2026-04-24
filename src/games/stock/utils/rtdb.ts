@@ -74,7 +74,7 @@ export async function joinRoom(roomId: string, player: Player): Promise<void> {
 
   const room = snap.val() as Room
   if (room.status !== 'waiting') throw new Error('이미 게임이 시작된 방입니다.')
-  if (room.players && Object.keys(room.players).length >= 8) throw new Error('방이 가득 찼습니다.')
+  if (room.players && Object.keys(room.players).length >= 10) throw new Error('방이 가득 찼습니다.')
 
   const newPlayer: Player = {
     ...player,
