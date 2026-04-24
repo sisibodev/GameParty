@@ -3,7 +3,7 @@ import type { MatchResult } from '../types'
 
 const DB_NAME    = 'battle-grandprix'
 const STORE_NAME = 'match-logs'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 export interface MatchLogRecord {
   tournamentId: string
