@@ -11,6 +11,8 @@
   display: flex;
   flex-direction: column;
   background: #0a0b12;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
+  color: #d8dcef;
 }
 
 /* ── 헤더 ─────────────────────────────────────────── */
@@ -18,8 +20,9 @@
 .header {
   text-align: center;
   padding: 2rem 1.5rem 1.5rem;
-  background: #161a2a;
+  background: #111320;
   border-bottom: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.4);
 }
 
 .title {
@@ -49,14 +52,15 @@
 /* ── 우승자 배너 ──────────────────────────────────── */
 
 .winnerBanner {
-  background: linear-gradient(135deg, rgba(255,193,7,0.12), rgba(255,152,0,0.12));
-  border: 1px solid rgba(255, 193, 7, 0.4);
+  background: linear-gradient(135deg, rgba(255,193,7,0.14), rgba(255,152,0,0.10), rgba(10,11,18,0.8));
+  border: 1px solid rgba(255, 193, 7, 0.45);
   border-radius: 16px;
-  padding: 1.5rem;
+  padding: 1.75rem 1.5rem;
   text-align: center;
   opacity: 0;
   transform: scale(0.95);
   transition: opacity 0.5s ease, transform 0.5s ease;
+  box-shadow: 0 0 40px rgba(255,193,7,0.15), 0 4px 24px rgba(0,0,0,0.5);
 }
 
 .winnerBanner.revealed {
@@ -88,10 +92,11 @@
 /* ── 공통 카드 ────────────────────────────────────── */
 
 .card {
-  background: #161a2a;
+  background: linear-gradient(180deg, #161a2a, #111320);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
   padding: 1rem 1.1rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
 .sectionTitle {
@@ -128,7 +133,8 @@
 }
 
 .rankRowMe {
-  background: rgba(99, 102, 241, 0.08);
+  background: rgba(157, 122, 255, 0.10);
+  box-shadow: 0 0 0 1px rgba(157,122,255,0.25) inset;
 }
 
 .rankEmoji {
@@ -155,12 +161,15 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #9d7aff;
+  background: linear-gradient(135deg, #9d7aff, #b79bff);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 0.85rem;
+  color: #0a0b12;
+  border: 2px solid rgba(255,255,255,0.12);
+  flex-shrink: 0;
 }
 
 .playerName {
@@ -232,11 +241,12 @@
 /* ── 내 결과 요약 ─────────────────────────────────── */
 
 .mySummary {
-  background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.1));
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(124,109,255,0.12), rgba(183,155,255,0.08));
+  border: 1px solid rgba(157, 122, 255, 0.4);
   border-radius: 14px;
   padding: 1.25rem;
   text-align: center;
+  box-shadow: 0 0 32px rgba(124,109,255,0.15), 0 4px 16px rgba(0,0,0,0.4);
 }
 
 .mySummaryTitle {
@@ -424,17 +434,20 @@
 .exitBtn {
   width: 100%;
   padding: 0.9rem;
-  background: #9d7aff;
-  color: white;
-  border: none;
+  background: linear-gradient(135deg, #7c6dff, #b79bff);
+  border: 1px solid rgba(157,146,255,0.6);
+  color: #fff;
   border-radius: 12px;
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 800;
+  font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s;
+  box-shadow: 0 0 28px rgba(124,109,255,0.5);
+  transition: filter 0.12s, transform 0.08s;
 }
 
-.exitBtn:hover { background: #b79bff; }
+.exitBtn:hover { filter: brightness(1.1); }
+.exitBtn:active { transform: translateY(1px); }
 
 .deleteBtn {
   width: 100%;
