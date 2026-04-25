@@ -7,6 +7,7 @@ import type {
   GrowthStats,
   InventoryItem,
   ItemDef,
+  NpcStat,
   PendingSkill,
   PlayerMatchInfo,
   PlayerTournamentResult,
@@ -72,18 +73,20 @@ export type GamePhase =
   | 'my_records'
 
 interface GameState {
-  phase:             GamePhase
-  slots:             SaveSlot[]
-  activeSlot:        SaveSlot | null
-  lastTournament:    TournamentResult | null
-  pendingReward:     RewardPackage | null
-  lastRandomStatKey: GrowthStatKey | null
-  unlockedCharIds:   number[]
-  newCharIds:        number[]
-  playerMatches:     PlayerMatchInfo[]
-  playerMatchIndex:  number
-  shopItems:         ItemDef[]
-  selectedTacticCardId: TacticCardId | null
+  phase:                  GamePhase
+  slots:                  SaveSlot[]
+  activeSlot:             SaveSlot | null
+  lastTournament:         TournamentResult | null
+  pendingReward:          RewardPackage | null
+  lastRandomStatKey:      GrowthStatKey | null
+  unlockedCharIds:        number[]
+  newCharIds:             number[]
+  playerMatches:          PlayerMatchInfo[]
+  playerMatchIndex:       number
+  shopItems:              ItemDef[]
+  selectedTacticCardId:   TacticCardId | null
+  pendingBattleSkillOpts: string[] | null
+  playedCharIds:          number[]
 }
 
 interface GameActions {
@@ -102,8 +105,10 @@ interface GameActions {
   buyItem:                 (itemId: string) => Promise<void>
   rerollShop:              (seed: number) => Promise<void>
   leaveShop:               () => void
+  acquireBattleSkill:      (skillId: string | null, replaceId?: string) => Promise<void>
   setPhase:                (phase: GamePhase) => void
   clearNewChars:           () => void
+  clearPlayedChars:        () => void
   setTacticCard:           (cardId: TacticCardId | null) => void
 }
 
@@ -128,6 +133,13 @@ function loadNewChars(): number[] {
 }
 function saveNewChars(ids: number[]) {
   localStorage.setItem('bgp_new_chars', JSON.stringify(ids))
+}
+function loadPlayedChars(): number[] {
+  try { return JSON.parse(localStorage.getItem('bgp_played_chars') ?? '[]') }
+  catch { return [] }
+}
+function savePlayedChars(ids: number[]) {
+  localStorage.setItem('bgp_played_chars', JSON.stringify(ids))
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -259,9 +271,9 @@ function extractPlayerMatches(
 
 function buildTournamentState(
   activeSlot: SaveSlot,
-  seed: number,
+  _seed: number,
   result: TournamentResult,
-  reward: RewardPackage,
+  _reward: RewardPackage,
   currentUnlocked: number[],
   itemsMap: Record<number, string[]>,
 ): {
@@ -284,6 +296,7 @@ function buildTournamentState(
   return { slotWithPhase, playerMatches, newUnlocked, newlyUnlocked }
 }
 
+<<<<<<< HEAD
 // ─── Match Navigation ────────────────────────────────────────────────────────
 // 실제 전투 결과(won)에 따라 다음 경기 인덱스와 페이즈를 결정.
 // playerMatches는 pre-run 기준이므로 re-sim 결과가 다르면 올바른 경로로 점프.
@@ -396,21 +409,79 @@ function determineNextMatch(
     : { nextIndex: currentIdx, nextPhase: 'tournament' }
 }
 
+// ─── NPC Stat Helper ──────────────────────────────────────────────────────────
+
+const STAGE_RANK: Record<string, number> = {
+  '우승': 7, '준우승': 6, '4강': 5, '8강': 4,
+  '16강': 3, '본선 그룹 탈락': 2, '예선 탈락': 1,
+}
+
+function getNpcAchievement(charId: number, result: TournamentResult): string {
+  if (result.winner === charId) return '우승'
+  const br = result.bracketEliminations[charId]
+  if (br !== undefined) {
+    const labels: Record<number, string> = { 4: '준우승', 3: '4강', 2: '8강', 1: '16강' }
+    return labels[br] ?? '16강'
+  }
+  if (result.finalists.includes(charId)) return '16강'
+  if (result.qualifiers.includes(charId)) return '본선 그룹 탈락'
+  return '예선 탈락'
+}
+
+function updateNpcStats(
+  existing: Record<number, NpcStat> | undefined,
+  result: TournamentResult,
+): Record<number, NpcStat> {
+  const stats: Record<number, NpcStat> = existing ? { ...existing } : {}
+
+  for (const charId of result.participants) {
+    const achievement = getNpcAchievement(charId, result)
+    const wins   = result.allMatches.filter(m => m.winnerId === charId).length
+    const losses = result.allMatches.filter(m => m.loserId  === charId).length
+
+    const prev = stats[charId]
+    if (!prev) {
+      stats[charId] = { totalWins: wins, totalLosses: losses, bestStage: achievement, bestStageCount: 1 }
+    } else {
+      const prevRank = STAGE_RANK[prev.bestStage] ?? 0
+      const newRank  = STAGE_RANK[achievement]    ?? 0
+      let bestStage      = prev.bestStage
+      let bestStageCount = prev.bestStageCount
+      if (newRank > prevRank) {
+        bestStage      = achievement
+        bestStageCount = 1
+      } else if (newRank === prevRank) {
+        bestStageCount = prev.bestStageCount + 1
+      }
+      stats[charId] = {
+        totalWins:      prev.totalWins  + wins,
+        totalLosses:    prev.totalLosses + losses,
+        bestStage,
+        bestStageCount,
+      }
+    }
+  }
+
+  return stats
+}
+
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useGameStore = create<GameState & GameActions>((set, get) => ({
-  phase:             'slot_select',
-  slots:             [],
-  activeSlot:        null,
-  lastTournament:    null,
-  pendingReward:     null,
-  lastRandomStatKey: null,
-  unlockedCharIds:   loadUnlocked(),
-  newCharIds:        loadNewChars(),
-  playerMatches:     [],
-  playerMatchIndex:  0,
-  shopItems:         [],
-  selectedTacticCardId: null,
+  phase:                  'slot_select',
+  slots:                  [],
+  activeSlot:             null,
+  lastTournament:         null,
+  pendingReward:          null,
+  lastRandomStatKey:      null,
+  unlockedCharIds:        loadUnlocked(),
+  newCharIds:             loadNewChars(),
+  playerMatches:          [],
+  playerMatchIndex:       0,
+  shopItems:              [],
+  selectedTacticCardId:   null,
+  pendingBattleSkillOpts: null,
+  playedCharIds:          loadPlayedChars(),
 
   initSlots: async () => {
     const slots = await listSlots()
@@ -439,11 +510,17 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     }
     await saveSlot(slot)
     const slots = await listSlots()
+    const { playedCharIds } = get()
+    const newPlayedCharIds = playedCharIds.includes(charId)
+      ? playedCharIds
+      : [...playedCharIds, charId]
+    if (!playedCharIds.includes(charId)) savePlayedChars(newPlayedCharIds)
     set({
       slots,
       activeSlot:        slot,
       lastRandomStatKey: null,
       phase:             'gacha',
+      playedCharIds:     newPlayedCharIds,
     })
   },
 
@@ -514,7 +591,9 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const { slotWithPhase, newUnlocked, newlyUnlocked } =
       buildTournamentState(activeSlot, seed, result, reward, unlockedCharIds, itemsMap)
 
-    await saveSlot(slotWithPhase)
+    const npcStats = updateNpcStats(activeSlot.npcStats, result)
+    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats }
+    await saveSlot(slotWithNpc)
 
     if (newlyUnlocked.length > 0) {
       saveUnlocked(newUnlocked)
@@ -522,7 +601,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       set({ unlockedCharIds: newUnlocked, newCharIds: newlyUnlocked })
     }
 
-    set({ activeSlot: slotWithPhase, lastTournament: result, pendingReward: reward })
+    set({ activeSlot: slotWithNpc, lastTournament: result, pendingReward: reward })
     return result
   },
 
@@ -571,7 +650,9 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const { slotWithPhase, playerMatches, newUnlocked, newlyUnlocked } =
       buildTournamentState(activeSlot, seed, result, reward, unlockedCharIds, itemsMap)
 
-    await saveSlot(slotWithPhase)
+    const npcStats = updateNpcStats(activeSlot.npcStats, result)
+    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats }
+    await saveSlot(slotWithNpc)
 
     if (newlyUnlocked.length > 0) {
       saveUnlocked(newUnlocked)
@@ -580,12 +661,13 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     }
 
     set({
-      activeSlot:       slotWithPhase,
-      lastTournament:   result,
-      pendingReward:    reward,
+      activeSlot:             slotWithNpc,
+      lastTournament:         result,
+      pendingReward:          reward,
       playerMatches,
-      playerMatchIndex: 0,
-      phase:            'match_preview',
+      playerMatchIndex:       0,
+      pendingBattleSkillOpts: null,
+      phase:                  'match_preview',
     })
   },
 
@@ -676,7 +758,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   },
 
   advancePlayerMatch: () => {
-    const { playerMatchIndex, playerMatches } = get()
+    const { playerMatchIndex, playerMatches, pendingBattleSkillOpts } = get()
+    if (pendingBattleSkillOpts !== null) return  // still waiting for skill pick
     const nextIndex = playerMatchIndex + 1
     if (nextIndex >= playerMatches.length) {
       set({ phase: 'tournament' })
@@ -878,11 +961,53 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     set({ shopItems: [], phase: 'gacha' })
   },
 
+  acquireBattleSkill: async (skillId, replaceId) => {
+    const { activeSlot, playerMatchIndex, playerMatches } = get()
+    if (!activeSlot) return
+
+    let updatedSlot = activeSlot
+
+    if (skillId !== null) {
+      let initialSkills  = activeSlot.initialSkills
+      let acquiredSkills = activeSlot.acquiredSkills
+
+      if (replaceId) {
+        if (initialSkills.includes(replaceId)) {
+          initialSkills = initialSkills.filter(s => s !== replaceId)
+        } else {
+          acquiredSkills = acquiredSkills.filter(s => s !== replaceId)
+        }
+      }
+
+      updatedSlot = {
+        ...activeSlot,
+        initialSkills,
+        acquiredSkills: [...acquiredSkills, skillId],
+        updatedAt:      Date.now(),
+      }
+      await saveSlot(updatedSlot)
+    }
+
+    // Clear pending and advance to next match
+    set({ activeSlot: updatedSlot, pendingBattleSkillOpts: null })
+    const nextIndex = playerMatchIndex + 1
+    if (nextIndex >= playerMatches.length) {
+      set({ phase: 'tournament' })
+    } else {
+      set({ playerMatchIndex: nextIndex, phase: 'match_preview' })
+    }
+  },
+
   setPhase: (phase) => set({ phase }),
 
   clearNewChars: () => {
     saveNewChars([])
     set({ newCharIds: [] })
+  },
+
+  clearPlayedChars: () => {
+    savePlayedChars([])
+    set({ playedCharIds: [] })
   },
 
   setTacticCard: (cardId) => set({ selectedTacticCardId: cardId }),

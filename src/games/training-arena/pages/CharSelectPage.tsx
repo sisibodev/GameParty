@@ -12,7 +12,7 @@ const ARCHETYPE_COLOR: Record<string, string> = {
 }
 
 export default function CharSelectPage() {
-  const { startNewGame, unlockedCharIds, newCharIds, clearNewChars, slots } = useGameStore()
+  const { startNewGame, unlockedCharIds, newCharIds, clearNewChars, slots, playedCharIds } = useGameStore()
   const winnerCharIds = slots.filter(s => s.bestClearRound != null).map(s => s.characterId)
   const [selected, setSelected] = useState<number | null>(null)
 
@@ -27,9 +27,10 @@ export default function CharSelectPage() {
   }
 
   function CharCard({ char }: { char: CharacterDef }) {
-    const isSelected = selected === char.id
-    const isNew      = newCharIds.includes(char.id)
-    const isWinner   = winnerCharIds.includes(char.id)
+    const isSelected   = selected === char.id
+    const isNew        = newCharIds.includes(char.id)
+    const isWinner     = winnerCharIds.includes(char.id)
+    const isFirstPlay  = !playedCharIds.includes(char.id)
     return (
       <button
         style={{
@@ -45,6 +46,7 @@ export default function CharSelectPage() {
         <div style={s.charName}>{char.name}</div>
         {isWinner && <div style={s.winBadge}>🏆</div>}
         {isNew && <div style={s.newBadge}>NEW</div>}
+        {!isNew && isFirstPlay && <div style={s.firstPlayBadge}>첫플</div>}
         <div style={s.statRow}>
           <span>HP {char.baseCombat.maxHp}</span>
           <span>ATK {char.baseCombat.atk}</span>
@@ -94,8 +96,9 @@ const s: Record<string, React.CSSProperties> = {
   charCard:  { display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '0.75rem', borderRadius: '10px', cursor: 'pointer', textAlign: 'left', position: 'relative', minWidth: '130px' },
   archBadge: { fontSize: '0.65rem', color: '#fff', padding: '2px 6px', borderRadius: '4px', alignSelf: 'flex-start', textTransform: 'uppercase' },
   charName:  { fontSize: '0.9rem', fontWeight: 700, color: '#e8e8ff' },
-  newBadge:  { position: 'absolute', top: '6px', right: '6px', fontSize: '0.6rem', background: '#ff4444', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 },
-  winBadge:  { position: 'absolute', top: '6px', left: '6px', fontSize: '0.75rem' },
+  newBadge:      { position: 'absolute', top: '6px', right: '6px', fontSize: '0.6rem', background: '#ff4444', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 },
+  winBadge:      { position: 'absolute', bottom: '6px', left: '6px', fontSize: '0.75rem', background: '#ffd70033', padding: '2px 4px', borderRadius: '4px' },
+  firstPlayBadge:{ position: 'absolute', bottom: '6px', right: '6px', fontSize: '0.6rem', background: '#2244aa', color: '#88aaff', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 },
   statRow:   { display: 'flex', gap: '0.4rem', flexWrap: 'wrap', fontSize: '0.7rem', color: '#aaa' },
   footer:    { position: 'fixed', bottom: 0, left: 0, right: 0, padding: '1rem', background: '#0d0d1a', borderTop: '1px solid #222', display: 'flex', justifyContent: 'center' },
   btnConfirm:{ background: '#7c5cfc', border: 'none', borderRadius: '8px', color: '#fff', padding: '0.75rem 3rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },

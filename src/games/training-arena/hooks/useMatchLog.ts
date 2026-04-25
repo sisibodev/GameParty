@@ -1,7 +1,6 @@
-import { openDB, type IDBPDatabase } from 'idb'
 import type { MatchResult } from '../types'
+import { getDb } from './db'
 
-const DB_NAME    = 'battle-grandprix'
 const STORE_NAME = 'match-logs'
 const DB_VERSION = 3
 
@@ -9,16 +8,6 @@ export interface MatchLogRecord {
   tournamentId: string
   matches:      MatchResult[]
   savedAt:      number
-}
-
-async function getDb(): Promise<IDBPDatabase> {
-  return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'tournamentId' })
-      }
-    },
-  })
 }
 
 export async function appendMatchLog(

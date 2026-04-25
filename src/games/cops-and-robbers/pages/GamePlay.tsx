@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Application, Container, Graphics } from 'pixi.js'
+import { loadCharFrames, type CharFrames } from '../engine/charSprites'
 import { buildTileMap, renderTileMap, circleCollidesWall } from '../engine/createMap'
 import { createPlayer, setPlayerFacing, syncPlayerView } from '../engine/createPlayer'
 import { createFogOfWar } from '../engine/createFogOfWar'
@@ -365,6 +366,11 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
     const keyboard = createKeyboard(window)
 
     ;(async () => {
+      const [thiefFrames, copFrames] = await Promise.all([
+        loadCharFrames('thief'),
+        loadCharFrames('cop'),
+      ]) as [CharFrames, CharFrames]
+
       await app.init({
         width: VIEWPORT_WIDTH,
         height: VIEWPORT_HEIGHT,
@@ -408,13 +414,14 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
       abilitiesHandleRef.current = abHandle
       world.addChild(abHandle.smokeLayer)
 
-      const copHandle = createCopBot(COP_SPAWN)
+      const copHandle = createCopBot(COP_SPAWN, copFrames)
       copBotHandleRef.current = copHandle
       world.addChild(copHandle.footprintRing)
       world.addChild(copHandle.view)
       world.addChild(copHandle.scanRing)
 
-      const thief = createPlayer(myRole, { x: TILE_SIZE * 2.5, y: TILE_SIZE * 2.5 })
+      const roleFrames = myRole === 'thief' ? thiefFrames : copFrames
+      const thief = createPlayer(myRole, { x: TILE_SIZE * 2.5, y: TILE_SIZE * 2.5 }, roleFrames)
       thiefRef.current = thief
 
       // 발소리 인디케이터 (도둑 전용 — 경찰 방향 화살표)
@@ -447,7 +454,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
           { x: TILE_SIZE * 37.5, y: TILE_SIZE * 25.5 },
         ]
         demoExtraThievesRef.current = extraSpawns.map((spawn) => {
-          const player = createPlayer('thief', spawn)
+          const player = createPlayer('thief', spawn, thiefFrames)
           const ab = createAbilities()
           world.addChild(ab.smokeLayer)
           world.addChild(ab.stealthOverlay)
@@ -456,7 +463,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
         })
 
         // 경찰 2번째 봇
-        const cop2 = createCopBot({ x: TILE_SIZE * 10.5, y: TILE_SIZE * 14.5 })
+        const cop2 = createCopBot({ x: TILE_SIZE * 10.5, y: TILE_SIZE * 14.5 }, copFrames)
         demoCop2Ref.current = cop2
         world.addChild(cop2.footprintRing)
         world.addChild(cop2.view)
@@ -657,6 +664,7 @@ export default function GamePlay({ onBack, onGameEnd, roomId, uid, isHost, myRol
             const br = demoThief.bot.tick(dtMs, demoThief.player.state.pos, safesRef.current, nearestCop.state.pos, treasureCountRef.current, treasureGoalRef.current, map, occupied)
             if (br.rescued) performRescue()
             if (br.dir) {
+              setPlayerFacing(demoThief.player, br.dir.x, br.dir.y, true)
               const step = demoThief.player.state.speed * dt
               const nx = demoThief.player.state.pos.x + br.dir.x * step
               if (!circleCollidesWall(map, nx, demoThief.player.state.pos.y, PLAYER_RADIUS - 1)) demoThief.player.state.pos.x = nx

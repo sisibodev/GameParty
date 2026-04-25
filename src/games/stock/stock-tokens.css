@@ -1,0 +1,237 @@
+/* === 주식 보드게임 전용 디자인 토큰 + 유틸리티 클래스 ===
+   다크 토너먼트 테마 · 한국식 컬러 (빨강=상승/매수, 파랑=하락/매도)
+*/
+
+:root {
+  /* 종목 컬러 A–H */
+  --co-A: #ff4d5e; --co-A-soft: rgba(255,77,94,0.14);
+  --co-B: #3b82f6; --co-B-soft: rgba(59,130,246,0.14);
+  --co-C: #4ade80; --co-C-soft: rgba(74,222,128,0.14);
+  --co-D: #ffc857; --co-D-soft: rgba(255,200,87,0.14);
+  --co-E: #9d7aff; --co-E-soft: rgba(157,122,255,0.14);
+  --co-F: #5de3ff; --co-F-soft: rgba(93,227,255,0.14);
+  --co-G: #ff92d0; --co-G-soft: rgba(255,146,208,0.14);
+  --co-H: #fb923c; --co-H-soft: rgba(251,146,60,0.14);
+
+  /* Surfaces */
+  --bg-0: #0a0b12;
+  --bg-1: #111320;
+  --bg-2: #161a2a;
+  --bg-3: #1e2236;
+  --bg-4: #252a42;
+  --surface-elev: rgba(255,255,255,0.04);
+  --surface-elev-hi: rgba(255,255,255,0.07);
+
+  /* Borders */
+  --border-1: rgba(255,255,255,0.06);
+  --border-2: rgba(255,255,255,0.10);
+  --border-3: rgba(255,255,255,0.18);
+
+  /* Text */
+  --text-hi: #f1f3ff;
+  --text: #d8dcef;
+  --text-dim: #9098b7;
+  --text-faint: #5e6582;
+
+  /* Semantic — Korean market convention */
+  --up: #ff4d5e;
+  --up-soft: rgba(255,77,94,0.16);
+  --up-glow: 0 0 20px rgba(255,77,94,0.45);
+  --down: #3b82f6;
+  --down-soft: rgba(59,130,246,0.16);
+  --down-glow: 0 0 20px rgba(59,130,246,0.45);
+
+  /* Neon accents */
+  --neon-purple: #9d7aff;
+  --neon-purple-glow: 0 0 24px rgba(157,122,255,0.5);
+  --neon-cyan: #5de3ff;
+  --neon-cyan-glow: 0 0 24px rgba(93,227,255,0.45);
+  --neon-amber: #ffc857;
+  --neon-amber-glow: 0 0 24px rgba(255,200,87,0.5);
+  --neon-green: #4ade80;
+
+  /* Primary CTA */
+  --primary: #7c6dff;
+  --primary-hi: #9d92ff;
+  --primary-glow: 0 0 28px rgba(124,109,255,0.55);
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --shadow-1: 0 2px 8px rgba(0,0,0,0.35);
+  --shadow-2: 0 8px 32px rgba(0,0,0,0.5);
+  --shadow-3: 0 20px 60px rgba(0,0,0,0.6);
+}
+
+/* ── Company color scope helpers ── */
+.co-A { --co: var(--co-A); --co-soft: var(--co-A-soft); }
+.co-B { --co: var(--co-B); --co-soft: var(--co-B-soft); }
+.co-C { --co: var(--co-C); --co-soft: var(--co-C-soft); }
+.co-D { --co: var(--co-D); --co-soft: var(--co-D-soft); }
+.co-E { --co: var(--co-E); --co-soft: var(--co-E-soft); }
+.co-F { --co: var(--co-F); --co-soft: var(--co-F-soft); }
+.co-G { --co: var(--co-G); --co-soft: var(--co-G-soft); }
+.co-H { --co: var(--co-H); --co-soft: var(--co-H-soft); }
+
+/* ── Layout utilities ── */
+.sk-row { display: flex; align-items: center; gap: 8px; }
+.sk-row-between { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sk-col { display: flex; flex-direction: column; }
+.sk-wrap { flex-wrap: wrap; }
+
+/* ── Panel ── */
+.sk-panel {
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.sk-panel-tight {
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius);
+}
+
+/* ── Chip ── */
+.sk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: var(--surface-elev);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.sk-chip-up     { color: var(--up);          background: var(--up-soft);             border-color: rgba(255,77,94,0.35); }
+.sk-chip-down   { color: var(--down);         background: var(--down-soft);           border-color: rgba(59,130,246,0.35); }
+.sk-chip-purple { color: var(--neon-purple);  background: rgba(157,122,255,0.14);     border-color: rgba(157,122,255,0.4); }
+.sk-chip-amber  { color: var(--neon-amber);   background: rgba(255,200,87,0.14);      border-color: rgba(255,200,87,0.4); }
+.sk-chip-cyan   { color: var(--neon-cyan);    background: rgba(93,227,255,0.14);      border-color: rgba(93,227,255,0.4); }
+.sk-chip-green  { color: var(--neon-green);   background: rgba(74,222,128,0.14);      border-color: rgba(74,222,128,0.4); }
+.sk-chip-ghost  { background: transparent;    border-color: var(--border-2);          color: var(--text-dim); }
+
+/* ── Dot (company color indicator) ── */
+.sk-dot {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--co, var(--neon-purple));
+  box-shadow: 0 0 8px var(--co, var(--neon-purple));
+  flex-shrink: 0;
+}
+
+/* ── Number font ── */
+.sk-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Divider ── */
+.sk-divider {
+  height: 1px;
+  background: var(--border-1);
+  border: 0;
+  margin: 10px 0;
+}
+
+/* ── Scrollable row ── */
+.sk-scroll-x { overflow-x: auto; }
+.sk-scroll-x::-webkit-scrollbar { height: 6px; }
+.sk-scroll-x::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+
+/* ── Button primitives ── */
+.sk-btn {
+  appearance: none;
+  font-family: inherit;
+  font-weight: 700;
+  border: 1px solid var(--border-3);
+  border-radius: var(--radius);
+  background: var(--surface-elev);
+  color: var(--text);
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: transform 0.08s, filter 0.12s, background 0.12s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.sk-btn:hover:not(:disabled)  { background: var(--surface-elev-hi); }
+.sk-btn:active:not(:disabled) { transform: translateY(1px); }
+.sk-btn:disabled               { opacity: 0.4; cursor: not-allowed; }
+
+.sk-btn-primary {
+  background: linear-gradient(135deg, var(--primary), #b79bff);
+  border-color: rgba(157,146,255,0.6);
+  color: #fff;
+  box-shadow: var(--primary-glow);
+}
+.sk-btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+
+.sk-btn-up {
+  background: linear-gradient(135deg, #ff4d5e, #ff7788);
+  border-color: rgba(255,120,135,0.6);
+  color: #fff;
+  box-shadow: var(--up-glow);
+}
+.sk-btn-down {
+  background: linear-gradient(135deg, #3b82f6, #6ba7ff);
+  border-color: rgba(107,167,255,0.6);
+  color: #fff;
+  box-shadow: var(--down-glow);
+}
+.sk-btn-green {
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  border-color: rgba(74,222,128,0.6);
+  color: #0a0b12;
+  box-shadow: 0 0 28px rgba(74,222,128,0.45);
+}
+.sk-btn-ghost { background: transparent; border-color: var(--border-2); }
+.sk-btn-sm    { padding: 4px 10px; font-size: 12px; border-radius: 8px; }
+.sk-btn-lg    { padding: 12px 20px; font-size: 15px; border-radius: 12px; }
+
+/* ── Hero background ── */
+.sk-hero-glow {
+  background:
+    radial-gradient(800px 400px at 20% -10%, rgba(124,109,255,0.22), transparent 60%),
+    radial-gradient(600px 300px at 110% 10%, rgba(255,77,94,0.14), transparent 60%),
+    var(--bg-0);
+}
+
+/* ── Ticker row (company list item) ── */
+.sk-ticker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+  gap: 8px;
+}
+.sk-ticker-row:hover    { background: var(--surface-elev-hi); }
+.sk-ticker-row.selected {
+  background: linear-gradient(90deg, var(--co-soft, rgba(157,122,255,0.12)), transparent);
+  border-color: var(--co, var(--neon-purple));
+}
+
+/* ── Avatar ── */
+.sk-avatar {
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #0a0b12;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+
+/* ── Timer ring (SVG wrapper) ── */
+.sk-timer { flex-shrink: 0; }

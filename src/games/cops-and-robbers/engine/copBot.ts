@@ -1,5 +1,6 @@
-import { Container, Graphics } from 'pixi.js'
+import { Container, Graphics, AnimatedSprite } from 'pixi.js'
 import type { CopBotState, SmokeCloud, TileMap, Vec2 } from '../types'
+import { type CharFrames, createCharSprite, updateCharDir } from './charSprites'
 import {
   COLORS,
   COP_BOT_ATTACK_RADIUS,
@@ -131,6 +132,9 @@ export interface CopBotHandle {
   _path: TileCoord[]
   _pathGoal: TileCoord | null
   _pathRecomputeMs: number
+  sprite?: AnimatedSprite
+  frames?: CharFrames
+  _lastDir: Vec2
 }
 
 function pickWaypoint(map: TileMap, avoid: Vec2): Vec2 {
@@ -146,27 +150,33 @@ function pickWaypoint(map: TileMap, avoid: Vec2): Vec2 {
   return { x: (map.cols / 2) * TILE_SIZE, y: (map.rows / 2) * TILE_SIZE }
 }
 
-export function createCopBot(spawn: Vec2): CopBotHandle {
+export function createCopBot(spawn: Vec2, frames?: CharFrames): CopBotHandle {
   const view = new Container()
   view.label = 'cop-bot'
 
   const shadow = new Graphics()
-    .ellipse(0, PLAYER_RADIUS * 0.6, PLAYER_RADIUS * 0.9, PLAYER_RADIUS * 0.35)
+    .ellipse(0, PLAYER_RADIUS * 0.6, PLAYER_RADIUS * 1.8, PLAYER_RADIUS * 0.6)
     .fill({ color: 0x000000, alpha: 0.35 })
+  view.addChild(shadow)
 
-  const body = new Graphics()
-    .circle(0, 0, PLAYER_RADIUS)
-    .fill(COLORS.cop)
-    .stroke({ color: 0xffffff, width: 2, alpha: 0.85 })
+  let sprite: AnimatedSprite | undefined
+  if (frames) {
+    sprite = createCharSprite(frames, 4)
+    view.addChild(sprite)
+  } else {
+    const body = new Graphics()
+      .circle(0, 0, PLAYER_RADIUS)
+      .fill(COLORS.cop)
+      .stroke({ color: 0xffffff, width: 2, alpha: 0.85 })
+    const dirArrow = new Graphics()
+      .moveTo(PLAYER_RADIUS - 2, 0)
+      .lineTo(PLAYER_RADIUS + 6, -4)
+      .lineTo(PLAYER_RADIUS + 6, 4)
+      .closePath()
+      .fill({ color: 0xffffff, alpha: 0.9 })
+    view.addChild(body, dirArrow)
+  }
 
-  const dir = new Graphics()
-    .moveTo(PLAYER_RADIUS - 2, 0)
-    .lineTo(PLAYER_RADIUS + 6, -4)
-    .lineTo(PLAYER_RADIUS + 6, 4)
-    .closePath()
-    .fill({ color: 0xffffff, alpha: 0.9 })
-
-  view.addChild(shadow, body, dir)
   view.position.set(spawn.x, spawn.y)
 
   const scanRing = new Graphics()
@@ -181,7 +191,11 @@ export function createCopBot(spawn: Vec2): CopBotHandle {
     lastHitMs: -COP_BOT_HIT_COOLDOWN_MS,
   }
 
-  return { state, view, scanRing, footprintRing, _path: [], _pathGoal: null, _pathRecomputeMs: 0 }
+  return {
+    state, view, scanRing, footprintRing,
+    _path: [], _pathGoal: null, _pathRecomputeMs: 0,
+    sprite, frames, _lastDir: { x: 0, y: 1 },
+  }
 }
 
 function isSmokeBlocking(smokeList: SmokeCloud[], target: Vec2): boolean {
@@ -255,7 +269,7 @@ export function updateCopBot(
         handle._pathGoal = wpTile
       }
       if (!followPath(handle, map, COP_BOT_PATROL_SPEED, dt))
-        moveToward(state, map, wp.x, wp.y, COP_BOT_PATROL_SPEED, dt)
+        moveToward(handle, map, wp.x, wp.y, COP_BOT_PATROL_SPEED, dt)
     }
   }
 
@@ -272,7 +286,7 @@ export function updateCopBot(
       handle._pathRecomputeMs = 0
     }
     if (!followPath(handle, map, COP_BOT_CHASE_SPEED, dt))
-      moveToward(state, map, thiefPos.x, thiefPos.y, COP_BOT_CHASE_SPEED, dt)
+      moveToward(handle, map, thiefPos.x, thiefPos.y, COP_BOT_CHASE_SPEED, dt)
   }
 
   if (state.scanCooldownMs === 0 && canDetect && distToThief <= COP_BOT_SCAN_RADIUS * 1.5) {
@@ -284,6 +298,11 @@ export function updateCopBot(
   handle.view.position.set(state.pos.x, state.pos.y)
   drawScanRing(handle.scanRing, state)
   drawFootprintRing(handle.footprintRing, state)
+
+  if (handle.sprite && handle.frames) {
+    const moving = state.behavior !== 'attack'
+    updateCharDir(handle.sprite, handle.frames, handle._lastDir.x, handle._lastDir.y, moving)
+  }
 
   return { hitRegistered, scanFired }
 }
@@ -299,20 +318,21 @@ function followPath(handle: CopBotHandle, map: TileMap, speed: number, dt: numbe
       handle._path.shift()
       continue
     }
-    moveToward(handle.state, map, wx, wy, speed, dt)
+    moveToward(handle, map, wx, wy, speed, dt)
     return true
   }
   return false
 }
 
 function moveToward(
-  state: CopBotState,
+  handle: CopBotHandle,
   map: TileMap,
   tx: number,
   ty: number,
   speed: number,
   dt: number,
 ) {
+  const { state } = handle
   const dx = tx - state.pos.x
   const dy = ty - state.pos.y
   const dist = Math.hypot(dx, dy)
@@ -320,6 +340,8 @@ function moveToward(
   const step = speed * dt
   const nx = dx / dist
   const ny = dy / dist
+
+  handle._lastDir = { x: nx, y: ny }
 
   const nextX = state.pos.x + nx * step
   if (!circleCollidesWall(map, nextX, state.pos.y, PLAYER_RADIUS - 1)) state.pos.x = nextX

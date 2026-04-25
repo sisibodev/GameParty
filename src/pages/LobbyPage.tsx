@@ -5,6 +5,8 @@ import { GAMES } from '../data/games'
 import type { GameMeta } from '../data/games'
 import styles from './LobbyPage.module.css'
 
+const IS_DEV = import.meta.env.DEV
+
 export default function LobbyPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -42,9 +44,13 @@ export default function LobbyPage() {
 
 function GameCard({ game }: { game: GameMeta }) {
   const navigate = useNavigate()
+  const disabled = game.devOnly && !IS_DEV
 
   return (
-    <div className={styles.card} onClick={() => navigate(game.path)}>
+    <div
+      className={`${styles.card} ${disabled ? styles.cardDisabled : ''}`}
+      onClick={() => !disabled && navigate(game.path)}
+    >
       <div className={styles.cardThumbnail}>{game.thumbnail}</div>
       <div className={styles.cardBody}>
         <h3 className={styles.cardTitle}>{game.name}</h3>
@@ -59,7 +65,9 @@ function GameCard({ game }: { game: GameMeta }) {
         </div>
       </div>
       <div className={styles.cardFooter}>
-        <button className={styles.playButton}>플레이</button>
+        <button className={styles.playButton} disabled={disabled}>
+          {disabled ? '준비 중' : '플레이'}
+        </button>
       </div>
     </div>
   )

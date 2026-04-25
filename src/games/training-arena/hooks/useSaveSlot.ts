@@ -1,25 +1,12 @@
-import { openDB, type IDBPDatabase } from 'idb'
 import {
   doc, getDoc, getDocs, setDoc, deleteDoc,
   collection, serverTimestamp,
 } from 'firebase/firestore'
 import { db, auth } from '../../../firebase/config'
 import type { SaveSlot, SlotId } from '../types'
+import { getDb } from './db'
 
-const DB_NAME    = 'battle-grandprix'
 const STORE_NAME = 'save-slots'
-const DB_VERSION = 3   // must stay in sync with useMatchLog.ts
-
-async function getDb(): Promise<IDBPDatabase> {
-  return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'slotId' })
-      }
-      // v2: match-logs store is owned by useMatchLog — nothing to do here
-    },
-  })
-}
 
 function slotsCol(uid: string) {
   return collection(db, 'users', uid, 'bgp_slots')

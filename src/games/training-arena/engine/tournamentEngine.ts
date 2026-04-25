@@ -13,12 +13,37 @@ import {
   GROUP_COUNT,
   GROUP_SIZE,
   INTER_MATCH_HP_REGEN_RATIO,
+  MAX_SKILL_SLOTS,
   QUALIFIER_TARGET,
 } from '../constants'
 import { SeededRng } from '../utils/rng'
 import { shuffle, pickN } from '../utils/fisherYates'
 import { simulateMatch, regenHpBetweenMatches } from './battleEngine'
 import { deriveStats } from './statDeriver'
+import skillsRaw from '../data/skills.json'
+
+// ─── Skill Learning Helper ────────────────────────────────────────────────────
+
+const TIER_RANK: Record<string, number> = { common: 1, rare: 2, hero: 3, legend: 4 }
+const _skillMap = Object.fromEntries(
+  (skillsRaw as Array<{ id: string; tier: string }>).map(s => [s.id, s])
+)
+
+function pickSkillToLearn(
+  winnerSkills: string[],
+  loserSkills:  string[],
+  maxSlots:     number,
+): string | null {
+  if (winnerSkills.length >= maxSlots) return null
+  const candidates = loserSkills.filter(id => !winnerSkills.includes(id))
+  if (candidates.length === 0) return null
+  candidates.sort(
+    (a, b) =>
+      (TIER_RANK[_skillMap[b]?.tier ?? 'common'] ?? 1) -
+      (TIER_RANK[_skillMap[a]?.tier ?? 'common'] ?? 1),
+  )
+  return candidates[0]
+}
 
 // ─── State Factory ────────────────────────────────────────────────────────────
 
@@ -93,6 +118,8 @@ function runQualifier(
         deriveStats(charById[result.winnerId].baseCombat, growthMap[result.winnerId], charById[result.winnerId].archetype).maxHp,
         INTER_MATCH_HP_REGEN_RATIO,
       )
+      const learned = pickSkillToLearn(skillMap[result.winnerId], skillMap[result.loserId], MAX_SKILL_SLOTS)
+      if (learned) skillMap[result.winnerId] = [...skillMap[result.winnerId], learned]
       losers.push(result.loserId)
     }
 
@@ -131,6 +158,16 @@ function playGroupMatch(
   result.groupId        = groupId
   result.groupMatchType = type
   allMatches.push(result)
+  // HP regen for winner
+  const winnerLastHp = result.log.at(-1)?.hpAfter[result.winnerId] ?? hpMap[result.winnerId]
+  hpMap[result.winnerId] = regenHpBetweenMatches(
+    winnerLastHp,
+    deriveStats(charById[result.winnerId].baseCombat, growthMap[result.winnerId], charById[result.winnerId].archetype).maxHp,
+    INTER_MATCH_HP_REGEN_RATIO,
+  )
+  // Skill learning for winner
+  const learned = pickSkillToLearn(skillMap[result.winnerId], skillMap[result.loserId], MAX_SKILL_SLOTS)
+  if (learned) skillMap[result.winnerId] = [...skillMap[result.winnerId], learned]
   return result
 }
 
@@ -147,6 +184,10 @@ function runGroup(
   tacticCardId?: TacticCardId,
 ): GroupResult {
   const [a, b, c, d] = memberIds
+  const hpMap: Record<number, number> = {}
+  for (const id of memberIds) {
+    hpMap[id] = deriveStats(charById[id].baseCombat, growthMap[id], charById[id].archetype).maxHp
+  }
   const play = (id1: number, id2: number, type: GroupMatchType) =>
     playGroupMatch(id1, id2, type, groupId, charById, growthMap, skillMap, itemsMap, rng, allMatches, playerCharId, tacticCardId)
 
@@ -194,6 +235,12 @@ function runBracket(
   let pool = shuffle(finalists, rng)
   let bracketRound = 1
 
+  // Initialize HP map at max HP for all finalists
+  const hpMap: Record<number, number> = {}
+  for (const id of finalists) {
+    hpMap[id] = deriveStats(charById[id].baseCombat, growthMap[id], charById[id].archetype).maxHp
+  }
+
   while (pool.length > 1) {
     const next: number[] = []
     for (let i = 0; i < pool.length; i += 2) {
@@ -208,6 +255,16 @@ function runBracket(
       result.bracketRound = bracketRound
       allMatches.push(result)
       bracketEliminations[result.loserId] = bracketRound
+      // HP regen for winner
+      const winnerLastHp = result.log.at(-1)?.hpAfter[result.winnerId] ?? hpMap[result.winnerId]
+      hpMap[result.winnerId] = regenHpBetweenMatches(
+        winnerLastHp,
+        deriveStats(charById[result.winnerId].baseCombat, growthMap[result.winnerId], charById[result.winnerId].archetype).maxHp,
+        INTER_MATCH_HP_REGEN_RATIO,
+      )
+      // Skill learning for winner
+      const learned = pickSkillToLearn(skillMap[result.winnerId], skillMap[result.loserId], MAX_SKILL_SLOTS)
+      if (learned) skillMap[result.winnerId] = [...skillMap[result.winnerId], learned]
       next.push(result.winnerId)
     }
     pool = next

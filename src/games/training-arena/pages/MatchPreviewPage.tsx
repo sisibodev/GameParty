@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { Archetype, CharacterDef, CombatStats, GrowthStats, ItemTier, SkillDef, TacticCardId, TournamentResult } from '../types'
+import type { Archetype, CharacterDef, CombatStats, GrowthStats, ItemTier, NpcStat, SkillDef, TacticCardId, TournamentResult } from '../types'
 import { deriveStats } from '../engine/statDeriver'
 import { NPC_BASE_GROWTH } from '../constants'
 import { getItemById } from '../data/items'
@@ -85,7 +85,11 @@ export default function MatchPreviewPage() {
   const opponentStats: CombatStats | null = opponentChar
     ? deriveStats(opponentChar.baseCombat, oppGrowth, opponentChar.archetype) : null
 
-  const achievement = lastTournament ? getOpponentAchievement(opponentId, lastTournament) : null
+  const rawAchievement = lastTournament ? getOpponentAchievement(opponentId, lastTournament) : null
+  const npcStat = activeSlot.npcStats?.[opponentId]
+  const achievement = rawAchievement && npcStat && npcStat.bestStageCount > 1
+    ? `${rawAchievement} ${npcStat.bestStageCount}회`
+    : rawAchievement
 
   const prevMatches  = playerMatches.slice(0, playerMatchIndex)
   const totalWins    = prevMatches.filter(m => m.playerWon).length
@@ -239,7 +243,7 @@ export default function MatchPreviewPage() {
 }
 
 function CharCard({
-  char, maxHp, stats, isPlayer, achievement,
+  char, maxHp, stats, isPlayer, achievement, npcStat,
 }: {
   char: CharacterDef | undefined
   maxHp: number
@@ -280,6 +284,12 @@ function CharCard({
       {achievement && (
         <div style={s.achieveBadge}>{achievement}</div>
       )}
+      {npcStat && (
+        <div style={s.recordBadge}>
+          통산 <span style={{ color: '#44ff88' }}>{npcStat.totalWins}승</span>
+          {' '}<span style={{ color: '#ff6666' }}>{npcStat.totalLosses}패</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -319,6 +329,7 @@ const s: Record<string, React.CSSProperties> = {
   recordLabel:  { fontSize: '0.65rem', color: '#666', fontWeight: 600 },
   recordVal:    { fontSize: '0.82rem', color: '#aaa', fontWeight: 700 },
   recordH2H:    { fontSize: '0.82rem', fontWeight: 700 },
+  recordBadge:  { marginTop: '2px', background: '#1a1a2e', border: '1px solid #334', borderRadius: '6px', padding: '3px 8px', fontSize: '0.68rem', color: '#aaa', textAlign: 'center' as const, width: '100%' },
   btnFight:     { background: 'linear-gradient(135deg,#fc5c5c,#fc9c3c)', border: 'none', borderRadius: '12px', color: '#fff', padding: '1rem 3.5rem', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 700 },
   oppItemsBox:  { background: '#15152a', border: '1px solid #2a2a3e', borderRadius: '8px', padding: '0.5rem 0.85rem', display: 'flex', flexDirection: 'column' as const, gap: '0.35rem', maxWidth: '420px', width: '100%' },
   oppItemsLabel:{ fontSize: '0.75rem', color: '#c0aaff', fontWeight: 700 },

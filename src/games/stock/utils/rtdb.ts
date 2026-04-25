@@ -74,7 +74,7 @@ export async function joinRoom(roomId: string, player: Player): Promise<void> {
 
   const room = snap.val() as Room
   if (room.status !== 'waiting') throw new Error('이미 게임이 시작된 방입니다.')
-  if (room.players && Object.keys(room.players).length >= 8) throw new Error('방이 가득 찼습니다.')
+  if (room.players && Object.keys(room.players).length >= 10) throw new Error('방이 가득 찼습니다.')
 
   const newPlayer: Player = {
     ...player,
@@ -381,8 +381,9 @@ export async function calculateRoundResult(roomId: string, round: number) {
     if (hasCashBurn) afterTax = Math.floor(afterTax * 0.5)
     // profit_steal 반영
     afterTax = Math.max(0, afterTax + (profitStealCashDelta[player.uid] ?? 0))
-    // 파산 구제
-    if (afterTax < (isFinite(minPrice) ? minPrice : Infinity)) {
+    // 파산 구제: 주식 없음 AND 현금으로 아무 주식도 못 사는 경우
+    const hasStock = Object.values(player.portfolio ?? {}).some(qty => (qty as number) > 0)
+    if (!hasStock && afterTax < (isFinite(minPrice) ? minPrice : Infinity)) {
       refillApplied[player.uid] = 1000000
       cashAfterTax[player.uid] = afterTax + 1000000
     } else {
@@ -521,6 +522,20 @@ export function subscribeRoom(roomId: string, cb: (room: Room | null) => void): 
 /** 구독 해제 */
 export function unsubscribeRoom(roomRef: DatabaseReference) {
   off(roomRef)
+}
+
+/** 대기 중인 방 목록 실시간 구독 (status === 'waiting', 플레이어 1명 이상) */
+export function subscribeRooms(cb: (rooms: (Room & { roomId: string })[]) => void): DatabaseReference {
+  const roomsRef = ref(db(), 'rooms')
+  onValue(roomsRef, snap => {
+    if (!snap.exists()) { cb([]); return }
+    const all = snap.val() as Record<string, Room>
+    const waiting = Object.entries(all)
+      .filter(([, r]) => r.status === 'waiting' && Object.keys(r.players ?? {}).length >= 1)
+      .map(([roomId, r]) => ({ ...r, roomId }))
+    cb(waiting)
+  })
+  return roomsRef
 }
 
 /** 정보 카드 사용 — 카드 used 처리 + usedInfoThisRound 증가 */

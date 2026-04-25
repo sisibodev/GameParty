@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import './stock-tokens.css'
 import RoomEnter from './pages/RoomEnter'
 import GameLobby from './pages/GameLobby'
 import GamePlay from './pages/GamePlay'

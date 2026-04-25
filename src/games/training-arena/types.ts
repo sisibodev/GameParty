@@ -246,6 +246,15 @@ export interface InventoryItem {
   acquiredRound: number
 }
 
+// ─── NPC Stat Tracking ────────────────────────────────────────────────────────
+
+export interface NpcStat {
+  totalWins:      number
+  totalLosses:    number
+  bestStage:      string  // '우승' | '준우승' | '4강' | '8강' | '16강' | '본선 그룹 탈락' | '예선 탈락'
+  bestStageCount: number
+}
+
 // ─── Save Slot ────────────────────────────────────────────────────────────────
 
 export type SlotId = 1 | 2 | 3
@@ -266,12 +275,13 @@ export interface SaveSlot {
   runRecords?: RunRecord[]    // v0.4.3+: 라운드별 기록 (최대 20건, 점수 내림차순)
   createdAt: number
   updatedAt: number
+  npcStats?: Record<number, NpcStat>
 }
 
-// 전투용 스킬 목록 (initialSkills + acquiredSkills, 최대 8개)
+// 전투용 스킬 목록 (initialSkills + acquiredSkills, 최대 5개)
 export function mergePlayerSkills(slot: SaveSlot): string[] {
   const all = [...slot.initialSkills, ...slot.acquiredSkills]
-  return Array.from(new Set(all)).slice(0, 8)
+  return Array.from(new Set(all)).slice(0, 5)
 }
 
 // ─── Run Record (v0.4.3) ─────────────────────────────────────────────────────

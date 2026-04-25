@@ -111,7 +111,7 @@ function FilterBtn({ label, value, current, onSelect, color }: FilterBtnProps) {
 }
 
 export default function EncyclopediaPage() {
-  const { unlockedCharIds, newCharIds, clearNewChars, slots } = useGameStore()
+  const { unlockedCharIds, newCharIds, clearNewChars, slots, playedCharIds } = useGameStore()
   const winnerCharIds = slots.filter(s => s.bestClearRound != null).map(s => s.characterId)
   const bestScores = buildBestScores(slots)
   const [filter, setFilter] = useState<Archetype | 'all'>('all')

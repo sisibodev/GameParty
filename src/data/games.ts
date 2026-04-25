@@ -5,6 +5,7 @@ export interface GameMeta {
   thumbnail: string
   path: string
   enabled: boolean
+  devOnly?: boolean
   tags: string[]
   players: string
 }
@@ -37,6 +38,7 @@ export const GAMES: GameMeta[] = [
     thumbnail: '🕵️',
     path: '/game/cops-and-robbers',
     enabled: true,
+    devOnly: true,
     tags: ['멀티', '스텔스', '대전'],
     players: '4~10명',
   },
