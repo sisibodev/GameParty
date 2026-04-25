@@ -1,8 +1,8 @@
 # 🛡️ 배틀 그랑프리 — 아케타입 성장 계수 기획서
 
-> 버전: v0.1 (2026-04-24 최초 작성)
+> 버전: v0.2 (코드 기반 확정, 2026-04-25 검증)
 > 상위 문서: [training-arena-plan.md](./training-arena-plan.md)
-> 연관 코드: `src/games/training-arena/constants.ts` (`ARCHETYPE_GROWTH_COEFFS`), `src/games/training-arena/engine/statDeriver.ts`
+> 연관 코드: `src/games/training-arena/constants.ts` (ARCHETYPE_GROWTH_COEFFS, DEFAULT_COEFFS), `src/games/training-arena/engine/statDeriver.ts`
 
 ---
 
@@ -64,58 +64,78 @@ interface ArchetypeCoeffs {
 
 ---
 
-## 5. 아케타입별 계수표 (현재 튜닝값)
+## 5. 아케타입별 계수표 (현재 튜닝값, 코드 확정)
 
-> 기본값에서 **변경된 항목만** 표기. 미표기 항목은 DEFAULT와 동일.
+> **기본값**(DEFAULT_COEFFS)에서 변경된 항목만 표기. 미표기 항목은 DEFAULT와 동일.
 
-### 5.1 tank (탱커)
+### 5.1 tank (탱커) ✓
+```ts
+hp_to_maxHp: 10, str_to_atk: 3.0, str_to_def: 1.5, 
+hp_to_def: 0.1, str_to_spd: 0.3
 ```
-hp_to_maxHp 10, str_to_atk 3.0, str_to_def 1.5, hp_to_def 0.1, str_to_spd 0.3
-```
-체력·방어 중심. STR이 속도에도 약간 기여해 행동력 보강.
+**컨셉**: 체력·방어 중심. STR이 속도에도 약간 기여해 행동력 보강.
+**특징**: 가장 높은 hp_to_def (HP로 방어력 보너스)
 
-### 5.2 berserker (버서커)
+### 5.2 berserker (버서커) ✓
+```ts
+hp_to_maxHp: 8, str_to_atk: 4.0, luk_to_crit: 0.7, 
+str_to_crit: 0.2
 ```
-hp_to_maxHp 8, str_to_atk 4.0, luk_to_crit 0.7, str_to_crit 0.2
-```
-STR→ATK 계수가 가장 높음. 크리 폭발을 위한 LUK·STR→크리 추가 보정.
+**컨셉**: 고위험 고보상 딜러, 크리 폭발.
+**특징**: str_to_atk 최고값(4.0), luk_to_crit 최고값(0.7), str_to_crit 유일
 
-### 5.3 assassin (어쌔신)
+### 5.3 assassin (어쌔신) ✓
+```ts
+str_to_atk: 2.2, agi_to_spd: 2.0, luk_to_crit: 0.5, 
+luk_to_eva: 0.4
 ```
-str_to_atk 2.2, agi_to_spd 2.0, luk_to_crit 0.5, luk_to_eva 0.4
-```
-기본 스탯이 이미 강해서 STR→ATK 배율을 낮추고 회피 강화로 차별화.
+**컨셉**: 빠른 속도·높은 회피. 기본 스탯이 이미 강함.
+**특징**: 낮은 str_to_atk(2.2)로 배율 완화, 회피 강화(luk_to_eva 0.4)
 
-### 5.4 ranger (레인저)
+### 5.4 ranger (레인저) ✓
+```ts
+luk_to_crit: 0.4  (외 모두 DEFAULT)
 ```
-luk_to_crit 0.4
-```
-다른 건 기본값, LUK→CRIT만 소폭 상향 (LOW 구간 탈출).
+**컨셉**: 원거리 크리 딜러.
+**특징**: DEFAULT 대비 최소 수정 (luk_to_crit만 0.5→0.4 소폭 상향)
 
-### 5.5 mage (마법사)
+### 5.5 mage (마법사) ✓
+```ts
+str_to_atk: 1.5, int_to_mana: 8, int_to_atk: 2.0, 
+int_to_spd: 1.2
 ```
-str_to_atk 1.5, int_to_mana 8, int_to_atk 1.5, int_to_spd 0.5
-```
-STR→ATK 크게 낮추고 INT→ATK·SPD·마나를 핵심으로 설정.
+**컨셉**: 마나·스킬 의존 딜러. 느린 초반 → 강한 후반.
+**특징**: 
+- str_to_atk 최저값(1.5) — 힘으로는 약함
+- int_to_mana 최고값(8) — 지력으로 마나 축적
+- int_to_atk 높음(2.0) — INT로 매직 공격력 상승
+- int_to_spd(1.2) — INT로 속도 보너스
 
-### 5.6 paladin (성기사)
+### 5.6 paladin (성기사) ✓
+```ts
+hp_to_maxHp: 12, str_to_atk: 2, str_to_def: 2, 
+int_to_maxHp: 3, int_to_spd: 0.7
 ```
-hp_to_maxHp 12, str_to_atk 2, str_to_def 2, int_to_maxHp 3
-```
-탱커보다도 체력 계수가 높고 INT가 체력에 기여.
+**컨셉**: 체력·방어 + 지력으로 생존력 극대.
+**특징**: 
+- hp_to_maxHp 최고값(12) — 탱커 넘어선 생존력
+- int_to_maxHp(3) — 유일하게 INT → maxHp 추가 보너스
+- int_to_spd(0.7) — 지력으로도 속도 지원
 
-### 5.7 support (서포트)
+### 5.7 support (서포트) ✓
+```ts
+str_to_atk: 2.5, luk_to_crit: 0.3, int_to_mana: 7, 
+int_to_spd: 0.8, luk_to_eva: 0.3, int_to_atk: 0.4
 ```
-str_to_atk 2.5, luk_to_crit 0.3, int_to_mana 7, int_to_spd 0.3,
-luk_to_eva 0.3, int_to_atk 0.4
-```
-INT 기반 유틸리티, LUK→회피로 생존 보강.
+**컨셉**: INT 기반 유틸리티. LUK→회피로 생존.
+**특징**: 다양한 계수 조합, 균형 잡힌 성장
 
-### 5.8 warrior (워리어)
+### 5.8 warrior (워리어) ✓
+```ts
+str_to_atk: 3.5  (외 모두 DEFAULT)
 ```
-str_to_atk 3.5
-```
-균형형, STR→ATK만 소폭 상향.
+**컨셉**: 균형 잡힌 근접 딜러.
+**특징**: str_to_atk만 소폭 상향(3→3.5), 가장 단순한 설계
 
 ---
 
@@ -150,16 +170,19 @@ maxMana= baseMaxMana + int * int_to_mana
 
 ## 8. 튜닝 이력
 
-| 일자 | 변경 | 비고 |
-|------|------|------|
-| 2026-04-22 | 아케타입별 차등화 최초 도입 (commit e3f9334) | DEFAULT 대비 직업 특성 부여 |
-| 2026-04-23 | R5/R10 균형 목표로 계수 재조정 (commit 3b9a6ac) | 전 직업 승률 평탄화 |
-| 2026-04-23 | 플레이어 성장 커브 재조정 (commit 4651d08) | 초반 너무 어려움·후반 너무 쉬움 개선 |
+| 일자 | 변경 | 커밋 | 비고 |
+|------|------|------|------|
+| 2026-04-22 | 아케타입별 차등화 최초 도입 | e3f9334 | DEFAULT 대비 직업 특성 부여 |
+| 2026-04-23 | R5/R10 균형 목표로 계수 재조정 | 3b9a6ac | 전 직업 승률 평탄화 |
+| 2026-04-23 | 플레이어 성장 커브 재조정 | 4651d08 | 초반 어려움·후반 쉬움 개선 |
+| 2026-04-25 | v0.4.2 본선 더블 엘리미네이션 적용 | — | 조별 리그 도입으로 균형 재평가 필요 |
 
 ---
 
 ## 9. 향후 과제
 
-- 각 직업별 **대표 빌드 예시** (어떤 스탯을 얼마나 편중하면 좋은가) 정리
-- **아이템 효과 × 계수** 상호작용 검증 (v0.4 아이템 시스템 도입 후)
-- 자동 밸런스 시뮬레이터(`scripts/balance-check.ts`)로 승률 검증 자동화
+- [ ] 각 직업별 **대표 빌드 예시** (어떤 스탯을 얼마나 편중하면 좋은가) 정리
+- [ ] **아이템 효과 × 계수** 상호작용 검증 (v0.4.2+ 아이템 시스템 적용 후)
+- [ ] 본선 더블 엘리미네이션 도입 후 **R5/R10 승률 재검증** (이전 예선 방식과 달라짐)
+- [ ] 자동 밸런스 시뮬레이터 (`scripts/balance-check.ts` 등)로 승률 검증 자동화
+- [ ] 전술 카드 8종 × 8 아케타입 × 직업 빌드 메타 분석
