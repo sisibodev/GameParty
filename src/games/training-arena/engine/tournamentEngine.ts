@@ -146,6 +146,7 @@ function playGroupMatch(
   itemsMap: Record<number, string[]>,
   rng: SeededRng,
   allMatches: MatchResult[],
+  hpMap: Record<number, number>,
   playerCharId?: number,
   tacticCardId?: TacticCardId,
 ): MatchResult {
@@ -189,7 +190,7 @@ function runGroup(
     hpMap[id] = deriveStats(charById[id].baseCombat, growthMap[id], charById[id].archetype).maxHp
   }
   const play = (id1: number, id2: number, type: GroupMatchType) =>
-    playGroupMatch(id1, id2, type, groupId, charById, growthMap, skillMap, itemsMap, rng, allMatches, playerCharId, tacticCardId)
+    playGroupMatch(id1, id2, type, groupId, charById, growthMap, skillMap, itemsMap, rng, allMatches, hpMap, playerCharId, tacticCardId)
 
   const m1 = play(a, b, 'initial')
   const m2 = play(c, d, 'initial')
