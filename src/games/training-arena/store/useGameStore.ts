@@ -296,7 +296,6 @@ function buildTournamentState(
   return { slotWithPhase, playerMatches, newUnlocked, newlyUnlocked }
 }
 
-<<<<<<< HEAD
 // ─── Match Navigation ────────────────────────────────────────────────────────
 // 실제 전투 결과(won)에 따라 다음 경기 인덱스와 페이즈를 결정.
 // playerMatches는 pre-run 기준이므로 re-sim 결과가 다르면 올바른 경로로 점프.
