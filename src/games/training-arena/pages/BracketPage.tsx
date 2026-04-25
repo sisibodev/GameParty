@@ -1,6 +1,8 @@
 import { useGameStore } from '../store/useGameStore'
 import type { CharacterDef, MatchResult } from '../types'
 import charactersRaw from '../data/characters.json'
+import HeaderBar from '../components/ui/HeaderBar'
+import '../styles/arena.css'
 
 const characters = charactersRaw as CharacterDef[]
 const charName = (id: number) => characters.find(c => c.id === id)?.name ?? `#${id}`
@@ -16,19 +18,27 @@ function MatchCard({ match, pid }: MatchCardProps) {
   const isPlayerMatch = match.char1Id === pid || match.char2Id === pid
   const ids = [match.char1Id, match.char2Id]
   return (
-    <div style={{ ...s.matchCard, borderColor: isPlayerMatch ? '#c0aaff' : '#2a2a3e' }}>
+    <div style={{
+      background: isPlayerMatch ? 'rgba(124,80,240,.1)' : 'rgba(20,14,40,.8)',
+      border: `1px solid ${isPlayerMatch ? 'rgba(164,120,255,.5)' : 'var(--line)'}`,
+      borderRadius: 8, padding: '6px 8px',
+      display: 'flex', flexDirection: 'column' as const, gap: 3,
+      boxShadow: isPlayerMatch ? '0 0 12px -4px rgba(164,120,255,.3)' : 'none',
+    }}>
       {ids.map(id => (
         <div
           key={id}
           style={{
-            ...s.combatant,
-            color: id === match.winnerId ? '#e8e8ff' : '#555',
+            display: 'flex', alignItems: 'center', gap: 4, fontSize: 11,
+            padding: '2px 4px', borderRadius: 4,
+            color: id === match.winnerId ? 'var(--ink)' : 'var(--ink-mute)',
             fontWeight: id === match.winnerId ? 700 : 400,
-            background: id === pid ? '#1e1440' : 'transparent',
+            background: id === pid ? 'rgba(124,80,240,.15)' : 'transparent',
+            overflow: 'hidden', whiteSpace: 'nowrap' as const, textOverflow: 'ellipsis',
           }}
         >
-          {id === match.winnerId && <span style={s.win}>▶</span>}
-          <span style={id === pid ? s.playerName : undefined}>{charName(id)}</span>
+          {id === match.winnerId && <span style={{ color:'var(--violet)', fontSize:9, flexShrink:0 }}>▶</span>}
+          <span style={id === pid ? { color:'var(--violet-glow)', fontWeight:700 } : undefined}>{charName(id)}</span>
         </div>
       ))}
     </div>
@@ -55,59 +65,50 @@ export default function BracketPage() {
   const winner = lastTournament.winner
 
   return (
-    <div style={s.root}>
-      <h2 style={s.title}>대진표</h2>
-      <p style={s.sub}>R{activeSlot.currentRound} · {charName(pid)}</p>
+    <div className="arena-bg-arena" style={{ display:'flex', flexDirection:'column' as const, minHeight:'100vh' }}>
+      <HeaderBar
+        subtitle="TOURNAMENT BRACKET"
+        round={activeSlot.currentRound}
+        phase={`대진표 · ${charName(pid)}`}
+      />
 
-      <div style={s.bracket}>
-        {rounds.map((roundMatches, ri) => (
-          <div key={ri} style={s.roundCol}>
-            <div style={s.roundLabel}>{ROUND_LABELS[ri]}</div>
-            <div style={{ ...s.matchList, justifyContent: ri === 3 ? 'center' : 'space-evenly' }}>
-              {roundMatches.map((m, mi) => (
-                <MatchCard key={mi} match={m} pid={pid} />
-              ))}
+      <div style={{ flex:1, padding:'20px 16px', display:'flex', flexDirection:'column' as const, gap:20, overflowX:'auto' as const }}>
+        <div style={{ display:'flex', gap:8, minWidth:600 }}>
+          {rounds.map((roundMatches, ri) => (
+            <div key={ri} style={{ display:'flex', flexDirection:'column' as const, flex:'1 1 0', gap:6, minWidth:110 }}>
+              <div style={{ textAlign:'center' as const, fontSize:10, fontWeight:700, color:'var(--ink-mute)', letterSpacing:'.1em', padding:'4px 0', borderBottom:'1px solid var(--line)' }}>
+                {ROUND_LABELS[ri]}
+              </div>
+              <div style={{ display:'flex', flexDirection:'column' as const, flex:1, gap:6, justifyContent: ri === 3 ? 'center' : 'space-evenly' }}>
+                {roundMatches.map((m, mi) => (
+                  <MatchCard key={mi} match={m} pid={pid} />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        <div style={s.roundCol}>
-          <div style={s.roundLabel}>우승</div>
-          <div style={{ ...s.matchList, justifyContent: 'center' }}>
-            <div style={s.winnerCard}>
-              🏆
-              <span style={winner === pid ? s.playerName : undefined}>{charName(winner)}</span>
+          <div style={{ display:'flex', flexDirection:'column' as const, flex:'1 1 0', gap:6, minWidth:110 }}>
+            <div style={{ textAlign:'center' as const, fontSize:10, fontWeight:700, color:'var(--gold)', letterSpacing:'.1em', padding:'4px 0', borderBottom:'1px solid rgba(255,214,107,.3)' }}>
+              우승
+            </div>
+            <div style={{ display:'flex', flexDirection:'column' as const, flex:1, justifyContent:'center', alignItems:'center' }}>
+              <div style={{ background:'rgba(255,214,107,.08)', border:'1px solid rgba(255,214,107,.5)', borderRadius:10, padding:'12px 16px', display:'flex', flexDirection:'column' as const, alignItems:'center', gap:6, fontSize:13, color:'var(--gold)', fontWeight:700 }}>
+                🏆
+                <span style={winner === pid ? { color:'var(--violet-glow)' } : undefined}>{charName(winner)}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div style={s.btnRow}>
-        <button style={s.btnReplay} onClick={() => useGameStore.setState({ phase: 'replay' })}>
-          📋 전적 보기
-        </button>
-        <button style={s.btnNext} onClick={() => useGameStore.setState({ phase: 'reward' })}>
-          보상 받기 →
-        </button>
+        <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
+          <button className="arena-btn" onClick={() => useGameStore.setState({ phase: 'replay' })}>
+            📋 전적 보기
+          </button>
+          <button className="arena-btn arena-btn-primary" onClick={() => useGameStore.setState({ phase: 'reward' })}>
+            보상 받기 →
+          </button>
+        </div>
       </div>
     </div>
   )
-}
-
-const s: Record<string, React.CSSProperties> = {
-  root:       { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem 1rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff', gap: '1rem' },
-  title:      { fontSize: '1.5rem', fontWeight: 700, color: '#c0aaff', margin: 0 },
-  sub:        { color: '#888', margin: 0, fontSize: '0.85rem' },
-  bracket:    { display: 'flex', gap: '0.5rem', overflowX: 'auto', width: '100%', maxWidth: '900px', padding: '0.5rem 0' },
-  roundCol:   { display: 'flex', flexDirection: 'column', minWidth: '110px', flex: '1 1 0', gap: '0.4rem' },
-  roundLabel: { textAlign: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#888', letterSpacing: '0.08em', padding: '4px 0', borderBottom: '1px solid #2a2a3e' },
-  matchList:  { display: 'flex', flexDirection: 'column', flex: 1, gap: '0.35rem' },
-  matchCard:  { background: '#14142a', border: '1px solid', borderRadius: '6px', padding: '5px 7px', display: 'flex', flexDirection: 'column', gap: '3px' },
-  combatant:  { display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', padding: '2px 3px', borderRadius: '3px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' },
-  win:        { color: '#7c5cfc', fontSize: '0.6rem', flexShrink: 0 },
-  playerName: { color: '#c0aaff', fontWeight: 700 },
-  winnerCard: { background: '#1a1400', border: '1px solid #ffd700', borderRadius: '8px', padding: '0.6rem 0.8rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', fontSize: '0.85rem', color: '#ffd700', fontWeight: 700 },
-  btnRow:     { display: 'flex', gap: '0.75rem', marginTop: '0.5rem' },
-  btnReplay:  { background: 'transparent', border: '1px solid #444', borderRadius: '8px', color: '#aaa', padding: '0.75rem 1.5rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 },
-  btnNext:    { background: '#7c5cfc', border: 'none', borderRadius: '8px', color: '#fff', padding: '0.75rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },
 }

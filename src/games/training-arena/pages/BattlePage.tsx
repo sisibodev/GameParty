@@ -5,6 +5,7 @@ import { deriveStats } from '../engine/statDeriver'
 import { NPC_BASE_GROWTH } from '../constants'
 import charactersRaw from '../data/characters.json'
 import skillsRaw    from '../data/skills.json'
+import '../styles/arena.css'
 
 const CHARACTERS = charactersRaw as CharacterDef[]
 const SKILLS     = skillsRaw    as SkillDef[]
@@ -93,71 +94,89 @@ export default function BattlePage() {
     setDone(true)
   }
 
+  const isWin = match.winnerId === pid
+
   return (
-    <div style={s.root}>
-      <div style={s.stageBar}>{matchInfo.stageLabel}</div>
-
-      <div style={s.arena}>
-        <CharPanel
-          charId={pid}
-          isPlayer
-          hp={pidHp}
-          maxHp={match.initialHp[pid]}
-          mana={pidMana}
-          maxMana={match.initialMana[pid]}
-          isActing={entry?.actorId === pid}
-          stats={playerStats}
-          skills={playerSkills}
-        />
-        <div style={s.vsDivider}>VS</div>
-        <CharPanel
-          charId={oppId}
-          hp={oppHp}
-          maxHp={match.initialHp[oppId]}
-          mana={oppMana}
-          maxMana={match.initialMana[oppId]}
-          isActing={entry?.actorId === oppId}
-          stats={oppStats}
-          skills={oppSkills}
-        />
+    <div className="arena-bg-arena" style={{ display: 'flex', flexDirection: 'column' as const, minHeight: '100vh' }}>
+      {/* Top bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--line)', background: 'rgba(10,6,20,.7)', backdropFilter: 'blur(8px)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--violet-glow)', letterSpacing: '.15em' }}>BATTLE</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)' }}>{matchInfo.stageLabel}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {(['1x', '2x', '4x'] as const).map(sp => (
+            <button
+              key={sp}
+              className={`arena-btn${speed === sp ? ' arena-btn-primary' : ''}`}
+              style={{ padding: '4px 12px', fontSize: 12, borderRadius: 6 }}
+              onClick={() => handleSetSpeed(sp)}
+            >{sp}</button>
+          ))}
+          <button className="arena-btn" style={{ padding: '4px 12px', fontSize: 12, borderRadius: 6 }} onClick={handleSkip} disabled={done}>스킵</button>
+          <span className="arena-mono" style={{ fontSize: 11, color: 'var(--ink-mute)', marginLeft: 4 }}>{logCursor}/{match.log.length}</span>
+        </div>
       </div>
 
-      <div style={s.controlBar}>
-        {(['1x', '2x', '4x'] as const).map(sp => (
-          <button
-            key={sp}
-            style={{ ...s.speedBtn, ...(speed === sp ? s.speedActive : {}) }}
-            onClick={() => handleSetSpeed(sp)}
-          >{sp}</button>
-        ))}
-        <button style={s.skipBtn} onClick={handleSkip} disabled={done}>스킵</button>
-        <span style={s.turnCounter}>{logCursor} / {match.log.length} 턴</span>
-      </div>
+      {/* Main area */}
+      <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'hidden' }}>
+        {/* Left: fighters */}
+        <div style={{ flex: '0 0 320px', padding: '20px 16px', display: 'flex', flexDirection: 'column' as const, gap: 16, justifyContent: 'center' }}>
+          <CharPanel
+            charId={pid}
+            isPlayer
+            hp={pidHp}
+            maxHp={match.initialHp[pid]}
+            mana={pidMana}
+            maxMana={match.initialMana[pid]}
+            isActing={entry?.actorId === pid}
+            stats={playerStats}
+            skills={playerSkills}
+          />
+          <div style={{ textAlign: 'center' as const, fontSize: 18, fontWeight: 900, color: 'var(--violet-glow)', letterSpacing: '.1em' }}>VS</div>
+          <CharPanel
+            charId={oppId}
+            hp={oppHp}
+            maxHp={match.initialHp[oppId]}
+            mana={oppMana}
+            maxMana={match.initialMana[oppId]}
+            isActing={entry?.actorId === oppId}
+            stats={oppStats}
+            skills={oppSkills}
+          />
+        </div>
 
-      <div style={s.logBox} ref={logRef}>
-        {recentLog.map((e, i) => (
-          <LogRow key={i} entry={e} pid={pid} />
-        ))}
-        {done && (
-          <div style={s.logDone}>
-            <span style={{ color: match.winnerId === pid ? '#44ff88' : '#ff4444', fontWeight: 900, fontSize: '1rem' }}>
-              {match.winnerId === pid ? '🏆 승리!' : '💀 패배'}
-            </span>
-            <span style={{ color: '#aaa', marginLeft: '0.5rem' }}>
-              {'(승자: '}{charName(match.winnerId)}{match.winnerId === pid ? ' · 나)' : ')'}
-            </span>
+        {/* Right: combat log */}
+        <div style={{ flex: 1, borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column' as const, background: 'rgba(6,4,14,.6)' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)', fontSize: 10, color: 'var(--ink-mute)', letterSpacing: '.1em', fontWeight: 700 }}>COMBAT LOG</div>
+          <div ref={logRef} style={{ flex: 1, overflowY: 'auto' as const, padding: '8px 12px', display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+            {recentLog.map((e, i) => (
+              <LogRow key={i} entry={e} pid={pid} />
+            ))}
+            {done && (
+              <div style={{ textAlign: 'center' as const, padding: '16px 0', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: isWin ? 'var(--green)' : 'var(--red)' }}>
+                  {isWin ? '🏆 승리!' : '💀 패배'}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>
+                  승자: {charName(match.winnerId)}{isWin ? ' · 나' : ''}
+                </div>
+              </div>
+            )}
           </div>
-        )}
+          {done && (
+            <div style={{ padding: '16px', borderTop: '1px solid var(--line)' }}>
+              <button
+                className="arena-btn arena-btn-primary"
+                style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '12px 0', fontSize: 14 }}
+                onClick={() => useGameStore.setState({ phase: 'match_result' })}
+              >
+                결과 확인 →
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-
-      {done && (
-        <button
-          style={s.btnResult}
-          onClick={() => useGameStore.setState({ phase: 'match_result' })}
-        >
-          결과 확인 →
-        </button>
-      )}
     </div>
   )
 }
@@ -177,33 +196,41 @@ function CharPanel({
 }) {
   const hpPct   = maxHp   > 0 ? (hp   / maxHp)   * 100 : 0
   const manaPct = maxMana > 0 ? (mana / maxMana) * 100 : 0
-  const hpColor = hpPct > 60 ? '#44ff88' : hpPct > 30 ? '#ffaa44' : '#ff4444'
+  const hpFillClass = hpPct > 60 ? 'arena-hp-fill' : hpPct > 30 ? 'arena-hp-fill arena-hp-warn' : 'arena-hp-fill arena-hp-danger'
 
   return (
-    <div style={{ ...s.charPanel, boxShadow: isActing ? '0 0 12px #ffd70066' : 'none' }}>
-      {isPlayer && <div style={s.playerTag}>나</div>}
-      <div style={s.charIcon}>
-        <span style={{ fontSize: '2.5rem' }}>🃏</span>
-      </div>
-      <div style={s.charNameText}>{charName(charId)}</div>
-      <div style={s.barGroup}>
-        <div style={s.barLabelRow}>
-          <span style={s.barLbl}>HP</span>
-          <span style={s.barVal}>{Math.ceil(hp)}/{maxHp}</span>
-        </div>
-        <div style={s.barBg}>
-          <div style={{ ...s.bar, width: `${hpPct}%`, background: hpColor, transition: 'width 0.25s ease' }} />
-        </div>
-        <div style={s.barLabelRow}>
-          <span style={s.barLbl}>MP</span>
-          <span style={s.barVal}>{Math.ceil(mana)}/{maxMana}</span>
-        </div>
-        <div style={s.barBg}>
-          <div style={{ ...s.bar, width: `${manaPct}%`, background: '#44aaff', transition: 'width 0.25s ease' }} />
+    <div className="arena-panel arena-crt" style={{ padding: 16, display: 'flex', flexDirection: 'column' as const, gap: 10, boxShadow: isActing ? '0 0 16px -4px rgba(255,214,107,.5)' : undefined, border: isActing ? '1px solid rgba(255,214,107,.4)' : undefined }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 40, height: 40, background: 'rgba(124,80,240,.15)', border: '1px solid var(--line-strong)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🃏</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{charName(charId)}</span>
+            {isPlayer && <span style={{ fontSize: 9, fontWeight: 700, background: 'var(--violet)', borderRadius: 3, padding: '1px 5px', color: '#fff' }}>나</span>}
+            {isActing && <span style={{ fontSize: 9, color: 'var(--gold)', fontWeight: 700 }}>▶ 행동 중</span>}
+          </div>
         </div>
       </div>
+
+      {/* HP bar */}
+      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>HP</span>
+          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-dim)' }}>{Math.ceil(hp)}/{maxHp}</span>
+        </div>
+        <div className="arena-hpbar">
+          <div className={hpFillClass} style={{ width: `${hpPct}%` }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>MP</span>
+          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-dim)' }}>{Math.ceil(mana)}/{maxMana}</span>
+        </div>
+        <div className="arena-hpbar">
+          <div className="arena-mp-fill" style={{ width: `${manaPct}%` }} />
+        </div>
+      </div>
+
       {stats && (
-        <div style={s.statGrid}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
           <StatChip label="공격" val={Math.round(stats.atk)} />
           <StatChip label="방어" val={Math.round(stats.def)} />
           <StatChip label="속도" val={Math.round(stats.spd)} />
@@ -212,9 +239,9 @@ function CharPanel({
         </div>
       )}
       {skills.length > 0 && (
-        <div style={s.skillList}>
+        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
           {skills.map(id => (
-            <div key={id} style={s.skillTag}>{skillName(id)}</div>
+            <span key={id} style={{ fontSize: 10, background: 'rgba(103,232,249,.08)', border: '1px solid rgba(103,232,249,.25)', borderRadius: 4, padding: '2px 7px', color: 'var(--cyan)', whiteSpace: 'nowrap' as const }}>{skillName(id)}</span>
           ))}
         </div>
       )}
@@ -224,9 +251,9 @@ function CharPanel({
 
 function StatChip({ label, val }: { label: string; val: string | number }) {
   return (
-    <div style={s.statChip}>
-      <span style={s.statChipLabel}>{label}</span>
-      <span style={s.statChipVal}>{val}</span>
+    <div style={{ background: 'rgba(10,6,20,.6)', borderRadius: 4, padding: '2px 6px', display: 'flex', justifyContent: 'space-between', gap: 4 }}>
+      <span className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-mute)' }}>{label}</span>
+      <span className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-dim)', fontWeight: 700 }}>{val}</span>
     </div>
   )
 }
@@ -240,51 +267,15 @@ function LogRow({ entry, pid }: { entry: MatchLogEntry; pid: number }) {
       : `${entry.damage}dmg${entry.critical ? ' 💥' : ''}`
 
   return (
-    <div style={{ ...s.logRow, background: isMyAction ? '#1a1a3e' : '#111' }}>
-      <span style={s.logTurn}>T{entry.turn}</span>
-      <span style={{ ...s.logActor, color: isMyAction ? '#c0aaff' : '#ff9966' }}>
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '3px 8px', borderRadius: 4, fontSize: 11, background: isMyAction ? 'rgba(124,80,240,.08)' : 'rgba(255,255,255,.02)' }}>
+      <span className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-mute)', minWidth: 28 }}>T{entry.turn}</span>
+      <span style={{ fontWeight: 700, minWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, color: isMyAction ? 'var(--violet-glow)' : 'var(--red)' }}>
         {charName(entry.actorId)}
       </span>
-      <span style={s.logArrow}>→</span>
-      <span style={s.logTarget}>{charName(entry.targetId)}</span>
-      <span style={s.logAction}>{actionStr}</span>
+      <span style={{ color: 'var(--line-strong)' }}>→</span>
+      <span style={{ color: 'var(--ink-dim)', minWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{charName(entry.targetId)}</span>
+      <span style={{ color: entry.critical ? 'var(--gold)' : 'var(--ink)', flex: 1 }}>{actionStr}</span>
     </div>
   )
 }
 
-const s: Record<string, React.CSSProperties> = {
-  root:        { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff', gap: '0.75rem' },
-  stageBar:    { fontSize: '1rem', fontWeight: 700, color: '#ffd700', letterSpacing: '0.1em' },
-  arena:       { display: 'flex', gap: '1rem', alignItems: 'flex-start', width: '100%', maxWidth: '560px' },
-  vsDivider:   { fontSize: '1.2rem', fontWeight: 900, color: '#c0aaff', alignSelf: 'center', minWidth: '30px', textAlign: 'center' as const },
-  charPanel:   { flex: 1, background: '#1a1a2e', border: '1px solid #333', borderRadius: '10px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', position: 'relative' as const, transition: 'box-shadow 0.2s' },
-  playerTag:   { position: 'absolute' as const, top: '4px', left: '6px', fontSize: '0.6rem', fontWeight: 700, background: '#7c5cfc', borderRadius: '3px', padding: '1px 5px' },
-  charIcon:    { width: '52px', height: '52px', background: '#111', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
-  charNameText:{ fontSize: '0.8rem', fontWeight: 700, textAlign: 'center' as const },
-  barGroup:    { display: 'flex', flexDirection: 'column', gap: '3px' },
-  barLabelRow: { display: 'flex', justifyContent: 'space-between' },
-  barLbl:      { fontSize: '0.6rem', color: '#666' },
-  barVal:      { fontSize: '0.6rem', color: '#888' },
-  barBg:       { height: '6px', background: '#111', borderRadius: '3px', overflow: 'hidden' },
-  bar:         { height: '100%', borderRadius: '3px' },
-  controlBar:  { display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' },
-  speedBtn:    { background: '#1a1a2e', border: '1px solid #444', borderRadius: '6px', color: '#aaa', padding: '4px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 },
-  speedActive: { background: '#7c5cfc', border: '1px solid #7c5cfc', color: '#fff' },
-  skipBtn:     { background: 'transparent', border: '1px solid #666', borderRadius: '6px', color: '#aaa', padding: '4px 14px', cursor: 'pointer', fontSize: '0.85rem' },
-  turnCounter: { color: '#555', fontSize: '0.75rem' },
-  logBox:      { width: '100%', maxWidth: '560px', background: '#080810', border: '1px solid #1a1a2e', borderRadius: '8px', padding: '0.5rem', height: '200px', overflowY: 'auto' as const, display: 'flex', flexDirection: 'column', gap: '2px' },
-  logRow:      { display: 'flex', gap: '0.4rem', alignItems: 'center', padding: '2px 6px', borderRadius: '3px', fontSize: '0.72rem' },
-  logTurn:     { color: '#444', minWidth: '28px', fontSize: '0.65rem' },
-  logActor:    { fontWeight: 700, minWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  logArrow:    { color: '#444' },
-  logTarget:   { color: '#aaa', minWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  logAction:   { color: '#ddd', flex: 1 },
-  logDone:      { textAlign: 'center' as const, color: '#ffd700', fontSize: '0.8rem', padding: '6px', marginTop: '2px', letterSpacing: '0.05em' },
-  btnResult:    { background: '#7c5cfc', border: 'none', borderRadius: '10px', color: '#fff', padding: '0.85rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },
-  statGrid:     { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px', marginTop: '4px', width: '100%' },
-  statChip:     { background: '#0d0d1a', borderRadius: '4px', padding: '2px 5px', display: 'flex', justifyContent: 'space-between', gap: '4px' },
-  statChipLabel:{ fontSize: '0.58rem', color: '#555' },
-  statChipVal:  { fontSize: '0.58rem', color: '#aaa', fontWeight: 700 },
-  skillList:    { display: 'flex', flexDirection: 'column' as const, gap: '2px', marginTop: '4px', width: '100%' },
-  skillTag:     { fontSize: '0.58rem', background: '#0d1a2e', border: '1px solid #2a3a5e', borderRadius: '3px', padding: '2px 5px', color: '#88aaff', textAlign: 'center' as const, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
-}

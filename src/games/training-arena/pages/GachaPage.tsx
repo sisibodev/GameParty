@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import type { GachaResult, GrowthStatKey } from '../types'
+import HeaderBar from '../components/ui/HeaderBar'
+import '../styles/arena.css'
 
 const GRADE_COLOR: Record<string, string> = {
-  C: '#888', B: '#44aaff', A: '#44ffaa', S: '#ffd700', SS: '#ff9900', SSS: '#ff44aa',
+  C: '#9aa3b2', B: '#5ef0a8', A: '#67e8f9', S: '#c78bff', SS: '#ff7ab6', SSS: '#ffd66b',
 }
 
 const STAT_LABEL: Record<GrowthStatKey, string> = {
@@ -30,60 +32,71 @@ export default function GachaPage() {
   }
 
   const playerTotal = result?.playerGains.reduce((s, c) => s + c.statGain, 0) ?? 0
+  const topGain = result?.playerGains.length
+    ? result.playerGains.reduce((a, b) => a.statGain >= b.statGain ? a : b)
+    : null
 
   return (
-    <div style={s.root}>
-      <h2 style={s.title}>라운드 강화</h2>
-      <p style={s.sub}>Round {activeSlot.currentRound} — 캐릭터 스탯 자동 적용</p>
+    <div className="arena-bg-arena" style={{ display:'flex', flexDirection:'column' as const, minHeight:'100vh' }}>
+      <HeaderBar
+        subtitle="ROUND GACHA"
+        round={activeSlot.currentRound}
+        phase="라운드 시작 · 스탯 뽑기"
+      />
 
-      {!result ? (
-        <div style={s.loading}>강화 적용 중…</div>
-      ) : (
-        <>
-          <div style={s.playerBox}>
-            <h3 style={s.boxTitle}>내 캐릭터 강화 결과</h3>
-            {result.playerGains.length === 0 ? (
-              <p style={s.noGain}>이번 라운드에서 내 캐릭터 강화 없음</p>
-            ) : (
-              <>
-                <p style={s.totalGain}>총 +{playerTotal} 스탯 획득</p>
-                <div style={s.gainList}>
-                  {result.playerGains.map((card, i) => (
-                    <div key={i} style={s.gainRow}>
-                      <span style={{ ...s.gradeTag, color: GRADE_COLOR[card.grade], borderColor: GRADE_COLOR[card.grade] }}>
-                        {card.grade}
-                      </span>
-                      <span style={s.gainStatKey}>{STAT_LABEL[card.statKey]}</span>
-                      <span style={s.gainVal}>+{card.statGain}</span>
+      <div style={{ flex:1, display:'flex', flexDirection:'column' as const, alignItems:'center', justifyContent:'center', padding:'32px 24px', gap:28 }}>
+        {!result ? (
+          <div className="arena-pulse" style={{ color:'var(--ink-mute)', fontSize:14 }}>강화 적용 중…</div>
+        ) : (
+          <>
+            {/* Main gacha card */}
+            <div className="arena-crt" style={{ width:340, padding:'32px 28px', background:'linear-gradient(180deg,rgba(36,26,66,.95),rgba(18,12,36,.95))', border:'1px solid var(--line-strong)', borderRadius:24, display:'flex', flexDirection:'column' as const, alignItems:'center', gap:20, boxShadow:'0 0 60px -20px rgba(164,120,255,.3)' }}>
+              <div className="arena-mono" style={{ fontSize:11, color:'var(--ink-mute)', letterSpacing:'.15em' }}>ROUND {activeSlot.currentRound} ENHANCEMENT</div>
+
+              {topGain ? (
+                <>
+                  <div style={{ fontSize:72, fontWeight:900, lineHeight:1, color: GRADE_COLOR[topGain.grade], textShadow:`0 0 40px ${GRADE_COLOR[topGain.grade]}` }}>
+                    {topGain.grade}
+                  </div>
+                  <div style={{ fontSize:14, color:'var(--ink-dim)' }}>{STAT_LABEL[topGain.statKey]}</div>
+                  <div style={{ fontSize:48, fontWeight:900, color:'var(--ink)' }}>+{topGain.statGain}</div>
+                </>
+              ) : (
+                <div style={{ fontSize:18, color:'var(--ink-mute)', padding:'20px 0' }}>이번 라운드 강화 없음</div>
+              )}
+
+              {playerTotal > 0 && (
+                <div style={{ fontSize:13, color:'var(--green)', fontWeight:700 }}>총 +{playerTotal} 스탯 획득</div>
+              )}
+            </div>
+
+            {/* Gain history strip */}
+            {result.playerGains.length > 0 && (
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap' as const, justifyContent:'center', maxWidth:400 }}>
+                {result.playerGains.map((card, i) => {
+                  const c = GRADE_COLOR[card.grade] ?? '#888'
+                  return (
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 10px', borderRadius:999, background:`${c}12`, border:`1px solid ${c}44` }}>
+                      <span className="arena-mono" style={{ fontSize:11, fontWeight:700, color:c }}>{card.grade}</span>
+                      <span style={{ fontSize:11, color:'var(--ink-dim)' }}>{STAT_LABEL[card.statKey]}</span>
+                      <span className="arena-mono" style={{ fontSize:11, fontWeight:700, color:c }}>+{card.statGain}</span>
                     </div>
-                  ))}
-                </div>
-              </>
+                  )
+                })}
+              </div>
             )}
-          </div>
 
-          <button style={s.btnNext} disabled={starting} onClick={handleStart}>
-            {starting ? '대회 준비 중…' : '⚔️ 대회 시작 →'}
-          </button>
-        </>
-      )}
+            <button
+              className="arena-btn arena-btn-gold"
+              style={{ padding:'14px 48px', fontSize:15, borderRadius:14 }}
+              disabled={starting}
+              onClick={handleStart}
+            >
+              {starting ? '대회 준비 중…' : '⚔️ 대회 시작'}
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
-}
-
-const s: Record<string, React.CSSProperties> = {
-  root:        { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff', gap: '1.25rem' },
-  title:       { fontSize: '1.5rem', fontWeight: 700, color: '#c0aaff', margin: 0 },
-  sub:         { color: '#888', margin: 0, fontSize: '0.9rem' },
-  loading:     { color: '#888', fontSize: '1rem', marginTop: '2rem' },
-  playerBox:   { background: '#1a1a2e', border: '1px solid #333', borderRadius: '12px', padding: '1.25rem', width: '100%', maxWidth: '400px' },
-  boxTitle:    { fontSize: '0.95rem', fontWeight: 700, color: '#c0aaff', margin: '0 0 0.75rem' },
-  noGain:      { color: '#666', margin: 0, fontSize: '0.9rem', textAlign: 'center' as const },
-  totalGain:   { color: '#44ffaa', fontWeight: 700, margin: '0 0 0.5rem', fontSize: '0.9rem' },
-  gainList:    { display: 'flex', flexDirection: 'column', gap: '0.4rem' },
-  gainRow:     { display: 'flex', alignItems: 'center', gap: '0.75rem' },
-  gradeTag:    { border: '1px solid', borderRadius: '4px', padding: '1px 6px', fontSize: '0.75rem', fontWeight: 700, minWidth: '32px', textAlign: 'center' as const },
-  gainStatKey: { color: '#ccc', fontSize: '0.85rem', flex: 1 },
-  gainVal:     { color: '#44ffaa', fontWeight: 700, fontSize: '0.9rem' },
-  btnNext:     { background: 'linear-gradient(135deg,#fc5c5c,#fc9c3c)', border: 'none', borderRadius: '12px', color: '#fff', padding: '1rem 3rem', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700 },
 }

@@ -5,6 +5,7 @@ import { mergePlayerSkills } from '../types'
 import { MAX_SKILL_SLOTS } from '../constants'
 import charactersRaw from '../data/characters.json'
 import skillsRaw from '../data/skills.json'
+import '../styles/arena.css'
 
 const CHARACTERS = charactersRaw as CharacterDef[]
 const charName = (id: number) => CHARACTERS.find(c => c.id === id)?.name ?? `#${id}`
@@ -14,10 +15,10 @@ const SKILLS = skillsRaw as SkillDef[]
 const findSkill = (id: string) => SKILLS.find(s => s.id === id)
 
 const TIER_COLOR: Record<string, string> = {
-  common: '#888', rare: '#44aaff', hero: '#cc66ff', legend: '#ffcc22',
+  common: '#9aa3b2', rare: '#67e8f9', hero: '#c78bff', legend: '#ffd66b',
 }
 const TIER_LABEL: Record<string, string> = {
-  common: '일반', rare: '레어', hero: '영웅', legend: '전설',
+  common: '보통', rare: '희귀', hero: '영웅', legend: '전설',
 }
 
 export default function MatchResultPage() {
@@ -103,113 +104,124 @@ export default function MatchResultPage() {
   }
 
   return (
-    <div style={s.root}>
-      <div style={s.stageBar}>{matchInfo.stageLabel}</div>
-
-      <div style={{ ...s.resultBadge, background: won ? '#1a3a1a' : '#3a1a1a', border: `2px solid ${won ? '#44ff88' : '#ff4444'}` }}>
-        <span style={{ fontSize: '2.5rem' }}>{won ? '🏆' : '💀'}</span>
-        <span style={{ ...s.resultText, color: won ? '#44ff88' : '#ff4444' }}>
-          {won ? '승리!' : '패배'}
-        </span>
+    <div className="arena-bg-arena" style={{ display: 'flex', flexDirection: 'column' as const, minHeight: '100vh' }}>
+      {/* Top bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--line)', background: 'rgba(10,6,20,.7)', backdropFilter: 'blur(8px)' }}>
+        <span className="arena-mono" style={{ fontSize: 10, color: 'var(--violet-glow)', letterSpacing: '.15em' }}>MATCH RESULT</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)' }}>{matchInfo.stageLabel}</span>
       </div>
 
-      <div style={s.matchup}>
-        <span style={s.myName}>{charName(pid)}</span>
-        <span style={s.vsText}>VS</span>
-        <span style={s.oppName}>{charName(oppId)}</span>
-      </div>
-
-      <div style={s.statsBox}>
-        <div style={s.statsHeader}>
-          <span style={s.colMe}>나</span>
-          <span style={s.colLabel}></span>
-          <span style={s.colOpp}>상대</span>
+      <div style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 20 }}>
+        {/* VICTORY / DEFEAT */}
+        <div className="arena-crt" style={{ width: '100%', maxWidth: 400, padding: '28px 24px', background: won ? 'rgba(94,240,168,.06)' : 'rgba(255,92,110,.06)', border: `1px solid ${won ? 'rgba(94,240,168,.4)' : 'rgba(255,92,110,.4)'}`, borderRadius: 20, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 12 }}>
+          <div style={{ fontSize: 48 }}>{won ? '🏆' : '💀'}</div>
+          <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: '.05em', color: won ? 'var(--green)' : 'var(--red)' }}>
+            {won ? '승리!' : '패배'}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14 }}>
+            <span style={{ fontWeight: 700, color: 'var(--violet-glow)' }}>{charName(pid)}</span>
+            <span style={{ color: 'var(--ink-mute)', fontWeight: 900 }}>VS</span>
+            <span style={{ fontWeight: 700, color: 'var(--red)' }}>{charName(oppId)}</span>
+          </div>
         </div>
-        <StatRow label="잔여 HP"  myVal={Math.ceil(myFinalHp)} oppVal={Math.ceil(oppFinalHp)} higher />
-        <StatRow label="총 턴수"  myVal={totalTurns} oppVal={totalTurns} shared />
-        <StatRow label="크리티컬" myVal={myCrits}   oppVal={oppCrits}   higher />
-        <StatRow label="회피"     myVal={myEvades}  oppVal={oppEvades}  higher />
-      </div>
 
-      {/* ── Skill pick: select from opponent skills ── */}
-      {hasPendingSkills && pickPhase === 'pick' && (
-        <div style={s.skillBox}>
-          <div style={s.skillTitle}>⚔️ 전리품 스킬 — 하나를 습득할 수 있습니다</div>
-          <div style={s.skillHint}>스킬 슬롯 {currentSkills.length}/{MAX_SKILL_SLOTS}{isFull ? ' · 슬롯이 가득 찼습니다. 교체할 수 있습니다.' : ''}</div>
-          <div style={s.skillList}>
-            {pendingBattleSkillOpts!.map(sid => {
-              const sk = findSkill(sid)
-              if (!sk) return null
-              const tc = TIER_COLOR[sk.tier] ?? '#888'
-              return (
-                <div key={sid} style={s.skillRow}>
-                  <div style={s.skillInfo}>
-                    <span style={{ ...s.tierBadge, color: tc, borderColor: tc }}>{TIER_LABEL[sk.tier] ?? sk.tier}</span>
-                    <span style={s.skillName}>{sk.name}</span>
-                    <span style={s.skillDesc}>{sk.description}</span>
+        {/* Stats comparison */}
+        <div className="arena-panel" style={{ width: '100%', maxWidth: 400, padding: '16px 20px', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 6, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--violet-glow)' }}>나</span>
+            <span style={{ fontSize: 10, color: 'var(--ink-mute)' }}></span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', textAlign: 'right' as const }}>상대</span>
+          </div>
+          <StatRow label="잔여 HP"  myVal={Math.ceil(myFinalHp)} oppVal={Math.ceil(oppFinalHp)} higher />
+          <StatRow label="총 턴수"  myVal={totalTurns} oppVal={totalTurns} shared />
+          <StatRow label="크리티컬" myVal={myCrits}   oppVal={oppCrits}   higher />
+          <StatRow label="회피"     myVal={myEvades}  oppVal={oppEvades}  higher />
+        </div>
+
+        {/* Skill pick: select from opponent skills */}
+        {hasPendingSkills && pickPhase === 'pick' && (
+          <div style={{ width: '100%', maxWidth: 400, background: 'rgba(124,80,240,.08)', border: '1px solid rgba(164,120,255,.4)', borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--violet-glow)' }}>⚔️ 전리품 스킬 — 하나를 습득</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>스킬 슬롯 {currentSkills.length}/{MAX_SKILL_SLOTS}{isFull ? ' · 슬롯 가득 — 교체 가능' : ''}</div>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+              {pendingBattleSkillOpts!.map(sid => {
+                const sk = findSkill(sid)
+                if (!sk) return null
+                const tc = TIER_COLOR[sk.tier] ?? 'var(--ink-mute)'
+                return (
+                  <div key={sid} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.03)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 14px' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: tc, border: `1px solid ${tc}55`, borderRadius: 999, padding: '1px 6px', alignSelf: 'flex-start' }}>{TIER_LABEL[sk.tier] ?? sk.tier}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{sk.name}</span>
+                      <span style={{ fontSize: 11, color: 'var(--green)' }}>{sk.description}</span>
+                    </div>
+                    <button className="arena-btn arena-btn-primary" style={{ padding: '6px 14px', fontSize: 12, borderRadius: 8, whiteSpace: 'nowrap' as const }} onClick={() => handlePickSkill(sid)}>
+                      {isFull ? '교체' : '습득'}
+                    </button>
                   </div>
-                  <button style={s.btnAcquire} onClick={() => handlePickSkill(sid)}>
-                    {isFull ? '교체' : '습득'}
-                  </button>
+                )
+              })}
+            </div>
+            <button className="arena-btn" style={{ alignSelf: 'center', fontSize: 12, padding: '6px 16px' }} onClick={handleSkip}>건너뛰기</button>
+          </div>
+        )}
+
+        {/* Replace step: pick which current skill to remove */}
+        {hasPendingSkills && pickPhase === 'replace' && (
+          <div style={{ width: '100%', maxWidth: 400, background: 'rgba(124,80,240,.08)', border: '1px solid rgba(164,120,255,.4)', borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--violet-glow)' }}>교체할 스킬을 선택하세요</div>
+            {chosenSkill && (() => {
+              const sk = findSkill(chosenSkill)
+              const tc = TIER_COLOR[sk?.tier ?? ''] ?? 'var(--ink-mute)'
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(94,240,168,.06)', border: '1px solid rgba(94,240,168,.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 4 }}>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: tc, border: `1px solid ${tc}55`, borderRadius: 999, padding: '1px 6px', alignSelf: 'flex-start' }}>{TIER_LABEL[sk?.tier ?? ''] ?? sk?.tier}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{sk?.name}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--green)', whiteSpace: 'nowrap' as const }}>습득 예정</span>
                 </div>
               )
-            })}
-          </div>
-          <button style={s.btnSkip} onClick={handleSkip}>건너뛰기</button>
-        </div>
-      )}
-
-      {/* ── Replace step: pick which current skill to remove ── */}
-      {hasPendingSkills && pickPhase === 'replace' && (
-        <div style={s.skillBox}>
-          <div style={s.skillTitle}>교체할 스킬을 선택하세요</div>
-          {chosenSkill && (() => {
-            const sk = findSkill(chosenSkill)
-            const tc = TIER_COLOR[sk?.tier ?? ''] ?? '#888'
-            return (
-              <div style={{ ...s.skillRow, background: '#1a2a1a', border: '1px solid #44aa66', marginBottom: '0.25rem' }}>
-                <div style={s.skillInfo}>
-                  <span style={{ ...s.tierBadge, color: tc, borderColor: tc }}>{TIER_LABEL[sk?.tier ?? ''] ?? sk?.tier}</span>
-                  <span style={s.skillName}>{sk?.name}</span>
-                  <span style={s.skillDesc}>{sk?.description}</span>
-                </div>
-                <span style={{ fontSize: '0.7rem', color: '#44ff88', whiteSpace: 'nowrap' }}>습득 예정</span>
-              </div>
-            )
-          })()}
-          <div style={s.skillHint}>현재 보유 스킬 중 하나를 교체합니다:</div>
-          <div style={s.skillList}>
-            {currentSkills.map(sid => {
-              const sk = findSkill(sid)
-              if (!sk) return null
-              const tc = TIER_COLOR[sk.tier] ?? '#888'
-              return (
-                <div key={sid} style={s.skillRow}>
-                  <div style={s.skillInfo}>
-                    <span style={{ ...s.tierBadge, color: tc, borderColor: tc }}>{TIER_LABEL[sk.tier] ?? sk.tier}</span>
-                    <span style={s.skillName}>{sk.name}</span>
-                    <span style={s.skillDesc}>{sk.description}</span>
+            })()}
+            <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>현재 보유 스킬 중 하나를 교체합니다:</div>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+              {currentSkills.map(sid => {
+                const sk = findSkill(sid)
+                if (!sk) return null
+                const tc = TIER_COLOR[sk.tier] ?? 'var(--ink-mute)'
+                return (
+                  <div key={sid} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,.03)', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 14px' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: tc, border: `1px solid ${tc}55`, borderRadius: 999, padding: '1px 6px', alignSelf: 'flex-start' }}>{TIER_LABEL[sk.tier] ?? sk.tier}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{sk.name}</span>
+                      <span style={{ fontSize: 11, color: 'var(--green)' }}>{sk.description}</span>
+                    </div>
+                    <button
+                      className="arena-btn"
+                      style={{ padding: '6px 14px', fontSize: 12, borderRadius: 8, borderColor: 'rgba(255,92,110,.5)', color: 'var(--red)', whiteSpace: 'nowrap' as const }}
+                      onClick={() => handleReplace(sid)}
+                    >
+                      교체
+                    </button>
                   </div>
-                  <button
-                    style={{ ...s.btnAcquire, background: '#3a1a1a', borderColor: '#ff4444', color: '#ff6666' }}
-                    onClick={() => handleReplace(sid)}
-                  >
-                    교체
-                  </button>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+            <button className="arena-btn" style={{ alignSelf: 'center', fontSize: 12, padding: '6px 16px' }} onClick={handleSkip}>취소 (건너뛰기)</button>
           </div>
-          <button style={s.btnSkip} onClick={handleSkip}>취소 (건너뛰기)</button>
-        </div>
-      )}
+        )}
 
-      {/* ── Next button: visible when no pending skill pick or pick is done ── */}
-      {(!hasPendingSkills || pickPhase === 'done') && (
-        <button style={won ? s.btnNext : s.btnTournament} onClick={handleNext}>
-          {won ? '스킬 학습 →' : '토너먼트 결과 →'}
-        </button>
-      )}
+        {/* Next button */}
+        {(!hasPendingSkills || pickPhase === 'done') && (
+          <button
+            className={`arena-btn ${won ? 'arena-btn-primary' : 'arena-btn'}`}
+            style={{ padding: '14px 48px', fontSize: 15, borderRadius: 14, marginTop: 4 }}
+            onClick={handleNext}
+          >
+            {won ? '스킬 학습 →' : '토너먼트 결과 →'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -227,42 +239,10 @@ function StatRow({
   const oppBetter = !shared && (higher ? oppVal > myVal : oppVal < myVal)
 
   return (
-    <div style={s.statRow}>
-      <span style={{ ...s.statVal, color: myBetter ? '#44ff88' : '#ccc', textAlign: 'left' as const }}>{myVal}</span>
-      <span style={s.statLabel}>{label}</span>
-      <span style={{ ...s.statVal, color: oppBetter ? '#ff6644' : '#ccc', textAlign: 'right' as const }}>{oppVal}</span>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 6 }}>
+      <span className="arena-mono" style={{ fontSize: 14, fontWeight: 700, color: myBetter ? 'var(--green)' : 'var(--ink-dim)' }}>{myVal}</span>
+      <span style={{ fontSize: 10, color: 'var(--ink-mute)', textAlign: 'center' as const, minWidth: 60 }}>{label}</span>
+      <span className="arena-mono" style={{ fontSize: 14, fontWeight: 700, color: oppBetter ? 'var(--red)' : 'var(--ink-dim)', textAlign: 'right' as const }}>{oppVal}</span>
     </div>
   )
-}
-
-const s: Record<string, React.CSSProperties> = {
-  root:         { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem 1rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff', gap: '1.25rem' },
-  stageBar:     { fontSize: '1rem', fontWeight: 700, color: '#ffd700', letterSpacing: '0.1em' },
-  resultBadge:  { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', borderRadius: '16px', padding: '1.5rem 3rem' },
-  resultText:   { fontSize: '2rem', fontWeight: 900, letterSpacing: '0.05em' },
-  matchup:      { display: 'flex', alignItems: 'center', gap: '1rem' },
-  myName:       { color: '#c0aaff', fontWeight: 700, fontSize: '1.1rem' },
-  vsText:       { color: '#555', fontWeight: 900 },
-  oppName:      { color: '#ff9966', fontWeight: 700, fontSize: '1.1rem' },
-  statsBox:     { background: '#1a1a2e', border: '1px solid #333', borderRadius: '12px', padding: '1rem', width: '100%', maxWidth: '360px', display: 'flex', flexDirection: 'column', gap: '0.5rem' },
-  statsHeader:  { display: 'flex', justifyContent: 'space-between', paddingBottom: '0.4rem', borderBottom: '1px solid #333' },
-  colMe:        { color: '#c0aaff', fontWeight: 700, fontSize: '0.8rem', flex: 1, textAlign: 'left' as const },
-  colLabel:     { color: '#666', fontSize: '0.75rem', flex: 1, textAlign: 'center' as const },
-  colOpp:       { color: '#ff9966', fontWeight: 700, fontSize: '0.8rem', flex: 1, textAlign: 'right' as const },
-  statRow:      { display: 'flex', alignItems: 'center' },
-  statVal:      { fontWeight: 700, fontSize: '0.95rem', flex: 1 },
-  statLabel:    { color: '#666', fontSize: '0.75rem', flex: 1, textAlign: 'center' as const },
-  btnNext:      { background: '#7c5cfc', border: 'none', borderRadius: '10px', color: '#fff', padding: '0.85rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, marginTop: '0.5rem' },
-  btnTournament:{ background: '#1a3a5c', border: '1px solid #44aaff', borderRadius: '10px', color: '#44aaff', padding: '0.85rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, marginTop: '0.5rem' },
-  skillBox:     { background: '#141428', border: '1px solid #5544aa', borderRadius: '12px', padding: '1rem', width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '0.6rem' },
-  skillTitle:   { fontSize: '0.9rem', fontWeight: 700, color: '#c0aaff' },
-  skillHint:    { fontSize: '0.72rem', color: '#666' },
-  skillList:    { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
-  skillRow:     { display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#1a1a2e', borderRadius: '8px', padding: '0.5rem 0.75rem', border: '1px solid #2a2a44' },
-  skillInfo:    { flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' },
-  tierBadge:    { fontSize: '0.6rem', fontWeight: 700, border: '1px solid', borderRadius: '3px', padding: '0 5px', alignSelf: 'flex-start' },
-  skillName:    { fontSize: '0.85rem', fontWeight: 700, color: '#e8e8ff' },
-  skillDesc:    { fontSize: '0.68rem', color: '#777' },
-  btnAcquire:   { background: '#1a3a1a', border: '1px solid #44aa66', borderRadius: '6px', color: '#44ff88', padding: '0.3rem 0.7rem', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, whiteSpace: 'nowrap' as const },
-  btnSkip:      { background: 'transparent', border: '1px solid #444', borderRadius: '6px', color: '#666', padding: '0.3rem 1rem', cursor: 'pointer', fontSize: '0.78rem', alignSelf: 'center' },
 }
