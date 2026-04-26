@@ -259,6 +259,13 @@ export interface NpcStat {
 
 export type SlotId = 1 | 2 | 3
 
+export interface GachaHistoryEntry {
+  round: number
+  grade: GachaGrade
+  statKey: GrowthStatKey
+  statGain: number
+}
+
 export interface SaveSlot {
   slotId: SlotId
   characterId: number
@@ -273,6 +280,7 @@ export interface SaveSlot {
   rivalIds?: number[]         // v0.4.3+: 라이벌 NPC 3명 (legacy undefined → [])
   pendingSkills?: PendingSkill[] // v0.4.3+: 학습 대기 스킬 (legacy undefined → [])
   runRecords?: RunRecord[]    // v0.4.3+: 라운드별 기록 (최대 20건, 점수 내림차순)
+  gachaHistory?: GachaHistoryEntry[] // v0.4.4+: 라운드별 가챠 결과
   createdAt: number
   updatedAt: number
   npcStats?: Record<number, NpcStat>

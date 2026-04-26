@@ -540,7 +540,15 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       newGrowth[card.statKey] = newGrowth[card.statKey] + card.statGain
     }
 
-    const updated: SaveSlot = { ...activeSlot, growthStats: newGrowth }
+    const topGain = result.playerGains.length
+      ? result.playerGains.reduce((a, b) => a.statGain >= b.statGain ? a : b)
+      : null
+    const prevHistory = activeSlot.gachaHistory ?? []
+    const newHistory = topGain
+      ? [...prevHistory, { round: activeSlot.currentRound, grade: topGain.grade, statKey: topGain.statKey, statGain: topGain.statGain }]
+      : prevHistory
+
+    const updated: SaveSlot = { ...activeSlot, growthStats: newGrowth, gachaHistory: newHistory }
     await saveSlot(updated)
     set({ activeSlot: updated })
     return result

@@ -148,3 +148,12 @@
 
 @keyframes arena-pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
 .arena-pulse { animation: arena-pulse 1.4s infinite; }
+
+@keyframes arena-glow-pulse { 0%,100%{opacity:.7} 50%{opacity:1} }
+.arena-gacha-card { border-radius: 20px; position: relative; }
+.arena-gacha-card-C  { box-shadow: 0 0 0 2px #9aa3b2, 0 0 24px -4px #9aa3b244; }
+.arena-gacha-card-B  { box-shadow: 0 0 0 2px #5ef0a8, 0 0 32px -4px #5ef0a866; }
+.arena-gacha-card-A  { box-shadow: 0 0 0 2px #67e8f9, 0 0 40px -4px #67e8f977; }
+.arena-gacha-card-S  { box-shadow: 0 0 0 2px #c78bff, 0 0 48px -4px #c78bff88; animation: arena-glow-pulse 1.8s infinite; }
+.arena-gacha-card-SS { box-shadow: 0 0 0 2px #ff7ab6, 0 0 56px -4px #ff7ab699; animation: arena-glow-pulse 1.4s infinite; }
+.arena-gacha-card-SSS{ box-shadow: 0 0 0 2px #ffd66b, 0 0 64px -8px #ffd66baa, 0 0 120px -20px #ffd66b55; animation: arena-glow-pulse 1.2s infinite; }
