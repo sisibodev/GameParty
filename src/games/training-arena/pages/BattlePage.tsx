@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import type { Archetype, CharacterDef, CombatStats, GrowthStats, MatchLogEntry, SkillDef } from '../types'
 import { deriveStats } from '../engine/statDeriver'
-import { NPC_BASE_GROWTH } from '../constants'
+import { NPC_BASE_GROWTH, RIVAL_STAT_PER_ROUND } from '../constants'
 import Portrait from '../components/ui/Portrait'
 import charactersRaw from '../data/characters.json'
 import skillsRaw    from '../data/skills.json'
@@ -30,8 +30,8 @@ function loadSpeed(): '1x' | '2x' | '4x' {
   return v === '1x' || v === '2x' || v === '4x' ? v : '1x'
 }
 
-function npcGrowth(round: number): GrowthStats {
-  const b = NPC_BASE_GROWTH + (round - 1)
+function npcGrowth(round: number, isRival = false): GrowthStats {
+  const b = NPC_BASE_GROWTH + (round - 1) + (isRival ? RIVAL_STAT_PER_ROUND * round : 0)
   return { hp: b, str: b, agi: b, int: b, luk: b }
 }
 
@@ -105,13 +105,13 @@ export default function BattlePage() {
   const oppChar    = CHARACTERS.find(c => c.id === oppId)
 
   const round     = activeSlot.currentRound
-  const oppGrowth = npcGrowth(round)
+  const isRival           = (activeSlot.rivalIds ?? []).includes(oppId)
+  const oppGrowth = npcGrowth(round, isRival)
   const playerStats: CombatStats | null = playerChar
     ? deriveStats(playerChar.baseCombat, activeSlot.growthStats, playerChar.archetype) : null
   const oppStats: CombatStats | null = oppChar
     ? deriveStats(oppChar.baseCombat, oppGrowth, oppChar.archetype) : null
 
-  const isRival           = (activeSlot.rivalIds ?? []).includes(oppId)
   const isWinnerCandidate = lastTournament?.winner === oppId
   const isDarkhorse       = (lastTournament?.darkhorses ?? []).includes(oppId)
 
@@ -172,6 +172,7 @@ export default function BattlePage() {
               <span className="arena-mono" style={{ fontWeight: 700, color: 'var(--gold)', fontSize: 12 }}>{gold.toLocaleString()}</span>
             </div>
           )}
+          <button className="arena-btn arena-btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => { if (confirm('메인 화면으로 나가시겠습니까?\n현재까지의 진행은 저장되어 있습니다.')) useGameStore.setState({ phase: 'slot_select' }) }}>✕ 나가기</button>
         </div>
       </div>
 

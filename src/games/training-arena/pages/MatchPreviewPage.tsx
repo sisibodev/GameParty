@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import type { Archetype, CharacterDef, CombatStats, GrowthStats, ItemTier, NpcStat, SkillDef, TacticCardId, TournamentResult } from '../types'
 import { deriveStats } from '../engine/statDeriver'
-import { NPC_BASE_GROWTH } from '../constants'
+import { NPC_BASE_GROWTH, RIVAL_STAT_PER_ROUND } from '../constants'
 import { getItemById } from '../data/items'
 import { TACTIC_CARDS } from '../data/tacticCards'
 import Portrait from '../components/ui/Portrait'
@@ -31,8 +31,8 @@ const ARCHETYPE_LABEL: Record<Archetype, string> = {
   support: '지원', ranger: '레인저', berserker: '광전사', paladin: '팔라딘',
 }
 
-function npcGrowth(round: number): GrowthStats {
-  const b = NPC_BASE_GROWTH + (round - 1)
+function npcGrowth(round: number, isRival = false): GrowthStats {
+  const b = NPC_BASE_GROWTH + (round - 1) + (isRival ? RIVAL_STAT_PER_ROUND * round : 0)
   return { hp: b, str: b, agi: b, int: b, luk: b }
 }
 
@@ -246,7 +246,7 @@ export default function MatchPreviewPage() {
   const opponentMaxHp = matchResult.initialHp[opponentId] ?? 0
 
   const round         = activeSlot.currentRound
-  const oppGrowth     = npcGrowth(round)
+  const oppGrowth     = npcGrowth(round, (activeSlot.rivalIds ?? []).includes(opponentId))
   const playerStats   = playerChar ? deriveStats(playerChar.baseCombat, activeSlot.growthStats, playerChar.archetype) : null
   const opponentStats = opponentChar ? deriveStats(opponentChar.baseCombat, oppGrowth, opponentChar.archetype) : null
 
@@ -285,6 +285,7 @@ export default function MatchPreviewPage() {
         subtitle={`${stageLabel} · ${playerMatchIndex + 1}/${playerMatches.length} 경기`}
         round={activeSlot.currentRound}
         phase="매치 프리뷰"
+        onExit={() => { if (confirm('메인 화면으로 나가시겠습니까?\n현재까지의 진행은 저장되어 있습니다.')) useGameStore.setState({ phase: 'slot_select' }) }}
       />
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -408,7 +409,7 @@ export default function MatchPreviewPage() {
   )
 }
 
-function HeaderBar({ subtitle, round, phase }: { subtitle?: string; round?: number; phase?: string }) {
+function HeaderBar({ subtitle, round, phase, onExit }: { subtitle?: string; round?: number; phase?: string; onExit?: () => void }) {
   const { activeSlot } = useGameStore()
   const gold = activeSlot?.gold ?? null
   return (
@@ -426,6 +427,7 @@ function HeaderBar({ subtitle, round, phase }: { subtitle?: string; round?: numb
             <span className="arena-mono" style={{ fontWeight: 700, color: 'var(--gold)', fontSize: 12 }}>{gold.toLocaleString()}</span>
           </div>
         )}
+        {onExit && <button className="arena-btn arena-btn-ghost" onClick={onExit} style={{ fontSize: 11, padding: '4px 10px' }}>✕ 나가기</button>}
       </div>
     </div>
   )

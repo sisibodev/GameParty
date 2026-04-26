@@ -107,7 +107,7 @@ export default function ShopPage() {
 
   return (
     <div className="arena-bg" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <HeaderBar subtitle="TRAVELING SHOP" round={activeSlot.currentRound} gold={gold} />
+      <HeaderBar subtitle="TRAVELING SHOP" round={activeSlot.currentRound} gold={gold} onExit={() => { if (confirm('메인 화면으로 나가시겠습니까?\n현재까지의 진행은 저장되어 있습니다.')) useGameStore.setState({ phase: 'slot_select' }) }} />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 

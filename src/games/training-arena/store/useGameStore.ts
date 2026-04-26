@@ -684,11 +684,6 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     set({ selectedTacticCardId: tactic })
 
-    if (!tactic) {
-      set({ phase: 'battle' })
-      return
-    }
-
     const matchInfo = playerMatches[playerMatchIndex]
     if (!matchInfo) { set({ phase: 'battle' }); return }
 
@@ -718,7 +713,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       baseCombat:   playerChar.baseCombat,
       archetype:    playerChar.archetype,
       items:        playerItems,
-      tactic:       { cardId: tactic },
+      tactic:       tactic ? { cardId: tactic } : undefined,
     }
 
     const oppState: BattleCharState = {
@@ -840,8 +835,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         )
       : activeSlot.bestClearRound
 
-    // 스킬은 전투 승리 후 상대에게서 획득 — 보상 단계에서는 상점 또는 가챠로 이동
-    const nextPhase: GamePhase = newRound >= 2 ? 'shop' : 'gacha'
+    // 우승 시 게임 종료, 아니면 상점/가챠로 이동
+    const nextPhase: GamePhase = isWinner ? 'slot_select' : (newRound >= 2 ? 'shop' : 'gacha')
 
     const newGold = (activeSlot.gold ?? 0) + pendingReward.goldEarned
 

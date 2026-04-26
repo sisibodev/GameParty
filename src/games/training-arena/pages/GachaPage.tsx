@@ -50,6 +50,7 @@ export default function GachaPage() {
         subtitle="ROUND GACHA"
         round={activeSlot.currentRound}
         phase="라운드 시작 · 스탯 뽑기"
+        onExit={() => { if (confirm('메인 화면으로 나가시겠습니까?\n현재까지의 진행은 저장되어 있습니다.')) useGameStore.setState({ phase: 'slot_select' }) }}
       />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', gap: 28 }}>
