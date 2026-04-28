@@ -83,7 +83,7 @@ export const MAX_TURNS = 50
 // INT → 스킬 쿨다운 감소: INT 성장치 INT_CD_REDUCTION_PER 당 -1턴 (최대 -3)
 export const INT_CD_REDUCTION_PER = 40
 
-// v0.7.0: 데미지 공식 — base = mult · myAtk² / (myAtk + oppAtk), DEF 소폭 감쇠 K/(K+DEF)
+// 데미지 공식: base = mult · ATK²/(ATK+oppATK), K/(K+DEF) 감쇠
 // K가 클수록 DEF 영향 약함 (DEF=100 → 80% 감쇠, DEF=400 → 50% 감쇠)
 export const DAMAGE_DEF_K = 400
 // 최소 명중률 (회피 메커니즘)
