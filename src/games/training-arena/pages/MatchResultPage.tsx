@@ -17,7 +17,7 @@ interface SkillDef { id: string; name: string; tier: string; description: string
 const SKILLS = skillsRaw as SkillDef[]
 const findSkill = (id: string) => SKILLS.find(s => s.id === id)
 
-const STAT_LABELS: Record<string, string> = { hp: 'HP', str: 'STR', agi: 'AGI', int: 'INT', luk: 'LUK' }
+const STAT_LABELS: Record<string, string> = { vit: 'VIT', str: 'STR', agi: 'AGI', int: 'INT', luk: 'LUK' }
 
 const TIER_COLOR: Record<string, string> = {
   common: 'var(--ink-dim)', rare: 'var(--cyan)', hero: 'var(--violet-glow)', legend: 'var(--gold)',

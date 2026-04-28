@@ -9,7 +9,7 @@ const GRADE_COLOR: Record<string, string> = {
 }
 
 const STAT_LABEL: Record<GrowthStatKey, string> = {
-  hp: 'HP', str: 'STR', agi: 'AGILITY', int: 'INT', luk: 'LUCK',
+  vit: 'VIT', str: 'STR', agi: 'AGILITY', int: 'INT', luk: 'LUCK',
 }
 
 const GRADE_FLAVOR: Record<string, string> = {

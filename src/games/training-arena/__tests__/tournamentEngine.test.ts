@@ -3,7 +3,7 @@ import { runTournament } from '../engine/tournamentEngine'
 import type { CharacterDef, GrowthStats } from '../types'
 import { GROUP_COUNT } from '../constants'
 
-const ZERO_GROWTH: GrowthStats = { hp: 0, str: 0, agi: 0, int: 0, luk: 0 }
+const ZERO_GROWTH: GrowthStats = { vit: 0, str: 0, agi: 0, int: 0, luk: 0 }
 
 function makeChar(id: number): CharacterDef {
   return {
@@ -11,7 +11,7 @@ function makeChar(id: number): CharacterDef {
     name: `char_${id}`,
     description: '',
     archetype: 'warrior',
-    baseCombat: { maxHp: 50, atk: 20, def: 10, spd: 5, crit: 20, eva: 5, maxMana: 20, aggression: 10 },
+    baseCombat: { maxHp: 50, pAtk: 20, mAtk: 8, pDef: 10, mDef: 6, spd: 5, crit: 20, eva: 5, acc: 80, maxMana: 20, aggression: 10 },
   }
 }
 

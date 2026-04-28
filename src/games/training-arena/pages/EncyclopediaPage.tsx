@@ -196,7 +196,7 @@ function RecordRow({ rec, rank, expanded, onToggle }: {
           background: 'rgba(10,6,20,.5)', display: 'flex', flexDirection: 'column', gap: 6,
         }}>
           <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--ink-dim)', flexWrap: 'wrap' }}>
-            <span>HP+{rec.growthStats.hp}</span>
+            <span>VIT+{rec.growthStats.vit}</span>
             <span>STR+{rec.growthStats.str}</span>
             <span>AGI+{rec.growthStats.agi}</span>
             <span>INT+{rec.growthStats.int}</span>
@@ -315,9 +315,7 @@ export default function EncyclopediaPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, padding: '12px 20px', borderBottom: '1px solid var(--line)', background: 'rgba(10,6,20,.4)' }}>
-        {(['encyclopedia', '도감'], ['records', '내 기록'] as const) && (
-          [['encyclopedia', '도감'], ['records', '내 기록']] as [TabKey, string][]
-        ).map(([key, label]) => (
+        {([['encyclopedia', '도감'], ['records', '내 기록']] as [TabKey, string][]).map(([key, label]) => (
           <button
             key={key}
             className="arena-btn"

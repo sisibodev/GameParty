@@ -7,9 +7,12 @@ function makeState(id: number, hp = 100): BattleCharState {
     charId: id, currentHp: hp, currentMana: 5, gauge: 0,
     buffs: [], debuffs: [], cooldowns: {},
     skills: ['atk_01'],
-    growthStats: { hp: 0, str: 0, agi: 0, int: 0, luk: 0 },
-    baseCombat: { maxHp: hp, atk: 20, def: 10, spd: 5, crit: 10, eva: 5, maxMana: 10, aggression: 50 },
-    archetype: 'balanced',
+    passives: [],
+    items: [],
+    skillEnhancements: {},
+    growthStats: { vit: 0, str: 0, agi: 0, int: 0, luk: 0 },
+    baseCombat: { maxHp: hp, pAtk: 20, mAtk: 8, pDef: 10, mDef: 6, spd: 5, crit: 10, eva: 5, acc: 80, maxMana: 10, aggression: 50 },
+    archetype: 'warrior',
   }
 }
 

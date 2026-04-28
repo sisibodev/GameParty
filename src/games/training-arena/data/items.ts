@@ -6,28 +6,28 @@ import type { ItemDef } from '../types'
 
 export const ITEMS: ItemDef[] = [
   // ─── Common ─────────────────────────────────────────────
-  { id: 'hp_amulet_c',  name: '튼튼 부적',      tier: 'common', kind: 'stat', price: 30,  description: 'HP +3',  statBonus: { hp: 3 } },
+  { id: 'hp_amulet_c',  name: '튼튼 부적',      tier: 'common', kind: 'stat', price: 30,  description: 'VIT +3', statBonus: { vit: 3 } },
   { id: 'str_gauntlet_c', name: '가죽 장갑',    tier: 'common', kind: 'stat', price: 35,  description: 'STR +3', statBonus: { str: 3 } },
   { id: 'agi_boots_c',  name: '가벼운 신발',    tier: 'common', kind: 'stat', price: 30,  description: 'AGI +3', statBonus: { agi: 3 } },
   { id: 'int_scroll_c', name: '수련 두루마리',  tier: 'common', kind: 'stat', price: 35,  description: 'INT +3', statBonus: { int: 3 } },
   { id: 'luk_coin_c',   name: '행운의 동전',    tier: 'common', kind: 'stat', price: 40,  description: 'LUK +3', statBonus: { luk: 3 } },
 
   // ─── Rare ───────────────────────────────────────────────
-  { id: 'hp_shield_r',   name: '은제 방패',     tier: 'rare',   kind: 'stat', price: 80,  description: 'HP +7',  statBonus: { hp: 7 } },
+  { id: 'hp_shield_r',   name: '은제 방패',     tier: 'rare',   kind: 'stat', price: 80,  description: 'VIT +7', statBonus: { vit: 7 } },
   { id: 'str_sword_r',   name: '강철 검',       tier: 'rare',   kind: 'stat', price: 90,  description: 'STR +7', statBonus: { str: 7 } },
   { id: 'agi_cloak_r',   name: '민첩의 망토',   tier: 'rare',   kind: 'stat', price: 80,  description: 'AGI +7', statBonus: { agi: 7 } },
   { id: 'int_tome_r',    name: '마법서',        tier: 'rare',   kind: 'stat', price: 90,  description: 'INT +7', statBonus: { int: 7 } },
   { id: 'luk_charm_r',   name: '네잎 클로버',   tier: 'rare',   kind: 'stat', price: 100, description: 'LUK +7', statBonus: { luk: 7 } },
 
   // ─── Hero ───────────────────────────────────────────────
-  { id: 'hp_heart_h',    name: '거인의 심장',   tier: 'hero',   kind: 'stat', price: 220, description: 'HP +15',  statBonus: { hp: 15 } },
+  { id: 'hp_heart_h',    name: '거인의 심장',   tier: 'hero',   kind: 'stat', price: 220, description: 'VIT +15', statBonus: { vit: 15 } },
   { id: 'str_hammer_h',  name: '전쟁의 망치',   tier: 'hero',   kind: 'stat', price: 250, description: 'STR +15', statBonus: { str: 15 } },
   { id: 'agi_wind_h',    name: '바람의 신발',   tier: 'hero',   kind: 'stat', price: 220, description: 'AGI +15', statBonus: { agi: 15 } },
   { id: 'int_crown_h',   name: '지혜의 관',     tier: 'hero',   kind: 'stat', price: 250, description: 'INT +15', statBonus: { int: 15 } },
   { id: 'luk_gem_h',     name: '행운의 보석',   tier: 'hero',   kind: 'stat', price: 280, description: 'LUK +15', statBonus: { luk: 15 } },
 
   // ─── Legend ─────────────────────────────────────────────
-  { id: 'hp_titan_l',    name: '타이탄의 심장', tier: 'legend', kind: 'stat', price: 600, description: 'HP +30',  statBonus: { hp: 30 } },
+  { id: 'hp_titan_l',    name: '타이탄의 심장', tier: 'legend', kind: 'stat', price: 600, description: 'VIT +30', statBonus: { vit: 30 } },
   { id: 'str_god_l',     name: '신의 완력',     tier: 'legend', kind: 'stat', price: 650, description: 'STR +30', statBonus: { str: 30 } },
   { id: 'agi_light_l',   name: '빛의 속도',     tier: 'legend', kind: 'stat', price: 600, description: 'AGI +30', statBonus: { agi: 30 } },
   { id: 'int_cosmos_l',  name: '우주의 지식',   tier: 'legend', kind: 'stat', price: 650, description: 'INT +30', statBonus: { int: 30 } },

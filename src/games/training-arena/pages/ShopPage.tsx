@@ -50,7 +50,7 @@ function getItemIcon(item: ItemDef): string {
 }
 
 const STAT_DISPLAY: Array<[keyof GrowthStats, string]> = [
-  ['hp', 'HP'], ['str', 'STR'], ['agi', 'AGI'], ['int', 'INT'], ['luk', 'LUK'],
+  ['vit', 'VIT'], ['str', 'STR'], ['agi', 'AGI'], ['int', 'INT'], ['luk', 'LUK'],
 ]
 
 interface TooltipItem {

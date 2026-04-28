@@ -120,7 +120,7 @@ function buildInitialSimState(useIpChars: boolean): SimPersist {
   const skillMap:  Record<number, string[]>    = {}
   const recordMap: Record<number, SimRecord>   = {}
   for (const c of chars) {
-    growthMap[c.id] = { hp: NPC_BASE_GROWTH, str: NPC_BASE_GROWTH, agi: NPC_BASE_GROWTH, int: NPC_BASE_GROWTH, luk: NPC_BASE_GROWTH }
+    growthMap[c.id] = { vit: NPC_BASE_GROWTH, str: NPC_BASE_GROWTH, agi: NPC_BASE_GROWTH, int: NPC_BASE_GROWTH, luk: NPC_BASE_GROWTH }
     skillMap[c.id]  = pickN(allSkillIds, INITIAL_SKILL_COUNT, new SeededRng(c.id * 7919))
     recordMap[c.id] = { wins: 0, losses: 0, bestStage: '예선 탈락', bestStageCount: 0 }
   }
@@ -134,7 +134,7 @@ function applyGacha(
   const newMap: Record<number, GrowthStats> = {}
   for (const c of chars) newMap[c.id] = { ...growthMap[c.id] }
   const cards: GachaCardEntry[] = []
-  const statKeys: GrowthStatKey[] = ['hp', 'str', 'agi', 'int', 'luk']
+  const statKeys: GrowthStatKey[] = ['vit', 'str', 'agi', 'int', 'luk']
   for (let i = 0; i < 100; i++) {
     const charId  = chars[rng.int(0, chars.length)].id
     const statKey = statKeys[rng.int(0, statKeys.length)]

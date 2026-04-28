@@ -32,7 +32,7 @@ function loadSpeed(): '1x' | '2x' | '4x' {
 
 function npcGrowth(round: number, isRival = false): GrowthStats {
   const b = NPC_BASE_GROWTH + (round - 1) + (isRival ? RIVAL_STAT_PER_ROUND * round : 0)
-  return { hp: b, str: b, agi: b, int: b, luk: b }
+  return { vit: b, str: b, agi: b, int: b, luk: b }
 }
 
 function computeAtbGauges(

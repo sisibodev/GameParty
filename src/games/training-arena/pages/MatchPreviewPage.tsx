@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { Archetype, CharacterDef, CombatStats, GrowthStats, ItemDef, ItemKind, ItemTier, NpcStat, SkillDef, TacticCardId, TournamentResult } from '../types'
+import type { Archetype, CharacterDef, CombatStats, GrowthStats, ItemDef, ItemKind, ItemTier, SkillDef, TacticCardId, TournamentResult } from '../types'
 import { deriveStats } from '../engine/statDeriver'
 import { NPC_BASE_GROWTH, MAX_PASSIVE_SLOTS, RIVAL_STAT_PER_ROUND } from '../constants'
 import { getItemById } from '../data/items'
@@ -72,7 +72,7 @@ const ARCHETYPE_LABEL: Record<Archetype, string> = {
 
 function npcGrowth(round: number, isRival = false): GrowthStats {
   const b = NPC_BASE_GROWTH + (round - 1) + (isRival ? RIVAL_STAT_PER_ROUND * round : 0)
-  return { hp: b, str: b, agi: b, int: b, luk: b }
+  return { vit: b, str: b, agi: b, int: b, luk: b }
 }
 
 function getOpponentAchievement(oppId: number, t: TournamentResult): string {

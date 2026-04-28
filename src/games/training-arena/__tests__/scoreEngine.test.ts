@@ -8,7 +8,7 @@ function makeSlot(overrides: Partial<SaveSlot> = {}): SaveSlot {
     characterId: 1,
     initialSkills: [],
     acquiredSkills: [],
-    growthStats: { hp: 0, str: 0, agi: 0, int: 0, luk: 0 },
+    growthStats: { vit: 0, str: 0, agi: 0, int: 0, luk: 0 },
     currentRound: 1,
     bestClearRound: null,
     gold: 0,
@@ -60,7 +60,7 @@ function makeRecord(score: number): RunRecord {
     endRound: 1,
     finishedAt: 0,
     characterId: 1,
-    growthStats: { hp: 0, str: 0, agi: 0, int: 0, luk: 0 },
+    growthStats: { vit: 0, str: 0, agi: 0, int: 0, luk: 0 },
     skills: [],
     items: [],
     wins: 0,
@@ -94,7 +94,7 @@ describe('calcScore', () => {
   it('growth stats add floor(total * 0.5)', () => {
     const slot = makeSlot({
       currentRound: 1,
-      growthStats: { hp: 10, str: 10, agi: 10, int: 10, luk: 10 },
+      growthStats: { vit: 10, str: 10, agi: 10, int: 10, luk: 10 },
     })
     expect(calcScore(slot, makeTournament(1, []))).toBe(950 + 25)
   })

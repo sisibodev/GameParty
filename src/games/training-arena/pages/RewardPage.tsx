@@ -2,7 +2,7 @@ import { useGameStore } from '../store/useGameStore'
 import type { GrowthStatKey, TournamentResult } from '../types'
 
 const STAT_LABELS: Record<GrowthStatKey, string> = {
-  hp: 'HP', str: 'STR', agi: 'AGI', int: 'INT', luk: 'LUK',
+  vit: 'VIT', str: 'STR', agi: 'AGI', int: 'INT', luk: 'LUK',
 }
 
 const BRACKET_LABELS: Record<number, string> = {

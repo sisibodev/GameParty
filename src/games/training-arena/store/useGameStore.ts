@@ -169,11 +169,6 @@ function npcGrowth(round: number, isRival: boolean = false): GrowthStats {
   return { vit: b, str: b, agi: b, int: b, luk: b }
 }
 
-// v0.5.0: NPC 스킬은 캐릭터 고정 스킬 사용 (레거시)
-function npcFixedSkills(char: CharacterDef): string[] {
-  return char.skills ? [...char.skills] : []
-}
-
 // v0.6.0: 게임 시작 시 NPC에게 랜덤 스킬 3개 부여 (gameSeed 기반, 라운드 불변)
 function npcRandomSkills(charId: number, gameSeed: number): string[] {
   const rng = new SeededRng(charId * 1337 + gameSeed)
