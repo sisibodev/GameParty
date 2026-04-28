@@ -1,7 +1,7 @@
 [
   {
     "id": 1,
-    "name": "강철기사",
+    "name": "Aldric",
     "description": "은빛 풀플레이트 아머, 대형 방패, 한손검",
     "archetype": "tank",
     "baseCombat": {
@@ -25,7 +25,7 @@
   },
   {
     "id": 2,
-    "name": "광전사",
+    "name": "Ragnar",
     "description": "상의 탈의, 거대 양손도끼, 붉은 문신, 분노의 눈빛",
     "archetype": "berserker",
     "baseCombat": {
@@ -49,7 +49,7 @@
   },
   {
     "id": 3,
-    "name": "그림자 암살자",
+    "name": "Kira",
     "description": "검은 후드 망토, 쌍단검, 얼굴 절반을 가리는 복면",
     "archetype": "assassin",
     "baseCombat": {
@@ -73,7 +73,7 @@
   },
   {
     "id": 4,
-    "name": "엘프 궁수",
+    "name": "Aelindra",
     "description": "녹색 외투, 긴 장궁, 은발, 뾰족한 귀",
     "archetype": "ranger",
     "baseCombat": {
@@ -97,7 +97,7 @@
   },
   {
     "id": 5,
-    "name": "대마법사",
+    "name": "Elric",
     "description": "별 무늬 로브, 수정 장식 지팡이, 흰 수염",
     "archetype": "mage",
     "baseCombat": {
@@ -121,7 +121,7 @@
   },
   {
     "id": 6,
-    "name": "성기사",
+    "name": "Seraph",
     "description": "흰 망토, 빛나는 한손검, 성스러운 휘장 방패",
     "archetype": "paladin",
     "baseCombat": {
@@ -145,7 +145,7 @@
   },
   {
     "id": 7,
-    "name": "도적",
+    "name": "Finn",
     "description": "가죽 갑옷, 은제 단검, 날렵한 체격, 자신만만한 미소",
     "archetype": "assassin",
     "baseCombat": {
@@ -169,7 +169,7 @@
   },
   {
     "id": 8,
-    "name": "사무라이",
+    "name": "Takeshi",
     "description": "기모노 위 경갑, 카타나, 묶은 상투",
     "archetype": "warrior",
     "baseCombat": {
@@ -193,7 +193,7 @@
   },
   {
     "id": 9,
-    "name": "총잡이",
+    "name": "Colt",
     "description": "롱코트, 양손 리볼버, 카우보이 모자",
     "archetype": "ranger",
     "baseCombat": {
@@ -217,7 +217,7 @@
   },
   {
     "id": 10,
-    "name": "음유시인",
+    "name": "Finley",
     "description": "깃털 모자, 류트, 화려한 의상",
     "archetype": "support",
     "baseCombat": {
@@ -241,7 +241,7 @@
   },
   {
     "id": 11,
-    "name": "드워프 전사",
+    "name": "Thorgin",
     "description": "땅딸막한 체격, 금빛 수염, 양손 전투도끼, 판금 갑주",
     "archetype": "tank",
     "baseCombat": {
@@ -265,7 +265,7 @@
   },
   {
     "id": 12,
-    "name": "바이킹 베르세르크",
+    "name": "Bjorn",
     "description": "털가죽 망토, 뿔 투구, 양손도끼, 온몸의 룬 문신",
     "archetype": "berserker",
     "baseCombat": {
@@ -289,7 +289,7 @@
   },
   {
     "id": 13,
-    "name": "전투 수녀",
+    "name": "Vera",
     "description": "흰 수녀복 위 금속 가슴갑, 검은 철퇴, 성가집",
     "archetype": "support",
     "baseCombat": {
@@ -313,7 +313,7 @@
   },
   {
     "id": 14,
-    "name": "검투사",
+    "name": "Darius",
     "description": "로마식 투구, 그물과 삼지창, 근육질 체격",
     "archetype": "warrior",
     "baseCombat": {
@@ -337,7 +337,7 @@
   },
   {
     "id": 15,
-    "name": "네크로맨서",
+    "name": "Varis",
     "description": "해골 장식 검은 로브, 구부러진 지팡이, 창백한 얼굴",
     "archetype": "mage",
     "baseCombat": {
@@ -361,7 +361,7 @@
   },
   {
     "id": 16,
-    "name": "몽크",
+    "name": "Bodhi",
     "description": "민머리, 회색 승복, 맨주먹, 평온한 표정",
     "archetype": "warrior",
     "baseCombat": {
@@ -385,7 +385,7 @@
   },
   {
     "id": 17,
-    "name": "거인 전사",
+    "name": "Grum",
     "description": "3미터에 가까운 체격, 원시적인 통나무 몽둥이, 가죽만 걸친 모습",
     "archetype": "tank",
     "baseCombat": {
@@ -409,7 +409,7 @@
   },
   {
     "id": 18,
-    "name": "드루이드",
+    "name": "Sylvan",
     "description": "녹색 후드, 뿔 장식, 나무 지팡이, 동물 동반자",
     "archetype": "mage",
     "baseCombat": {
@@ -433,7 +433,7 @@
   },
   {
     "id": 19,
-    "name": "해적 선장",
+    "name": "Drake",
     "description": "삼각모, 붉은 코트, 사브르와 플린트록 권총, 안대",
     "archetype": "warrior",
     "baseCombat": {
@@ -457,7 +457,7 @@
   },
   {
     "id": 20,
-    "name": "닌자",
+    "name": "Ryuji",
     "description": "검은 복면, 카타나와 수리검, 그림자처럼 움직이는 실루엣",
     "archetype": "assassin",
     "baseCombat": {
@@ -481,7 +481,7 @@
   },
   {
     "id": 21,
-    "name": "음양사",
+    "name": "하은",
     "description": "한복 도복, 부적을 손에 쥔 자세, 종이 인형",
     "archetype": "mage",
     "baseCombat": {
@@ -505,7 +505,7 @@
   },
   {
     "id": 22,
-    "name": "청룡 무장",
+    "name": "Zhang Wei",
     "description": "중국식 갑주, 거대한 청룡언월도, 긴 수염",
     "archetype": "warrior",
     "baseCombat": {
@@ -529,7 +529,7 @@
   },
   {
     "id": 23,
-    "name": "쿠노이치",
+    "name": "Yuki",
     "description": "붉은 스카프를 두른 여자 닌자, 쌍검과 독침",
     "archetype": "assassin",
     "baseCombat": {
@@ -553,7 +553,7 @@
   },
   {
     "id": 24,
-    "name": "검성",
+    "name": "Hakuro",
     "description": "백발, 흰 도복, 빛나는 일본도, 냉정한 눈빛",
     "archetype": "warrior",
     "baseCombat": {
@@ -577,7 +577,7 @@
   },
   {
     "id": 25,
-    "name": "도사",
+    "name": "청풍",
     "description": "흰 수염 노인, 부채형 지팡이, 신선풍 도복",
     "archetype": "mage",
     "baseCombat": {
@@ -601,7 +601,7 @@
   },
   {
     "id": 26,
-    "name": "승병",
+    "name": "현운",
     "description": "회색 승복, 긴 철봉, 묵주 목걸이",
     "archetype": "warrior",
     "baseCombat": {
@@ -625,7 +625,7 @@
   },
   {
     "id": 27,
-    "name": "당랑권 무사",
+    "name": "단철",
     "description": "초록빛 도복, 맨손, 사마귀처럼 구부린 자세",
     "archetype": "assassin",
     "baseCombat": {
@@ -649,7 +649,7 @@
   },
   {
     "id": 28,
-    "name": "요괴사냥꾼",
+    "name": "연우",
     "description": "붉은 부적을 두른 한복, 도깨비 퇴치용 손도끼",
     "archetype": "ranger",
     "baseCombat": {
@@ -673,7 +673,7 @@
   },
   {
     "id": 29,
-    "name": "현상금 사냥꾼",
+    "name": "Dusk",
     "description": "먼지투성이 가죽 망토, 쌍권총, 낡은 모자",
     "archetype": "ranger",
     "baseCombat": {
@@ -697,7 +697,7 @@
   },
   {
     "id": 30,
-    "name": "마적 두목",
+    "name": "Xiao Bao",
     "description": "붉은 스카프, 굴곡진 언월도, 말을 탄 도적 인상",
     "archetype": "warrior",
     "baseCombat": {
@@ -721,7 +721,7 @@
   },
   {
     "id": 31,
-    "name": "SWAT 요원",
+    "name": "Reyes",
     "description": "검은 방탄조끼, 돌격소총, 헬멧과 고글",
     "archetype": "ranger",
     "baseCombat": {
@@ -745,7 +745,7 @@
   },
   {
     "id": 32,
-    "name": "특수부대 병사",
+    "name": "Cole",
     "description": "위장복, 돌격소총, 야시경",
     "archetype": "ranger",
     "baseCombat": {
@@ -769,7 +769,7 @@
   },
   {
     "id": 33,
-    "name": "사이보그",
+    "name": "Seven",
     "description": "붉은 광학센서 오른눈, 기계 팔, 금속 외골격",
     "archetype": "tank",
     "baseCombat": {
@@ -793,7 +793,7 @@
   },
   {
     "id": 34,
-    "name": "해커",
+    "name": "Nym",
     "description": "후드티, 노트북, 빠른 타이핑을 하는 손",
     "archetype": "support",
     "baseCombat": {
@@ -817,7 +817,7 @@
   },
   {
     "id": 35,
-    "name": "프로 복서",
+    "name": "Dante",
     "description": "권투 글러브, 근육질 상체, 트레이닝복",
     "archetype": "warrior",
     "baseCombat": {
@@ -841,7 +841,7 @@
   },
   {
     "id": 36,
-    "name": "카레이서",
+    "name": "Max",
     "description": "레이싱 슈트, 헬멧, 렌치를 들고 엔진을 만지는 자세",
     "archetype": "warrior",
     "baseCombat": {
@@ -865,7 +865,7 @@
   },
   {
     "id": 37,
-    "name": "소방관",
+    "name": "Jace",
     "description": "방화복과 산소통, 긴 파이크 액스",
     "archetype": "tank",
     "baseCombat": {
@@ -889,7 +889,7 @@
   },
   {
     "id": 38,
-    "name": "응급 의사",
+    "name": "Noah",
     "description": "흰 가운 위 작전복, 주사기, 휴대 제세동기",
     "archetype": "support",
     "baseCombat": {
@@ -913,7 +913,7 @@
   },
   {
     "id": 39,
-    "name": "누아르 탐정",
+    "name": "Viktor",
     "description": "트렌치 코트, 중절모, 리볼버, 담배",
     "archetype": "ranger",
     "baseCombat": {
@@ -937,7 +937,7 @@
   },
   {
     "id": 40,
-    "name": "바텐더",
+    "name": "Silas",
     "description": "조끼와 나비 넥타이, 금속 셰이커, 날렵한 손놀림",
     "archetype": "support",
     "baseCombat": {
@@ -961,7 +961,7 @@
   },
   {
     "id": 41,
-    "name": "기계공학자",
+    "name": "Cog",
     "description": "가죽 앞치마, 고글, 큰 렌치, 그을음 묻은 얼굴",
     "archetype": "support",
     "baseCombat": {
@@ -985,7 +985,7 @@
   },
   {
     "id": 42,
-    "name": "스팀 나이트",
+    "name": "Gideon",
     "description": "증기를 분출하는 강철 갑옷, 거대한 스팀 해머",
     "archetype": "tank",
     "baseCombat": {
@@ -1009,7 +1009,7 @@
   },
   {
     "id": 43,
-    "name": "연금술사",
+    "name": "Aldous",
     "description": "붉은 로브, 여러 플라스크, 화약과 불꽃",
     "archetype": "mage",
     "baseCombat": {
@@ -1033,7 +1033,7 @@
   },
   {
     "id": 44,
-    "name": "발명가",
+    "name": "Nikolas",
     "description": "기이한 렌즈 고글, 이상한 에너지 소총",
     "archetype": "ranger",
     "baseCombat": {
@@ -1057,7 +1057,7 @@
   },
   {
     "id": 45,
-    "name": "비행사",
+    "name": "Ash",
     "description": "비행 모자와 고글, 스카프, 소형 석궁",
     "archetype": "ranger",
     "baseCombat": {
@@ -1081,7 +1081,7 @@
   },
   {
     "id": 46,
-    "name": "시계장인",
+    "name": "Edmund",
     "description": "회중시계가 매달린 조끼 차림의 노인, 시간을 만지는 듯한 손동작",
     "archetype": "support",
     "baseCombat": {
@@ -1105,7 +1105,7 @@
   },
   {
     "id": 47,
-    "name": "모험 탐험가",
+    "name": "Roland",
     "description": "사파리 의상, 채찍, 권총, 중절모",
     "archetype": "warrior",
     "baseCombat": {
@@ -1129,7 +1129,7 @@
   },
   {
     "id": 48,
-    "name": "고고학자",
+    "name": "Alistair",
     "description": "낡은 배낭과 유물, 긴 채찍, 먼지투성이 복장",
     "archetype": "ranger",
     "baseCombat": {
@@ -1153,7 +1153,7 @@
   },
   {
     "id": 49,
-    "name": "에테르 메이지",
+    "name": "Lyra",
     "description": "푸르스름한 아우라, 크리스탈 지팡이",
     "archetype": "mage",
     "baseCombat": {
@@ -1177,7 +1177,7 @@
   },
   {
     "id": 50,
-    "name": "톱니바퀴 기사",
+    "name": "Caspian",
     "description": "노출된 기어와 증기관이 달린 갑옷, 거대한 한손검",
     "archetype": "tank",
     "baseCombat": {
@@ -1201,7 +1201,7 @@
   },
   {
     "id": 51,
-    "name": "포스 유저",
+    "name": "Zen",
     "description": "흰 로브, 빛나는 검, 차분한 눈빛",
     "archetype": "mage",
     "baseCombat": {
@@ -1225,7 +1225,7 @@
   },
   {
     "id": 52,
-    "name": "우주 해병",
+    "name": "Rex",
     "description": "거대 강화 외골격, 레일건",
     "archetype": "tank",
     "baseCombat": {
@@ -1249,7 +1249,7 @@
   },
   {
     "id": 53,
-    "name": "스타파일럿",
+    "name": "Dash",
     "description": "우주복, 헬멧, 레이저 권총",
     "archetype": "ranger",
     "baseCombat": {
@@ -1273,7 +1273,7 @@
   },
   {
     "id": 54,
-    "name": "변이체",
+    "name": "Muta",
     "description": "변형된 피부와 촉수, 일그러진 신체",
     "archetype": "warrior",
     "baseCombat": {
@@ -1297,7 +1297,7 @@
   },
   {
     "id": 55,
-    "name": "드론 엔지니어",
+    "name": "Byte",
     "description": "작업복, 제어기, 주변을 맴도는 호버 드론",
     "archetype": "support",
     "baseCombat": {
@@ -1321,7 +1321,7 @@
   },
   {
     "id": 56,
-    "name": "스나이퍼",
+    "name": "Ghost",
     "description": "위장 길리슈트, 저격소총, 스코프",
     "archetype": "ranger",
     "baseCombat": {
@@ -1345,7 +1345,7 @@
   },
   {
     "id": 57,
-    "name": "강습병",
+    "name": "Reid",
     "description": "단단한 전술 갑옷, 샷건, 군화",
     "archetype": "warrior",
     "baseCombat": {
@@ -1369,7 +1369,7 @@
   },
   {
     "id": 58,
-    "name": "의료병",
+    "name": "Mira",
     "description": "붉은 십자 완장, 붕대와 치료 키트, 군복",
     "archetype": "support",
     "baseCombat": {
@@ -1393,7 +1393,7 @@
   },
   {
     "id": 59,
-    "name": "정찰병",
+    "name": "Vex",
     "description": "위장 망토, 쿠크리 단검, 쌍안경",
     "archetype": "assassin",
     "baseCombat": {
@@ -1417,7 +1417,7 @@
   },
   {
     "id": 60,
-    "name": "중화기병",
+    "name": "Bruno",
     "description": "거대한 미니건을 든 체격 큰 병사, 탄띠를 두른 몸",
     "archetype": "tank",
     "baseCombat": {
@@ -1441,7 +1441,7 @@
   },
   {
     "id": 61,
-    "name": "뱀파이어 로드",
+    "name": "Lucian",
     "description": "검은 망토, 창백한 피부, 붉은 눈, 날카로운 송곳니",
     "archetype": "assassin",
     "baseCombat": {
@@ -1465,7 +1465,7 @@
   },
   {
     "id": 62,
-    "name": "늑대인간",
+    "name": "Fenris",
     "description": "털북숭이 인간-늑대 혼종, 찢어진 옷, 긴 발톱",
     "archetype": "berserker",
     "baseCombat": {
@@ -1489,7 +1489,7 @@
   },
   {
     "id": 63,
-    "name": "마녀",
+    "name": "Sable",
     "description": "뾰족 모자, 검은 드레스, 빗자루, 검은 고양이",
     "archetype": "mage",
     "baseCombat": {
@@ -1513,7 +1513,7 @@
   },
   {
     "id": 64,
-    "name": "좀비 사냥꾼",
+    "name": "Bryce",
     "description": "긴 가죽 코트, 소드오프 샷건, 마체테",
     "archetype": "ranger",
     "baseCombat": {
@@ -1537,7 +1537,7 @@
   },
   {
     "id": 65,
-    "name": "구울",
+    "name": "Graves",
     "description": "부패한 피부, 누더기 옷, 길쭉한 발톱",
     "archetype": "warrior",
     "baseCombat": {
@@ -1561,7 +1561,7 @@
   },
   {
     "id": 66,
-    "name": "밴시",
+    "name": "Moira",
     "description": "반투명한 흰 드레스의 유령 여인, 긴 흰머리, 비명 자세",
     "archetype": "mage",
     "baseCombat": {
@@ -1585,7 +1585,7 @@
   },
   {
     "id": 67,
-    "name": "유령 자객",
+    "name": "Soren",
     "description": "반투명한 갑옷, 잔상처럼 사라지는 실루엣",
     "archetype": "assassin",
     "baseCombat": {
@@ -1609,7 +1609,7 @@
   },
   {
     "id": 68,
-    "name": "데몬 로드",
+    "name": "Malachor",
     "description": "붉은 피부, 뿔, 거대한 지옥검, 박쥐 날개",
     "archetype": "berserker",
     "baseCombat": {
@@ -1633,7 +1633,7 @@
   },
   {
     "id": 69,
-    "name": "퇴마 신관",
+    "name": "Ciel",
     "description": "성수병과 퇴마 지팡이, 금욕적인 인상",
     "archetype": "support",
     "baseCombat": {
@@ -1657,7 +1657,7 @@
   },
   {
     "id": 70,
-    "name": "오컬티스트",
+    "name": "Ezra",
     "description": "검은 정장, 타로 카드, 기이한 문신이 비치는 팔",
     "archetype": "mage",
     "baseCombat": {
@@ -1681,7 +1681,7 @@
   },
   {
     "id": 71,
-    "name": "번개의 후예",
+    "name": "Raiden",
     "description": "치솟은 금발, 번개가 감긴 창, 푸른 눈",
     "archetype": "mage",
     "baseCombat": {
@@ -1705,7 +1705,7 @@
   },
   {
     "id": 72,
-    "name": "바다의 후예",
+    "name": "Marin",
     "description": "푸른 머리, 은빛 삼지창, 해조 장식",
     "archetype": "mage",
     "baseCombat": {
@@ -1729,7 +1729,7 @@
   },
   {
     "id": 73,
-    "name": "전쟁의 후예",
+    "name": "Arios",
     "description": "청동 갑옷, 붉은 망토, 장검과 원형 방패",
     "archetype": "warrior",
     "baseCombat": {
@@ -1753,7 +1753,7 @@
   },
   {
     "id": 74,
-    "name": "지혜의 후예",
+    "name": "Pallas",
     "description": "헬멧과 긴 창, 어깨 위 올빼미",
     "archetype": "warrior",
     "baseCombat": {
@@ -1777,7 +1777,7 @@
   },
   {
     "id": 75,
-    "name": "태양의 후예",
+    "name": "Solara",
     "description": "금발, 황금 활, 빛나는 아우라",
     "archetype": "ranger",
     "baseCombat": {
@@ -1801,7 +1801,7 @@
   },
   {
     "id": 76,
-    "name": "전령의 후예",
+    "name": "Alden",
     "description": "날개 달린 샌들, 전령봉, 날렵한 체격",
     "archetype": "assassin",
     "baseCombat": {
@@ -1825,7 +1825,7 @@
   },
   {
     "id": 77,
-    "name": "노래하는 기사",
+    "name": "Lyric",
     "description": "은빛 검과 류트를 함께 든 전사, 깃털 망토",
     "archetype": "support",
     "baseCombat": {
@@ -1849,7 +1849,7 @@
   },
   {
     "id": 78,
-    "name": "피닉스의 후예",
+    "name": "Embris",
     "description": "붉은 머리, 불의 날개, 재로 뒤덮인 창",
     "archetype": "mage",
     "baseCombat": {
@@ -1873,7 +1873,7 @@
   },
   {
     "id": 79,
-    "name": "드래곤 슬레이어",
+    "name": "Torak",
     "description": "용 비늘 갑옷, 거대한 창, 용 두개골 투구",
     "archetype": "warrior",
     "baseCombat": {
@@ -1897,7 +1897,7 @@
   },
   {
     "id": 80,
-    "name": "용의 자손",
+    "name": "Dravos",
     "description": "인간에 용 비늘과 작은 날개, 입에서 새어 나오는 불꽃",
     "archetype": "mage",
     "baseCombat": {
@@ -1921,7 +1921,7 @@
   },
   {
     "id": 81,
-    "name": "광대 살인마",
+    "name": "Harlen",
     "description": "공포스러운 광대 분장, 칼과 풍선, 기괴한 웃음",
     "archetype": "assassin",
     "baseCombat": {
@@ -1945,7 +1945,7 @@
   },
   {
     "id": 82,
-    "name": "쌍둥이 · 형",
+    "name": "Kael",
     "description": "붉은 의상, 한손검, 공격적 자세",
     "archetype": "warrior",
     "baseCombat": {
@@ -1969,7 +1969,7 @@
   },
   {
     "id": 83,
-    "name": "쌍둥이 · 동생",
+    "name": "Lael",
     "description": "푸른 의상, 석궁, 침착한 눈빛",
     "archetype": "ranger",
     "baseCombat": {
@@ -1993,7 +1993,7 @@
   },
   {
     "id": 84,
-    "name": "가면 검객",
+    "name": "Dorian",
     "description": "은빛 가면, 긴 레이피어, 검은 망토",
     "archetype": "warrior",
     "baseCombat": {
@@ -2017,7 +2017,7 @@
   },
   {
     "id": 85,
-    "name": "전투 시인",
+    "name": "Verse",
     "description": "화려한 깃털 모자, 쌍검과 류트, 반짝이는 의상",
     "archetype": "support",
     "baseCombat": {
@@ -2041,7 +2041,7 @@
   },
   {
     "id": 86,
-    "name": "무당",
+    "name": "소희",
     "description": "한복 위 방울을 단 띠, 부채와 신칼",
     "archetype": "mage",
     "baseCombat": {
@@ -2065,7 +2065,7 @@
   },
   {
     "id": 87,
-    "name": "부족 주술사",
+    "name": "Zuri",
     "description": "뼈 장식과 부족 문신, 원시적인 창, 화려한 깃털",
     "archetype": "mage",
     "baseCombat": {
@@ -2089,7 +2089,7 @@
   },
   {
     "id": 88,
-    "name": "오토마타",
+    "name": "Modus",
     "description": "표정 없는 기계 인형, 등에 감긴 태엽",
     "archetype": "tank",
     "baseCombat": {
@@ -2113,7 +2113,7 @@
   },
   {
     "id": 89,
-    "name": "정령사",
+    "name": "Eleias",
     "description": "네 정령에 둘러싸인 로브 차림",
     "archetype": "mage",
     "baseCombat": {
@@ -2137,7 +2137,7 @@
   },
   {
     "id": 90,
-    "name": "환술사",
+    "name": "Kiran",
     "description": "여러 잔상이 겹쳐 보이는 실루엣, 금색 가면",
     "archetype": "assassin",
     "baseCombat": {
@@ -2161,7 +2161,7 @@
   },
   {
     "id": 91,
-    "name": "용병단장",
+    "name": "Gareth",
     "description": "중갑, 지휘관 풍채, 긴 한손검과 지휘봉",
     "archetype": "warrior",
     "baseCombat": {
@@ -2185,7 +2185,7 @@
   },
   {
     "id": 92,
-    "name": "왕궁 근위대장",
+    "name": "Alaric",
     "description": "빛나는 금색 갑옷, 긴 장창, 엄숙한 표정",
     "archetype": "tank",
     "baseCombat": {
@@ -2209,7 +2209,7 @@
   },
   {
     "id": 93,
-    "name": "암흑 기사",
+    "name": "Malachar",
     "description": "검은 풀플레이트, 붉게 빛나는 눈, 저주받은 검",
     "archetype": "warrior",
     "baseCombat": {
@@ -2233,7 +2233,7 @@
   },
   {
     "id": 94,
-    "name": "성전사",
+    "name": "Solis",
     "description": "눈부신 백금 갑옷, 거대한 양손검, 성스러운 빛",
     "archetype": "paladin",
     "baseCombat": {
@@ -2257,7 +2257,7 @@
   },
   {
     "id": 95,
-    "name": "사막의 검객",
+    "name": "Samir",
     "description": "사막풍 복장, 굴곡진 시미터, 얼굴을 가린 머리천",
     "archetype": "warrior",
     "baseCombat": {
@@ -2281,7 +2281,7 @@
   },
   {
     "id": 96,
-    "name": "얼음 여왕",
+    "name": "Isolde",
     "description": "푸른 드레스, 얼음 왕관, 서리 지팡이, 차가운 눈빛",
     "archetype": "mage",
     "baseCombat": {
@@ -2305,7 +2305,7 @@
   },
   {
     "id": 97,
-    "name": "불의 주술사",
+    "name": "Ignis",
     "description": "붉은 문신, 불꽃을 두른 지팡이, 맨발",
     "archetype": "mage",
     "baseCombat": {
@@ -2329,7 +2329,7 @@
   },
   {
     "id": 98,
-    "name": "바람의 검사",
+    "name": "Zephyr",
     "description": "흘러내리는 녹색 천 의상, 가느다란 장검",
     "archetype": "warrior",
     "baseCombat": {
@@ -2353,7 +2353,7 @@
   },
   {
     "id": 99,
-    "name": "대지의 파수꾼",
+    "name": "Goram",
     "description": "거대한 돌 망치, 갈색 가죽과 바위 조각으로 된 갑옷",
     "archetype": "tank",
     "baseCombat": {
@@ -2377,7 +2377,7 @@
   },
   {
     "id": 100,
-    "name": "빛의 용사",
+    "name": "Aldren",
     "description": "백발, 빛나는 플레이트 메일, 성검",
     "archetype": "warrior",
     "baseCombat": {
