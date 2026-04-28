@@ -1,0 +1,67 @@
+[
+  { "id": "pas_001", "name": "강철 의지", "description": "ATK가 15% 증가한다.", "effect": { "type": "stat_boost", "stat": "atk", "pct": 15 } },
+  { "id": "pas_002", "name": "전쟁의 기운", "description": "ATK가 25% 증가한다.", "effect": { "type": "stat_boost", "stat": "atk", "pct": 25 } },
+  { "id": "pas_003", "name": "철갑의 심장", "description": "DEF가 15% 증가한다.", "effect": { "type": "stat_boost", "stat": "def", "pct": 15 } },
+  { "id": "pas_004", "name": "불굴의 방패", "description": "DEF가 25% 증가한다.", "effect": { "type": "stat_boost", "stat": "def", "pct": 25 } },
+  { "id": "pas_005", "name": "쾌속의 발걸음", "description": "SPD가 15% 증가한다.", "effect": { "type": "stat_boost", "stat": "spd", "pct": 15 } },
+  { "id": "pas_006", "name": "바람의 심장", "description": "SPD가 25% 증가한다.", "effect": { "type": "stat_boost", "stat": "spd", "pct": 25 } },
+  { "id": "pas_007", "name": "예리한 감각", "description": "크리티컬 확률이 15% 증가한다.", "effect": { "type": "stat_boost", "stat": "crit", "pct": 15 } },
+  { "id": "pas_008", "name": "사냥꾼의 눈", "description": "크리티컬 확률이 25% 증가한다.", "effect": { "type": "stat_boost", "stat": "crit", "pct": 25 } },
+  { "id": "pas_009", "name": "그림자 발걸음", "description": "회피율이 15% 증가한다.", "effect": { "type": "stat_boost", "stat": "eva", "pct": 15 } },
+  { "id": "pas_010", "name": "안개 속 유령", "description": "회피율이 25% 증가한다.", "effect": { "type": "stat_boost", "stat": "eva", "pct": 25 } },
+  { "id": "pas_011", "name": "대지의 뿌리", "description": "최대 HP가 15% 증가한다.", "effect": { "type": "stat_boost", "stat": "maxHp", "pct": 15 } },
+  { "id": "pas_012", "name": "거인의 피", "description": "최대 HP가 25% 증가한다.", "effect": { "type": "stat_boost", "stat": "maxHp", "pct": 25 } },
+
+  { "id": "pas_013", "name": "흡혈의 본능", "description": "공격으로 준 피해의 12%를 HP로 회복한다.", "effect": { "type": "lifesteal", "pct": 12 } },
+  { "id": "pas_014", "name": "피의 향연", "description": "공격으로 준 피해의 18%를 HP로 회복한다.", "effect": { "type": "lifesteal", "pct": 18 } },
+  { "id": "pas_015", "name": "뱀파이어의 심장", "description": "공격으로 준 피해의 25%를 HP로 회복한다.", "effect": { "type": "lifesteal", "pct": 25 } },
+
+  { "id": "pas_016", "name": "가시 껍질", "description": "피격 시 공격자에게 받은 피해의 15%를 돌려준다.", "effect": { "type": "thorns", "pct": 15 } },
+  { "id": "pas_017", "name": "형벌의 갑주", "description": "피격 시 공격자에게 받은 피해의 22%를 돌려준다.", "effect": { "type": "thorns", "pct": 22 } },
+  { "id": "pas_018", "name": "복수의 철벽", "description": "피격 시 공격자에게 받은 피해의 30%를 돌려준다.", "effect": { "type": "thorns", "pct": 30 } },
+
+  { "id": "pas_019", "name": "자연의 치유", "description": "매 턴 시작 시 최대 HP의 1.5%를 회복한다.", "effect": { "type": "regen", "pct_per_turn": 1.5 } },
+  { "id": "pas_020", "name": "생명의 샘", "description": "매 턴 시작 시 최대 HP의 2.0%를 회복한다.", "effect": { "type": "regen", "pct_per_turn": 2.0 } },
+  { "id": "pas_021", "name": "불사의 재생", "description": "매 턴 시작 시 최대 HP의 3.0%를 회복한다.", "effect": { "type": "regen", "pct_per_turn": 3.0 } },
+
+  { "id": "pas_022", "name": "전투 집중력", "description": "모든 스킬의 쿨다운이 1 감소한다.", "effect": { "type": "battle_focus", "cd_reduction": 1 } },
+  { "id": "pas_023", "name": "초월적 집중", "description": "모든 스킬의 쿨다운이 2 감소한다.", "effect": { "type": "battle_focus", "cd_reduction": 2 } },
+
+  { "id": "pas_024", "name": "최후의 의지", "description": "HP가 1 이상이라면 치명적인 피해를 1회 무효화한다.", "effect": { "type": "iron_will" } },
+
+  { "id": "pas_025", "name": "약자 사냥꾼", "description": "HP 40% 이하인 적에게 30% 추가 피해를 준다.", "effect": { "type": "execute_bonus", "hp_threshold": 40, "bonus_pct": 30 } },
+  { "id": "pas_026", "name": "마무리의 일격", "description": "HP 30% 이하인 적에게 50% 추가 피해를 준다.", "effect": { "type": "execute_bonus", "hp_threshold": 30, "bonus_pct": 50 } },
+  { "id": "pas_027", "name": "처형인의 낫", "description": "HP 20% 이하인 적에게 80% 추가 피해를 준다.", "effect": { "type": "execute_bonus", "hp_threshold": 20, "bonus_pct": 80 } },
+
+  { "id": "pas_028", "name": "임계 분노", "description": "자신의 HP가 50% 이하일 때 ATK가 30% 증가한다.", "effect": { "type": "berserker_rage", "hp_threshold": 50, "atk_pct": 30 } },
+  { "id": "pas_029", "name": "피의 광기", "description": "자신의 HP가 40% 이하일 때 ATK가 50% 증가한다.", "effect": { "type": "berserker_rage", "hp_threshold": 40, "atk_pct": 50 } },
+  { "id": "pas_030", "name": "사투의 각성", "description": "자신의 HP가 30% 이하일 때 ATK가 80% 증가한다.", "effect": { "type": "berserker_rage", "hp_threshold": 30, "atk_pct": 80 } },
+
+  { "id": "pas_031", "name": "마나 친화", "description": "모든 스킬의 마나 소모량이 15% 감소한다.", "effect": { "type": "mana_affinity", "cost_reduction": 15 } },
+  { "id": "pas_032", "name": "마법사의 지혜", "description": "모든 스킬의 마나 소모량이 25% 감소한다.", "effect": { "type": "mana_affinity", "cost_reduction": 25 } },
+
+  { "id": "pas_033", "name": "절박한 도주", "description": "HP가 50% 이하일 때 SPD가 30% 증가한다.", "effect": { "type": "last_stand_spd", "hp_threshold": 50, "spd_pct": 30 } },
+  { "id": "pas_034", "name": "생존자의 빠름", "description": "HP가 40% 이하일 때 SPD가 50% 증가한다.", "effect": { "type": "last_stand_spd", "hp_threshold": 40, "spd_pct": 50 } },
+  { "id": "pas_035", "name": "벼랑 끝의 질주", "description": "HP가 30% 이하일 때 SPD가 80% 증가한다.", "effect": { "type": "last_stand_spd", "hp_threshold": 30, "spd_pct": 80 } },
+
+  { "id": "pas_036", "name": "예리한 쐐기", "description": "크리티컬 피해가 20% 증가한다.", "effect": { "type": "crit_damage", "bonus_pct": 20 } },
+  { "id": "pas_037", "name": "관통의 각", "description": "크리티컬 피해가 35% 증가한다.", "effect": { "type": "crit_damage", "bonus_pct": 35 } },
+  { "id": "pas_038", "name": "파괴자의 심장", "description": "크리티컬 피해가 50% 증가한다.", "effect": { "type": "crit_damage", "bonus_pct": 50 } },
+
+  { "id": "pas_039", "name": "갑옷 분쇄", "description": "공격 시 대상의 방어력을 20% 무시한다.", "effect": { "type": "def_break", "pct": 20 } },
+  { "id": "pas_040", "name": "철갑 파쇄", "description": "공격 시 대상의 방어력을 35% 무시한다.", "effect": { "type": "def_break", "pct": 35 } },
+  { "id": "pas_041", "name": "절대 관통", "description": "공격 시 대상의 방어력을 50% 무시한다.", "effect": { "type": "def_break", "pct": 50 } },
+
+  { "id": "pas_042", "name": "행운아", "description": "전투 종료 시 획득 골드가 20% 증가한다.", "effect": { "type": "gold_bonus", "pct": 20 } },
+  { "id": "pas_043", "name": "황금 손", "description": "전투 종료 시 획득 골드가 40% 증가한다.", "effect": { "type": "gold_bonus", "pct": 40 } },
+
+  { "id": "pas_044", "name": "선수 필승", "description": "전투 첫 턴에 ATK가 30% 증가한다.", "effect": { "type": "first_strike", "bonus_pct": 30 } },
+  { "id": "pas_045", "name": "기습의 달인", "description": "전투 첫 턴에 ATK가 50% 증가한다.", "effect": { "type": "first_strike", "bonus_pct": 50 } },
+  { "id": "pas_046", "name": "전광석화", "description": "전투 첫 턴에 ATK가 80% 증가한다.", "effect": { "type": "first_strike", "bonus_pct": 80 } },
+
+  { "id": "pas_047", "name": "강인한 체력", "description": "받는 디버프 지속 시간이 25% 감소한다.", "effect": { "type": "tenacity", "pct": 25 } },
+  { "id": "pas_048", "name": "불굴의 정신", "description": "받는 디버프 지속 시간이 40% 감소한다.", "effect": { "type": "tenacity", "pct": 40 } },
+  { "id": "pas_049", "name": "강철 의지 II", "description": "받는 디버프 지속 시간이 60% 감소한다.", "effect": { "type": "tenacity", "pct": 60 } },
+
+  { "id": "pas_050", "name": "무인의 경지", "description": "크리티컬 피해가 100% 증가하지만 크리 확률이 10 감소한다.", "effect": { "type": "crit_damage", "bonus_pct": 100 } }
+]

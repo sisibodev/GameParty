@@ -60,7 +60,7 @@ interface TooltipItem {
 }
 
 export default function ShopPage() {
-  const { activeSlot, shopItems, enterShopPhase, buyItem, leaveShop, rerollShop } = useGameStore()
+  const { activeSlot, shopItems, enterShopPhase, buyItem, leaveShop, rerollShop, setPhase } = useGameStore()
   const [filter, setFilter] = useState<FilterKey>('all')
   const [tooltip, setTooltip] = useState<TooltipItem | null>(null)
 
@@ -254,7 +254,14 @@ export default function ShopPage() {
             )}
           </div>
 
-          <div style={{ marginTop: 'auto' }}>
+          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              className="arena-btn"
+              style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '10px 0', fontSize: 13, border: '1px solid var(--violet)', color: 'var(--violet)' }}
+              onClick={() => setPhase('skill_enhance')}
+            >
+              스킬 강화 →
+            </button>
             <button
               className="arena-btn arena-btn-primary"
               style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '12px 0', fontSize: 14 }}

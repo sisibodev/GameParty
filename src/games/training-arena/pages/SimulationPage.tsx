@@ -407,7 +407,7 @@ function CharPanelSim({ charId, hp, maxHp, mana, maxMana, isActing, stats, skill
       </div>
       {stats && (
         <div style={s.simStatGrid}>
-          {([['ATK', Math.round(stats.atk)], ['DEF', Math.round(stats.def)], ['SPD', Math.round(stats.spd)]] as [string, number][]).map(([lbl, val]) => (
+          {([['ATK', Math.round(stats.pAtk)], ['DEF', Math.round(stats.pDef)], ['SPD', Math.round(stats.spd)]] as [string, number][]).map(([lbl, val]) => (
             <div key={lbl} style={s.simStatChip}><span style={s.simStatLbl}>{lbl}</span><span style={s.simStatVal}>{val}</span></div>
           ))}
         </div>

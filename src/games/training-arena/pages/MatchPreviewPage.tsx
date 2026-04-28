@@ -1,22 +1,61 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { Archetype, CharacterDef, CombatStats, GrowthStats, ItemTier, NpcStat, SkillDef, TacticCardId, TournamentResult } from '../types'
+import type { Archetype, CharacterDef, CombatStats, GrowthStats, ItemDef, ItemKind, ItemTier, NpcStat, SkillDef, TacticCardId, TournamentResult } from '../types'
 import { deriveStats } from '../engine/statDeriver'
-import { NPC_BASE_GROWTH, RIVAL_STAT_PER_ROUND } from '../constants'
+import { NPC_BASE_GROWTH, MAX_PASSIVE_SLOTS, RIVAL_STAT_PER_ROUND } from '../constants'
 import { getItemById } from '../data/items'
 import { TACTIC_CARDS } from '../data/tacticCards'
+import { SeededRng } from '../utils/rng'
+import { pickN } from '../utils/fisherYates'
 import Portrait from '../components/ui/Portrait'
 import charactersRaw from '../data/characters.json'
 import skillsRaw from '../data/skills.json'
+import passiveSkillsRaw from '../data/passiveSkills.json'
 import '../styles/arena.css'
 
 const SKILL_BY_ID: Record<string, SkillDef> = Object.fromEntries(
   (skillsRaw as SkillDef[]).map(s => [s.id, s]),
 )
 
+interface PassiveDef { id: string; name: string; description: string }
+const PASSIVE_BY_ID: Record<string, PassiveDef> = Object.fromEntries(
+  (passiveSkillsRaw as PassiveDef[]).map(p => [p.id, p]),
+)
+const allPassiveIds = (passiveSkillsRaw as PassiveDef[]).map(p => p.id)
+
+function getNpcPassives(charId: number, round: number): string[] {
+  const rng = new SeededRng(charId * 997 + round)
+  return pickN(allPassiveIds, Math.min(MAX_PASSIVE_SLOTS, allPassiveIds.length), rng)
+}
+
 const TIER_COLOR: Record<ItemTier, string> = {
   common: '#aaa', rare: '#44aaff', hero: '#c05cfc', legend: '#ffd700',
 }
+
+const TIER_LABEL: Record<ItemTier, string> = {
+  common: 'COMMON', rare: 'RARE', hero: 'HERO', legend: 'LEGEND',
+}
+
+const KIND_LABEL: Record<ItemKind, string> = {
+  stat: '영구 스탯', combat: '전투 발동', utility: '유틸리티',
+}
+
+const STAT_ICON: Record<string, string> = {
+  hp: '💗', str: '⚔️', agi: '👟', int: '🔮', luk: '🍀',
+}
+const COMBAT_ICON: Record<string, string> = {
+  poison_dagger: '🗡️', mana_seal: '⛓️', vampire_ring: '💍', indomitable: '🛡️', golden_glove: '🧤',
+}
+function getItemIcon(item: ItemDef): string {
+  if (item.kind === 'stat' && item.statBonus) return STAT_ICON[Object.keys(item.statBonus)[0]] ?? '📦'
+  return COMBAT_ICON[item.id] ?? '📦'
+}
+
+type TooltipData =
+  | { kind: 'skill';   id: string; x: number; y: number }
+  | { kind: 'passive'; id: string; x: number; y: number }
+  | { kind: 'item';    def: ItemDef; x: number; y: number }
+  | null
 
 const CHARACTERS = charactersRaw as CharacterDef[]
 const findChar = (id: number) => CHARACTERS.find(c => c.id === id)
@@ -68,22 +107,26 @@ function RecordValue({ value }: { value: string }) {
 }
 
 function SkillList({
-  skillIds,
-  pendingSkills,
+  skillIds, pendingSkills, onHover,
 }: {
   skillIds: string[]
   pendingSkills?: Array<{ skillId: string; turnsRemaining: number }>
+  onHover: (data: TooltipData) => void
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {skillIds.map(id => {
         const def = SKILL_BY_ID[id]
         if (!def) return null
-        const color = TIER_COLOR[def.tier]
+        const color = TIER_COLOR[def.tier as ItemTier]
         return (
           <div
             key={id}
-            title={`CD: ${def.cooldown}  코스트: ${def.cost}MP\n${def.description}`}
+            onMouseEnter={e => {
+              const r = e.currentTarget.getBoundingClientRect()
+              onHover({ kind: 'skill', id, x: r.right + 6, y: r.top })
+            }}
+            onMouseLeave={() => onHover(null)}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 6px', borderRadius: 6, background: `${color}0a`, cursor: 'default' }}
           >
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
@@ -95,11 +138,15 @@ function SkillList({
       {pendingSkills?.map(ps => {
         const def = SKILL_BY_ID[ps.skillId]
         if (!def) return null
-        const color = TIER_COLOR[def.tier]
+        const color = TIER_COLOR[def.tier as ItemTier]
         return (
           <div
             key={ps.skillId}
-            title={`CD: ${def.cooldown}  코스트: ${def.cost}MP\n학습 중 (${ps.turnsRemaining}라운드 후)\n${def.description}`}
+            onMouseEnter={e => {
+              const r = e.currentTarget.getBoundingClientRect()
+              onHover({ kind: 'skill', id: ps.skillId, x: r.right + 6, y: r.top })
+            }}
+            onMouseLeave={() => onHover(null)}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 6px', borderRadius: 6, background: `${color}06`, opacity: 0.55, cursor: 'default' }}
           >
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
@@ -112,10 +159,39 @@ function SkillList({
   )
 }
 
+function PassiveList({ passiveIds, onHover }: { passiveIds: string[]; onHover: (data: TooltipData) => void }) {
+  if (passiveIds.length === 0) return null
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+      {passiveIds.map(id => {
+        const p = PASSIVE_BY_ID[id]
+        if (!p) return null
+        return (
+          <span
+            key={id}
+            onMouseEnter={e => {
+              const r = e.currentTarget.getBoundingClientRect()
+              onHover({ kind: 'passive', id, x: r.right + 6, y: r.top })
+            }}
+            onMouseLeave={() => onHover(null)}
+            style={{
+              fontSize: 10, padding: '2px 7px', borderRadius: 999,
+              background: 'rgba(161,99,255,.1)', border: '1px solid rgba(161,99,255,.3)',
+              color: 'var(--violet-glow)', cursor: 'default',
+            }}
+          >
+            {p.name}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
 function CharCard({
   char, tone, maxHp, stats, isPlayer,
   isRival, isWinnerCandidate, isDarkhorse,
-  skillIds, pendingSkills, records,
+  skillIds, uniqueSkillIds, pendingSkills, passives, records, onHover,
 }: {
   char: CharacterDef | undefined
   tone: number
@@ -126,8 +202,11 @@ function CharCard({
   isWinnerCandidate?: boolean
   isDarkhorse?: boolean
   skillIds: string[]
+  uniqueSkillIds?: string[]
   pendingSkills?: Array<{ skillId: string; turnsRemaining: number }>
+  passives: string[]
   records: Array<{ label: string; value: string }>
+  onHover: (data: TooltipData) => void
 }) {
   const arch  = char?.archetype ?? 'warrior'
   const color = ARCHETYPE_COLOR[arch] ?? '#888'
@@ -177,8 +256,8 @@ function CharCard({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
               {([
                 ['HP',   maxHp.toLocaleString()],
-                ['ATK',  Math.round(stats.atk)],
-                ['DEF',  Math.round(stats.def)],
+                ['ATK',  Math.round(stats.pAtk)],
+                ['DEF',  Math.round(stats.pDef)],
                 ['SPD',  Math.round(stats.spd)],
                 ['CRT%', `${stats.crit.toFixed(1)}%`],
                 ['EVA%', `${stats.eva.toFixed(1)}%`],
@@ -209,12 +288,39 @@ function CharCard({
       )}
 
       {/* Skills */}
-      {(skillIds.length > 0 || (pendingSkills?.length ?? 0) > 0) && (
+      {(skillIds.length > 0 || (uniqueSkillIds?.length ?? 0) > 0 || (pendingSkills?.length ?? 0) > 0) && (
         <>
           <div className="arena-divider" style={{ margin: '0 12px' }} />
-          <div style={{ padding: '8px 12px 12px', flex: 1 }}>
-            <div style={{ fontSize: 9, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 6 }}>SKILLS</div>
-            <SkillList skillIds={skillIds} pendingSkills={pendingSkills} />
+          <div style={{ padding: '8px 12px 8px', flex: 1 }}>
+            {uniqueSkillIds ? (
+              <>
+                <div style={{ fontSize: 9, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 4 }}>고유 스킬</div>
+                <SkillList skillIds={uniqueSkillIds} onHover={onHover} />
+                {skillIds.length > 0 && (
+                  <>
+                    <div style={{ height: 1, background: 'rgba(255,255,255,.06)', margin: '6px 0' }} />
+                    <div style={{ fontSize: 9, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 4 }}>공통 스킬</div>
+                    <SkillList skillIds={skillIds} onHover={onHover} />
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 9, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 6 }}>SKILLS</div>
+                <SkillList skillIds={skillIds} pendingSkills={pendingSkills} onHover={onHover} />
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Passives */}
+      {passives.length > 0 && (
+        <>
+          <div className="arena-divider" style={{ margin: '0 12px' }} />
+          <div style={{ padding: '6px 12px 10px' }}>
+            <div style={{ fontSize: 9, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 6 }}>PASSIVES</div>
+            <PassiveList passiveIds={passives} onHover={onHover} />
           </div>
         </>
       )}
@@ -227,6 +333,8 @@ export default function MatchPreviewPage() {
     playerMatches, playerMatchIndex, activeSlot, lastTournament,
     selectedTacticCardId, setTacticCard, startBattleForCurrentMatch,
   } = useGameStore()
+
+  const [tooltip, setTooltip] = useState<TooltipData>(null)
 
   useEffect(() => { setTacticCard(null) }, [setTacticCard])
 
@@ -275,12 +383,86 @@ export default function MatchPreviewPage() {
     { label: '상대전적', value: `${h2hLosses}승 ${h2hWins}패` },
   ]
 
-  const playerSkillIds = [...activeSlot.initialSkills, ...activeSlot.acquiredSkills]
-  const myItems        = (activeSlot.inventory ?? []).map(i => i.itemId)
-  const showInventory  = myItems.length > 0 || opponentItems.length > 0
+  const playerSkillIds  = [...activeSlot.initialSkills, ...activeSlot.acquiredSkills]
+  const playerPassives  = activeSlot.passiveSkills ?? []
+  const oppPassives     = getNpcPassives(opponentId, round)
+  const myItems         = (activeSlot.inventory ?? []).map(i => i.itemId)
+  const showInventory   = myItems.length > 0 || opponentItems.length > 0
 
   return (
     <div className="arena-bg-arena" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {/* 툴팁 오버레이 */}
+      {tooltip && tooltip.kind === 'skill' && (() => {
+        const def = SKILL_BY_ID[tooltip.id]
+        if (!def) return null
+        const color = TIER_COLOR[def.tier as ItemTier]
+        const left = tooltip.x + 220 > window.innerWidth ? tooltip.x - 236 : tooltip.x
+        return (
+          <div style={{
+            position: 'fixed', left, top: tooltip.y, zIndex: 9999, width: 220,
+            pointerEvents: 'none',
+            background: 'rgba(12,8,24,.97)', border: `1px solid ${color}55`,
+            borderRadius: 10, padding: '10px 13px',
+            boxShadow: '0 4px 24px rgba(0,0,0,.65)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color, border: `1px solid ${color}55`, borderRadius: 999, padding: '1px 6px' }}>
+                {def.tier.toUpperCase()}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color }}>{def.name}</span>
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--ink-dim)', marginBottom: 5 }}>
+              CD {def.cooldown}턴 · {def.cost} MP
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--ink-mute)', lineHeight: 1.55 }}>{def.description}</div>
+          </div>
+        )
+      })()}
+      {tooltip && tooltip.kind === 'passive' && (() => {
+        const p = PASSIVE_BY_ID[tooltip.id]
+        if (!p) return null
+        const left = tooltip.x + 220 > window.innerWidth ? tooltip.x - 236 : tooltip.x
+        return (
+          <div style={{
+            position: 'fixed', left, top: tooltip.y, zIndex: 9999, width: 220,
+            pointerEvents: 'none',
+            background: 'rgba(12,8,24,.97)', border: '1px solid rgba(161,99,255,.4)',
+            borderRadius: 10, padding: '10px 13px',
+            boxShadow: '0 4px 24px rgba(0,0,0,.65)',
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--violet-glow)', marginBottom: 5 }}>{p.name}</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-mute)', lineHeight: 1.55 }}>{p.description}</div>
+          </div>
+        )
+      })()}
+      {tooltip && tooltip.kind === 'item' && (() => {
+        const { def, x, y } = tooltip
+        const color = TIER_COLOR[def.tier]
+        const icon  = getItemIcon(def)
+        const left  = x + 220 > window.innerWidth ? x - 236 : x
+        return (
+          <div style={{
+            position: 'fixed', left, top: y, zIndex: 9999, width: 210,
+            pointerEvents: 'none',
+            background: 'linear-gradient(180deg,rgba(28,18,54,.98),rgba(16,10,34,.98))',
+            border: `1px solid ${color}55`,
+            borderRadius: 12, padding: '12px 14px',
+            boxShadow: `0 8px 32px rgba(0,0,0,.6), 0 0 0 1px ${color}22`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 22 }}>{icon}</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{def.name}</div>
+                <span style={{ fontSize: 9, fontWeight: 700, color, border: `1px solid ${color}55`, borderRadius: 999, padding: '1px 6px' }}>
+                  {TIER_LABEL[def.tier]}
+                </span>
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginBottom: 5 }}>{KIND_LABEL[def.kind]}</div>
+            <div style={{ fontSize: 12, color: 'var(--green)', lineHeight: 1.5 }}>{def.description}</div>
+          </div>
+        )
+      })()}
       <HeaderBar
         subtitle={`${stageLabel} · ${playerMatchIndex + 1}/${playerMatches.length} 경기`}
         round={activeSlot.currentRound}
@@ -307,7 +489,9 @@ export default function MatchPreviewPage() {
               isPlayer
               skillIds={playerSkillIds}
               pendingSkills={activeSlot.pendingSkills}
+              passives={playerPassives}
               records={playerRecords}
+              onHover={setTooltip}
             />
             <div style={{ flexShrink: 0, alignSelf: 'center', fontSize: 18, fontWeight: 900, color: 'var(--violet-glow)', padding: '0 2px' }}>VS</div>
             <CharCard
@@ -318,52 +502,19 @@ export default function MatchPreviewPage() {
               isRival={isRival}
               isWinnerCandidate={isWinnerCandidate}
               isDarkhorse={isDarkhorse}
+              uniqueSkillIds={opponentChar?.skills ?? []}
               skillIds={opponentSkills}
+              passives={oppPassives}
               records={opponentRecords}
+              onHover={setTooltip}
             />
           </div>
 
           {/* Inventory */}
           {showInventory && (
             <div style={{ display: 'flex', gap: 10 }}>
-              <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: 'rgba(20,14,40,.7)', border: '1px solid var(--line)' }}>
-                <div style={{ fontSize: 10, color: 'var(--cyan)', fontWeight: 700, letterSpacing: '.08em', marginBottom: 6 }}>내 아이템</div>
-                {myItems.length === 0
-                  ? <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>—</div>
-                  : (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                      {myItems.map((id, i) => {
-                        const def = getItemById(id)
-                        if (!def) return null
-                        const c = TIER_COLOR[def.tier]
-                        return (
-                          <span key={`${id}-${i}`} title={def.description} style={{ fontSize: 11, color: c, border: `1px solid ${c}44`, borderRadius: 6, padding: '3px 8px', background: `${c}0d`, cursor: 'default' }}>
-                            {def.name}
-                          </span>
-                        )
-                      })}
-                    </div>
-                  )}
-              </div>
-              <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: 'rgba(20,14,40,.7)', border: '1px solid var(--line)' }}>
-                <div style={{ fontSize: 10, color: 'var(--ink-mute)', fontWeight: 700, letterSpacing: '.08em', marginBottom: 6 }}>상대 아이템</div>
-                {opponentItems.length === 0
-                  ? <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>—</div>
-                  : (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                      {opponentItems.map((id, i) => {
-                        const def = getItemById(id)
-                        if (!def) return null
-                        const c = TIER_COLOR[def.tier]
-                        return (
-                          <span key={`${id}-${i}`} title={def.description} style={{ fontSize: 11, color: c, border: `1px solid ${c}44`, borderRadius: 6, padding: '3px 8px', background: `${c}0d`, cursor: 'default' }}>
-                            {def.name}
-                          </span>
-                        )
-                      })}
-                    </div>
-                  )}
-              </div>
+              <ItemRow label="내 아이템" labelColor="var(--cyan)" itemIds={myItems} onHover={setTooltip} />
+              <ItemRow label="상대 아이템" labelColor="var(--ink-mute)" itemIds={opponentItems} onHover={setTooltip} />
             </div>
           )}
         </div>
@@ -405,6 +556,52 @@ export default function MatchPreviewPage() {
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function ItemRow({
+  label, labelColor, itemIds, onHover,
+}: {
+  label: string
+  labelColor: string
+  itemIds: string[]
+  onHover: (data: TooltipData) => void
+}) {
+  return (
+    <div style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: 'rgba(20,14,40,.7)', border: '1px solid var(--line)' }}>
+      <div style={{ fontSize: 10, color: labelColor, fontWeight: 700, letterSpacing: '.08em', marginBottom: 8 }}>{label}</div>
+      {itemIds.length === 0 ? (
+        <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>—</div>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {itemIds.map((id, i) => {
+            const def = getItemById(id)
+            if (!def) return null
+            const color = TIER_COLOR[def.tier]
+            const icon  = getItemIcon(def)
+            return (
+              <div
+                key={`${id}-${i}`}
+                onMouseEnter={e => {
+                  const r = e.currentTarget.getBoundingClientRect()
+                  onHover({ kind: 'item', def, x: r.right + 6, y: r.top })
+                }}
+                onMouseLeave={() => onHover(null)}
+                style={{
+                  width: 44, height: 44, borderRadius: 8, cursor: 'default',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  background: `linear-gradient(135deg, ${color}28, ${color}08)`,
+                  border: `1px solid ${color}55`,
+                  fontSize: 22, gap: 1,
+                }}
+              >
+                {icon}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

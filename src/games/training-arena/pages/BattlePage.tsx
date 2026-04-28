@@ -128,7 +128,7 @@ export default function BattlePage() {
     playerStats?.spd ?? 1, oppStats?.spd ?? 1,
   )
 
-  const recentLog = match.log.slice(Math.max(0, logCursor - 10), logCursor)
+  const allLog    = match.log.slice(0, logCursor)
   const isWin     = match.winnerId === pid
   const gold      = activeSlot.gold ?? null
 
@@ -143,7 +143,7 @@ export default function BattlePage() {
   }
 
   return (
-    <div className="arena-bg-arena" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <div className="arena-bg-arena" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       {/* Top bar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -176,38 +176,59 @@ export default function BattlePage() {
         </div>
       </div>
 
-      {/* Main */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Left — flex:7 */}
-        <div style={{ flex: 7, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Character panels */}
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '20px 16px', gap: 12, minHeight: 0 }}>
-            <CharPanel
-              char={playerChar} tone={pid % 6} isPlayer
-              hp={pidHp} maxHp={match.initialHp[pid]}
-              mana={pidMana} maxMana={match.initialMana[pid]}
-              isActing={entry?.actorId === pid}
-              stats={playerStats} skills={playerSkills}
-            />
-            {/* TURN center */}
-            <div style={{ flexShrink: 0, width: 72, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-              <div className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-mute)', letterSpacing: '.15em' }}>TURN</div>
-              <div style={{ fontSize: 56, fontWeight: 900, color: 'var(--gold)', lineHeight: 1, textShadow: '0 0 28px rgba(255,214,107,.55)' }}>
-                {currentTurn}
-              </div>
-            </div>
-            <CharPanel
-              char={oppChar} tone={oppId % 6}
-              isRival={isRival} isWinnerCandidate={isWinnerCandidate} isDarkhorse={isDarkhorse}
-              hp={oppHp} maxHp={match.initialHp[oppId]}
-              mana={oppMana} maxMana={match.initialMana[oppId]}
-              isActing={entry?.actorId === oppId}
-              stats={oppStats} skills={oppSkills}
-            />
-          </div>
+      {/* Main — 2열×2행 Grid: 선이 픽셀 단위로 맞춤 */}
+      <div style={{
+        flex: 1, overflow: 'hidden',
+        display: 'grid',
+        gridTemplateColumns: '7fr 3fr',
+        gridTemplateRows: '1fr auto',
+      }}>
 
-          {/* ATB section */}
-          <div style={{ padding: '12px 20px', borderTop: '1px solid var(--line)', background: 'rgba(0,0,0,.2)', flexShrink: 0 }}>
+        {/* [1,1] 캐릭터 패널 */}
+        <div style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', padding: '20px 16px', gap: 12 }}>
+          <CharPanel
+            char={playerChar} tone={pid % 6} isPlayer
+            hp={pidHp} maxHp={match.initialHp[pid]}
+            mana={pidMana} maxMana={match.initialMana[pid]}
+            isActing={entry?.actorId === pid}
+            stats={playerStats}
+            uniqueSkills={playerChar?.skills ?? []}
+            commonSkills={playerSkills}
+          />
+          <div style={{ flexShrink: 0, width: 72, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <div className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-mute)', letterSpacing: '.15em' }}>TURN</div>
+            <div style={{ fontSize: 56, fontWeight: 900, color: 'var(--gold)', lineHeight: 1, textShadow: '0 0 28px rgba(255,214,107,.55)' }}>
+              {currentTurn}
+            </div>
+          </div>
+          <CharPanel
+            char={oppChar} tone={oppId % 6}
+            isRival={isRival} isWinnerCandidate={isWinnerCandidate} isDarkhorse={isDarkhorse}
+            hp={oppHp} maxHp={match.initialHp[oppId]}
+            mana={oppMana} maxMana={match.initialMana[oppId]}
+            isActing={entry?.actorId === oppId}
+            stats={oppStats}
+            uniqueSkills={oppChar?.skills ?? []}
+            commonSkills={oppSkills}
+          />
+        </div>
+
+        {/* [1,2] 전투 로그 */}
+        <div style={{ borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', background: 'rgba(6,4,14,.6)', overflow: 'hidden' }}>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+            <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)', letterSpacing: '.1em', fontWeight: 700 }}>COMBAT LOG</span>
+            <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>{logCursor} / {match.log.length}</span>
+          </div>
+          <div ref={logRef} style={{ flex: 1, overflowY: 'auto' as const, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {allLog.map((e, i) => (
+              <LogRow key={i} entry={e} pid={pid} />
+            ))}
+          </div>
+        </div>
+
+        {/* [2,1] ATB + 속도 버튼 */}
+        <div style={{ borderTop: '1px solid var(--line)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '12px 20px', background: 'rgba(0,0,0,.2)' }}>
             <div className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)', letterSpacing: '.15em', marginBottom: 10 }}>
               ACTIVE TIME BATTLE
             </div>
@@ -236,9 +257,7 @@ export default function BattlePage() {
               ))}
             </div>
           </div>
-
-          {/* Speed bar */}
-          <div style={{ padding: '10px 20px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,.15)', flexShrink: 0 }}>
+          <div style={{ padding: '10px 20px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,.15)' }}>
             {(['1x', '2x', '4x'] as const).map(sp => (
               <button
                 key={sp}
@@ -256,37 +275,29 @@ export default function BattlePage() {
           </div>
         </div>
 
-        {/* Right — flex:3 */}
-        <div style={{ flex: 3, borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', background: 'rgba(6,4,14,.6)' }}>
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-            <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)', letterSpacing: '.1em', fontWeight: 700 }}>COMBAT LOG</span>
-            <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>{logCursor} / {match.log.length}</span>
-          </div>
-          <div ref={logRef} style={{ flex: 1, overflowY: 'auto' as const, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {recentLog.map((e, i) => (
-              <LogRow key={i} entry={e} pid={pid} />
-            ))}
-            {done && (
-              <div style={{ textAlign: 'center' as const, padding: '20px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                <div style={{ fontSize: 24, fontWeight: 900, color: isWin ? 'var(--green)' : 'var(--red)' }}>
+        {/* [2,2] 결과 + 버튼 */}
+        <div style={{ borderTop: '1px solid var(--line)', borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'rgba(6,4,14,.6)' }}>
+          {done ? (
+            <>
+              <div style={{ textAlign: 'center' as const, padding: '14px 10px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: isWin ? 'var(--green)' : 'var(--red)' }}>
                   {isWin ? '🏆 승리!' : '💀 패배'}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>승자: {charName(match.winnerId)}</div>
               </div>
-            )}
-          </div>
-          {done && (
-            <div style={{ padding: '14px', borderTop: '1px solid var(--line)', flexShrink: 0 }}>
-              <button
-                className="arena-btn arena-btn-primary"
-                style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '12px 0', fontSize: 14 }}
-                onClick={() => useGameStore.setState({ phase: 'match_result' })}
-              >
-                결과 확인 →
-              </button>
-            </div>
-          )}
+              <div style={{ padding: '8px 14px 14px' }}>
+                <button
+                  className="arena-btn arena-btn-primary"
+                  style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '12px 0', fontSize: 14 }}
+                  onClick={() => useGameStore.setState({ phase: 'match_result' })}
+                >
+                  결과 확인 →
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
+
       </div>
     </div>
   )
@@ -294,7 +305,7 @@ export default function BattlePage() {
 
 function CharPanel({
   char, tone, isPlayer, isRival, isWinnerCandidate, isDarkhorse,
-  hp, maxHp, mana, maxMana, isActing, stats, skills,
+  hp, maxHp, mana, maxMana, isActing, stats, uniqueSkills, commonSkills,
 }: {
   char: CharacterDef | undefined
   tone: number
@@ -308,7 +319,8 @@ function CharPanel({
   maxMana: number
   isActing: boolean
   stats: CombatStats | null
-  skills: string[]
+  uniqueSkills: string[]
+  commonSkills: string[]
 }) {
   const arch        = char?.archetype ?? 'warrior'
   const hpPct       = maxHp   > 0 ? (hp   / maxHp)   * 100 : 0
@@ -349,10 +361,10 @@ function CharPanel({
           {stats && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,122,182,.1)', border: '1px solid rgba(255,122,182,.3)', color: '#ff7ab6', alignSelf: 'flex-start' }}>
-                ATK {Math.round(stats.atk)}
+                ATK {Math.round(stats.pAtk)}
               </span>
               <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(74,158,255,.1)', border: '1px solid rgba(74,158,255,.3)', color: '#4a9eff', alignSelf: 'flex-start' }}>
-                DEF {Math.round(stats.def)}
+                DEF {Math.round(stats.pDef)}
               </span>
             </div>
           )}
@@ -373,10 +385,11 @@ function CharPanel({
         <div className="arena-hpbar"><div className="arena-mp-fill" style={{ width: `${manaPct}%` }} /></div>
       </div>
 
-      {/* Skills — 5칸 고정 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {Array.from({ length: 5 }).map((_, i) => {
-          const id    = skills[i]
+      {/* Skills — 고유 3 + 공통 3 */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ fontSize: 8, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 1 }}>고유 스킬</div>
+        {Array.from({ length: 3 }).map((_, i) => {
+          const id    = uniqueSkills[i]
           const def   = id ? SKILLS.find(s => s.id === id) : undefined
           const name  = def?.name ?? id ?? ''
           const color = def ? (SKILL_TIER_COLOR[def.tier] ?? '#aaa') : '#aaa'
@@ -386,7 +399,23 @@ function CharPanel({
               <span style={{ fontSize: 11, color, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{name}</span>
             </div>
           ) : (
-            <div key={`empty-${i}`} style={{ height: 22, borderRadius: 4, background: 'rgba(255,255,255,.02)', border: '1px dashed rgba(255,255,255,.06)' }} />
+            <div key={`empty-u${i}`} style={{ height: 22, borderRadius: 4, background: 'rgba(255,255,255,.02)', border: '1px dashed rgba(255,255,255,.06)' }} />
+          )
+        })}
+        <div style={{ height: 1, background: 'rgba(255,255,255,.06)', margin: '2px 0' }} />
+        <div style={{ fontSize: 8, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 1 }}>공통 스킬</div>
+        {Array.from({ length: 3 }).map((_, i) => {
+          const id    = commonSkills[i]
+          const def   = id ? SKILLS.find(s => s.id === id) : undefined
+          const name  = def?.name ?? id ?? ''
+          const color = def ? (SKILL_TIER_COLOR[def.tier] ?? '#aaa') : '#aaa'
+          return id ? (
+            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 6px', borderRadius: 4, background: `${color}0a`, height: 22 }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{name}</span>
+            </div>
+          ) : (
+            <div key={`empty-c${i}`} style={{ height: 22, borderRadius: 4, background: 'rgba(255,255,255,.02)', border: '1px dashed rgba(255,255,255,.06)' }} />
           )
         })}
       </div>

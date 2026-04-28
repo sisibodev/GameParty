@@ -125,15 +125,15 @@ export default function CharSelectPage() {
 
   const statRows: Array<{ label: string; val: number }> = selectedChar ? [
     { label: 'HP',  val: selectedChar.baseCombat.maxHp },
-    { label: 'ATK', val: selectedChar.baseCombat.atk },
-    { label: 'DEF', val: selectedChar.baseCombat.def },
+    { label: 'ATK', val: selectedChar.baseCombat.pAtk },
+    { label: 'DEF', val: selectedChar.baseCombat.pDef },
     { label: 'SPD', val: selectedChar.baseCombat.spd },
     { label: 'CRT', val: selectedChar.baseCombat.crit },
     { label: 'EVA', val: selectedChar.baseCombat.eva },
   ] : []
 
   return (
-    <div className="arena-bg" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <div className="arena-bg" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <HeaderBar
         subtitle="CHARACTER SELECT"
         phase="캐릭터 선택"
@@ -142,9 +142,9 @@ export default function CharSelectPage() {
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* ── 좌측: 캐릭터 그리드 (flex 7) ── */}
-        <div style={{ flex: 7, padding: '24px 20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* 제목 + 해금 카운터 */}
-          <div>
+        <div style={{ flex: 7, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* 제목 + 해금 카운터 — 고정 */}
+          <div style={{ flexShrink: 0, padding: '20px 20px 12px' }}>
             <div className="arena-kr" style={{ fontSize: 26, fontWeight: 900, color: 'var(--ink)', marginBottom: 6 }}>
               대전을 시작할 내 캐릭터를 골라라
             </div>
@@ -161,8 +161,8 @@ export default function CharSelectPage() {
             </div>
           </div>
 
-          {/* 아케타입 필터 탭 */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {/* 아케타입 필터 탭 — 고정 */}
+          <div style={{ flexShrink: 0, padding: '0 20px 12px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {filterTabs.map(tab => {
               const isActive = filter === tab
               const color = tab === '전체' ? 'var(--violet)' : (ARCHETYPE_COLOR[tab] ?? '#888')
@@ -185,9 +185,11 @@ export default function CharSelectPage() {
             })}
           </div>
 
-          {/* 캐릭터 그리드 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 10 }}>
-            {displayed.map(c => <CharCard key={c.id} char={c} />)}
+          {/* 캐릭터 그리드 — 스크롤 영역 */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 10 }}>
+              {displayed.map(c => <CharCard key={c.id} char={c} />)}
+            </div>
           </div>
         </div>
 

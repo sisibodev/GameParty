@@ -74,7 +74,9 @@ export default function TournamentPage() {
                   <div style={{ fontWeight:700, color:'var(--violet-glow)', marginBottom:6 }}>조 {g.groupId}</div>
                   <div style={{ display:'flex', gap:4, color:'var(--gold)', marginBottom:2 }}><span style={{ minWidth:18 }}>1위</span>{charName(g.rank1)}</div>
                   <div style={{ display:'flex', gap:4, color:'var(--ink-dim)', marginBottom:2 }}><span style={{ minWidth:18 }}>2위</span>{charName(g.rank2)}</div>
-                  <div style={{ display:'flex', gap:4, color:'var(--ink-mute)' }}><span style={{ minWidth:18 }}>탈락</span>{charName(g.eliminated[0])}</div>
+                  {g.eliminated.map(id => (
+                    <div key={id} style={{ display:'flex', gap:4, color:'var(--ink-mute)' }}><span style={{ minWidth:18 }}>탈락</span>{charName(id)}</div>
+                  ))}
                 </div>
               )
             })}

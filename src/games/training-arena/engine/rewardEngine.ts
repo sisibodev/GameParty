@@ -1,4 +1,4 @@
-import type { PlayerTournamentResult, RewardPackage } from '../types'
+import type { PassiveSkillDef, PlayerTournamentResult, RewardPackage } from '../types'
 import {
   GOLD_BY_RESULT,
   REWARD_DARKHORSE,
@@ -9,8 +9,10 @@ import {
 import { SeededRng } from '../utils/rng'
 import { pickN } from '../utils/fisherYates'
 import { sumGoldMultiplier } from '../data/items'
+import passiveSkillsData from '../data/passiveSkills.json'
 
 const SKILL_CHOICE_COUNT = 3
+const PASSIVE_CHOICE_COUNT = 3
 
 const BASE_STAT_GAINS: Record<PlayerTournamentResult, number> = {
   winner:         REWARD_WINNER,
@@ -20,6 +22,17 @@ const BASE_STAT_GAINS: Record<PlayerTournamentResult, number> = {
   qualifier_out:  1,
 }
 
+function calcGoldBonusPct(playerPassiveIds: string[]): number {
+  const passives = passiveSkillsData as PassiveSkillDef[]
+  return playerPassiveIds.reduce((total, id) => {
+    const def = passives.find(p => p.id === id)
+    if (def && def.effect.type === 'gold_bonus') {
+      return total + (def.effect.pct as number)
+    }
+    return total
+  }, 0)
+}
+
 export function calcReward(
   result: PlayerTournamentResult,
   isDarkhorse: boolean,
@@ -27,6 +40,8 @@ export function calcReward(
   acquiredSkillIds: string[],
   seed: number,
   playerItems: readonly string[] = [],
+  allPassiveIds: string[] = [],
+  playerPassiveIds: string[] = [],
 ): RewardPackage {
   const rng = new SeededRng(seed)
 
@@ -36,12 +51,17 @@ export function calcReward(
   const unowned      = availableSkillIds.filter(id => !acquiredSkillIds.includes(id))
   const skillChoices = pickN(unowned, Math.min(SKILL_CHOICE_COUNT, unowned.length), rng)
 
-  const goldMult   = sumGoldMultiplier(playerItems)
-  const goldEarned = Math.floor(GOLD_BY_RESULT[result] * goldMult)
+  const goldMult        = sumGoldMultiplier(playerItems)
+  const goldBonusPct    = calcGoldBonusPct(playerPassiveIds)
+  const goldEarned      = Math.floor(GOLD_BY_RESULT[result] * goldMult * (1 + goldBonusPct / 100))
+
+  const unownedPassives = allPassiveIds.filter(id => !playerPassiveIds.includes(id))
+  const passiveChoices  = pickN(unownedPassives, Math.min(PASSIVE_CHOICE_COUNT, unownedPassives.length), rng)
 
   return {
     randomStatGain,
     skillChoices,
     goldEarned,
+    passiveChoices,
   }
 }

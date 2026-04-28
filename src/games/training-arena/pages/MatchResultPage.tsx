@@ -1,44 +1,59 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import type { CharacterDef } from '../types'
-import { mergePlayerSkills } from '../types'
-import { MAX_SKILL_SLOTS } from '../constants'
 import charactersRaw from '../data/characters.json'
+import passiveSkillsRaw from '../data/passiveSkills.json'
 import skillsRaw from '../data/skills.json'
 import '../styles/arena.css'
 
 const CHARACTERS = charactersRaw as CharacterDef[]
 const charName = (id: number) => CHARACTERS.find(c => c.id === id)?.name ?? `#${id}`
 
-interface SkillDef { id: string; name: string; tier: string; description: string; cost: number; cooldown: number }
+interface PassiveDef { id: string; name: string; description: string; effect: { type: string; [key: string]: unknown } }
+const PASSIVES = passiveSkillsRaw as PassiveDef[]
+const findPassive = (id: string) => PASSIVES.find(p => p.id === id)
+
+interface SkillDef { id: string; name: string; tier: string; description: string }
 const SKILLS = skillsRaw as SkillDef[]
 const findSkill = (id: string) => SKILLS.find(s => s.id === id)
 
+const STAT_LABELS: Record<string, string> = { hp: 'HP', str: 'STR', agi: 'AGI', int: 'INT', luk: 'LUK' }
+
 const TIER_COLOR: Record<string, string> = {
-  common: '#9aa3b2', rare: '#67e8f9', hero: '#c78bff', legend: '#ffd66b',
+  common: 'var(--ink-dim)', rare: 'var(--cyan)', hero: 'var(--violet-glow)', legend: 'var(--gold)',
 }
 const TIER_LABEL: Record<string, string> = {
-  common: '보통', rare: '희귀', hero: '영웅', legend: '전설',
+  common: '일반', rare: '희귀', hero: '영웅', legend: '전설',
 }
 
-const STAT_LABELS: Record<string, string> = { hp: 'HP', str: 'STR', agi: 'AGI', int: 'INT', luk: 'LUK' }
+const MAX_PASSIVE_SLOTS = 6
 
 export default function MatchResultPage() {
   const {
     playerMatches, playerMatchIndex, activeSlot,
-    pendingBattleSkillOpts, acquireBattleSkill, pendingReward,
+    pendingReward, pendingPassiveOpts, pendingSkillOpts,
+    acquireBattlePassive, acquireBattleSkill,
+    initMatchPassives, initMatchSkills,
+    completeMatchAndAdvance,
   } = useGameStore()
+
+  // 교체 모드: 슬롯이 꽉 찼을 때 제안 ID를 저장하고 교체 대상 선택 UI로 전환
+  const [replaceMode, setReplaceMode] = useState<{ type: 'skill' | 'passive'; proposedId: string } | null>(null)
+  // 툴팁: 내 스킬 칩 호버 시 표시
+  const [hoveredChip, setHoveredChip] = useState<{ id: string; type: 'skill' | 'passive'; x: number; y: number } | null>(null)
 
   const matchInfo = playerMatches[playerMatchIndex]
   const match     = matchInfo?.matchResult
 
-  const [pickPhase, setPickPhase] = useState<'pick' | 'replace' | 'done'>('pick')
-  const [chosenSkill, setChosenSkill] = useState<string | null>(null)
-
   useEffect(() => {
-    setPickPhase('pick')
-    setChosenSkill(null)
-  }, [playerMatchIndex])
+    if (matchInfo?.playerWon) {
+      initMatchSkills()
+      initMatchPassives()
+    }
+  }, [playerMatchIndex, matchInfo?.playerWon])
+
+  // 매치가 바뀌면 교체 모드 초기화
+  useEffect(() => { setReplaceMode(null) }, [playerMatchIndex])
 
   if (!match || !activeSlot || !matchInfo) return null
 
@@ -64,55 +79,246 @@ export default function MatchResultPage() {
   const h2hWins   = h2h.filter(m => m.playerWon).length
   const h2hLosses = h2h.filter(m => !m.playerWon).length
 
-  const oppSkillsFromMatch = won
-    ? (match.char1Id === pid ? match.char2Skills : match.char1Skills)
-    : []
-
-  useEffect(() => {
-    if (won && oppSkillsFromMatch.length > 0 && pendingBattleSkillOpts === null) {
-      useGameStore.setState({ pendingBattleSkillOpts: oppSkillsFromMatch })
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerMatchIndex, won])
-
-  const currentSkills = mergePlayerSkills(activeSlot)
-  const isFull = currentSkills.length >= MAX_SKILL_SLOTS
-  const hasPendingSkills = won && pendingBattleSkillOpts !== null && pendingBattleSkillOpts.length > 0
-
-  async function handleSkip() {
-    await acquireBattleSkill(null)
-    setPickPhase('done')
-  }
-
-  async function handlePickSkill(skillId: string) {
-    if (!isFull) {
-      await acquireBattleSkill(skillId)
-      setPickPhase('done')
-    } else {
-      setChosenSkill(skillId)
-      setPickPhase('replace')
-    }
-  }
-
-  async function handleReplace(replaceId: string) {
-    if (chosenSkill) {
-      await acquireBattleSkill(chosenSkill, replaceId)
-      setPickPhase('done')
-    }
-  }
-
-  function handleNext() {
-    if (won) {
-      useGameStore.setState({ phase: 'skill_learn' })
-    } else {
-      useGameStore.getState().completeMatchAndAdvance(false)
-    }
-  }
-
   const panelBg = won ? 'rgba(94,240,168,.03)' : 'rgba(255,92,110,.03)'
+
+  const myPassives     = activeSlot.passiveSkills ?? []
+  const isPassiveFull  = myPassives.length >= MAX_PASSIVE_SLOTS
+  const uniqueSkills   = activeSlot.initialSkills
+  const commonSkills   = activeSlot.acquiredSkills
+  const isSkillFull    = commonSkills.length >= 3
+
+  function chipEnter(e: React.MouseEvent, id: string, type: 'skill' | 'passive') {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setHoveredChip({ id, type, x: r.left, y: r.bottom + 6 })
+  }
+
+  // ── 우승 오른쪽 패널 렌더 ───────────────────────────────────────────────────
+
+  function renderWinPanel() {
+    const hasPicks = pendingSkillOpts !== null || pendingPassiveOpts !== null
+
+    // 교체 대상 선택 모드
+    if (replaceMode) {
+      const { type, proposedId } = replaceMode
+      const isSkillReplace = type === 'skill'
+      const proposed = isSkillReplace ? findSkill(proposedId) : findPassive(proposedId)
+      const list = isSkillReplace ? commonSkills : myPassives
+      const accentColor = isSkillReplace ? 'var(--gold)' : 'var(--violet-glow)'
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: accentColor }}>
+              {isSkillReplace ? '교체할 액티브 스킬 선택' : '교체할 패시브 스킬 선택'}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 4 }}>
+              <span style={{ color: accentColor, fontWeight: 700 }}>{proposed?.name}</span> 을(를) 습득합니다. 교체할 스킬을 선택하세요.
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+            {list.map(sid => {
+              const item = isSkillReplace ? findSkill(sid) : findPassive(sid)
+              if (!item) return null
+              return (
+                <div key={sid} style={{
+                  flex: '1 1 calc(50% - 6px)', display: 'flex', flexDirection: 'column' as const, gap: 6,
+                  background: 'rgba(255,92,110,.06)', border: '1px solid rgba(255,92,110,.25)',
+                  borderRadius: 10, padding: '10px 12px',
+                }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)' }}>{item.name}</span>
+                  <span style={{ fontSize: 10, color: 'var(--ink-mute)', flex: 1 }}>{item.description}</span>
+                  <button
+                    className="arena-btn"
+                    style={{ padding: '5px 0', fontSize: 11, borderRadius: 6, width: '100%', color: 'var(--red)', borderColor: 'rgba(255,92,110,.4)' }}
+                    onClick={() => {
+                      isSkillReplace ? acquireBattleSkill(proposedId, sid) : acquireBattlePassive(proposedId, sid)
+                      setReplaceMode(null)
+                    }}
+                  >
+                    이걸로 교체
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+          <button className="arena-btn" style={{ alignSelf: 'flex-start' as const, fontSize: 12, padding: '6px 16px' }} onClick={() => setReplaceMode(null)}>
+            ← 취소
+          </button>
+        </div>
+      )
+    }
+
+    // 모두 완료 → 다음 경기
+    if (!hasPicks) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+          <div style={{ fontSize: 13, color: 'var(--ink-mute)' }}>모든 선택을 마쳤습니다.</div>
+          <button className="arena-btn arena-btn-primary" style={{ padding: '12px 32px', fontSize: 14, borderRadius: 12, alignSelf: 'flex-start' as const }} onClick={() => acquireBattlePassive(null)}>
+            다음 경기 →
+          </button>
+        </div>
+      )
+    }
+
+    // 통합 선택 UI
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
+
+        {/* ── 내 스킬 현황 ── */}
+        <div style={{ padding: '10px 14px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--line)', borderRadius: 10 }}>
+          {/* 액티브 */}
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 6 }}>
+            내 액티브 스킬 <span style={{ color: 'var(--ink-dim)', fontWeight: 400 }}>고유 {uniqueSkills.length}/3 · 공통 {commonSkills.length}/3</span>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5, marginBottom: 4 }}>
+            {uniqueSkills.length === 0 && <span style={{ fontSize: 10, color: 'var(--ink-dim)' }}>없음</span>}
+            {uniqueSkills.map(sid => {
+              const sk = findSkill(sid)
+              return sk ? (
+                <span key={sid}
+                  onMouseEnter={e => chipEnter(e, sid, 'skill')}
+                  onMouseLeave={() => setHoveredChip(null)}
+                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,214,107,.15)', border: '1px solid rgba(255,214,107,.4)', color: 'var(--gold)', cursor: 'default' }}>
+                  {sk.name}
+                </span>
+              ) : null
+            })}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5, marginBottom: 10 }}>
+            {commonSkills.length === 0 && <span style={{ fontSize: 10, color: 'var(--ink-dim)' }}>없음</span>}
+            {commonSkills.map(sid => {
+              const sk = findSkill(sid)
+              return sk ? (
+                <span key={sid}
+                  onMouseEnter={e => chipEnter(e, sid, 'skill')}
+                  onMouseLeave={() => setHoveredChip(null)}
+                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(103,232,249,.1)', border: '1px solid rgba(103,232,249,.3)', color: 'var(--cyan)', cursor: 'default' }}>
+                  {sk.name}
+                </span>
+              ) : null
+            })}
+          </div>
+          {/* 패시브 */}
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 6 }}>
+            내 패시브 스킬 <span style={{ color: 'var(--ink-dim)', fontWeight: 400 }}>{myPassives.length}/{MAX_PASSIVE_SLOTS}</span>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+            {myPassives.length === 0 && <span style={{ fontSize: 10, color: 'var(--ink-dim)' }}>없음</span>}
+            {myPassives.map(pid2 => {
+              const p = findPassive(pid2)
+              return p ? (
+                <span key={pid2}
+                  onMouseEnter={e => chipEnter(e, pid2, 'passive')}
+                  onMouseLeave={() => setHoveredChip(null)}
+                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(161,99,255,.1)', border: '1px solid rgba(161,99,255,.3)', color: 'var(--violet-glow)', cursor: 'default' }}>
+                  {p.name}
+                </span>
+              ) : null
+            })}
+          </div>
+        </div>
+
+        {/* ── 액티브 스킬 선택지 (가로 3개) ── */}
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', letterSpacing: '.08em', marginBottom: 8 }}>
+            액티브 스킬 습득 {isSkillFull && <span style={{ color: 'var(--ink-mute)', fontWeight: 400 }}>(교체)</span>}
+          </div>
+          {pendingSkillOpts === null || pendingSkillOpts.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--ink-dim)' }}>배울 수 있는 액티브 스킬 없음</div>
+          ) : (
+            <div style={{ display: 'flex', gap: 10 }}>
+              {pendingSkillOpts.slice(0, 3).map(skillId => {
+                const sk = findSkill(skillId)
+                if (!sk) return null
+                return (
+                  <div key={skillId} style={{
+                    flex: '1 1 0', display: 'flex', flexDirection: 'column' as const, gap: 6,
+                    background: 'rgba(255,214,107,.05)', border: '1px solid rgba(255,214,107,.22)',
+                    borderRadius: 10, padding: '11px 13px',
+                  }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: TIER_COLOR[sk.tier], border: `1px solid ${TIER_COLOR[sk.tier]}55`, borderRadius: 999, padding: '2px 7px', alignSelf: 'flex-start' as const }}>
+                      {TIER_LABEL[sk.tier] ?? sk.tier}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)' }}>{sk.name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--ink-mute)', lineHeight: 1.5, flex: 1 }}>{sk.description}</span>
+                    <button
+                      className="arena-btn arena-btn-primary"
+                      style={{ padding: '6px 0', fontSize: 12, borderRadius: 8, width: '100%', marginTop: 2 }}
+                      onClick={() => isSkillFull ? setReplaceMode({ type: 'skill', proposedId: skillId }) : acquireBattleSkill(skillId)}
+                    >
+                      {isSkillFull ? '교체 선택' : '배우기'}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* ── 패시브 스킬 선택지 (2열 그리드) ── */}
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--violet-glow)', letterSpacing: '.08em', marginBottom: 8 }}>
+            패시브 스킬 습득 {isPassiveFull && <span style={{ color: 'var(--ink-mute)', fontWeight: 400 }}>(교체)</span>}
+          </div>
+          {pendingPassiveOpts === null || pendingPassiveOpts.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--ink-dim)' }}>배울 수 있는 패시브 없음</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {pendingPassiveOpts.map(passiveId => {
+                const p = findPassive(passiveId)
+                if (!p) return null
+                return (
+                  <div key={passiveId} style={{
+                    display: 'flex', flexDirection: 'column' as const, gap: 6,
+                    background: 'rgba(161,99,255,.06)', border: '1px solid rgba(161,99,255,.22)',
+                    borderRadius: 10, padding: '11px 13px',
+                  }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--violet-glow)' }}>{p.name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--ink-mute)', lineHeight: 1.5, flex: 1 }}>{p.description}</span>
+                    <button
+                      className="arena-btn arena-btn-primary"
+                      style={{ padding: '6px 0', fontSize: 12, borderRadius: 8, width: '100%', marginTop: 2 }}
+                      onClick={() => isPassiveFull ? setReplaceMode({ type: 'passive', proposedId: passiveId }) : acquireBattlePassive(passiveId)}
+                    >
+                      {isPassiveFull ? '교체 선택' : '습득'}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <button className="arena-btn" style={{ alignSelf: 'flex-start' as const, fontSize: 12, padding: '6px 16px' }} onClick={() => acquireBattlePassive(null)}>
+          건너뛰기
+        </button>
+      </div>
+    )
+  }
+
+  const tooltipInfo = hoveredChip
+    ? (hoveredChip.type === 'skill' ? findSkill(hoveredChip.id) : findPassive(hoveredChip.id))
+    : null
 
   return (
     <div className="arena-bg-arena" style={{ display: 'flex', flexDirection: 'column' as const, minHeight: '100vh' }}>
+      {/* 툴팁 오버레이 */}
+      {hoveredChip && tooltipInfo && (
+        <div style={{
+          position: 'fixed', left: hoveredChip.x, top: hoveredChip.y, zIndex: 9999,
+          maxWidth: 220, pointerEvents: 'none',
+          background: 'rgba(12,8,24,.97)', border: '1px solid rgba(161,99,255,.4)',
+          borderRadius: 10, padding: '10px 13px',
+          boxShadow: '0 4px 24px rgba(0,0,0,.65)',
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 5, color: hoveredChip.type === 'skill' ? 'var(--gold)' : 'var(--violet-glow)' }}>
+            {tooltipInfo.name}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--ink-mute)', lineHeight: 1.55 }}>
+            {tooltipInfo.description}
+          </div>
+        </div>
+      )}
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--line)', background: 'rgba(10,6,20,.7)', backdropFilter: 'blur(8px)' }}>
         <span className="arena-mono" style={{ fontSize: 10, color: 'var(--violet-glow)', letterSpacing: '.15em' }}>MATCH RESULT</span>
@@ -122,13 +328,12 @@ export default function MatchResultPage() {
         </div>
       </div>
 
-      {/* Main body: left result panel + right skill panel */}
+      {/* Main body */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* Left panel: result info */}
+        {/* Left panel */}
         <div style={{ flex: 3, overflowY: 'auto' as const, padding: '28px 24px', borderRight: '1px solid var(--line)', background: panelBg, display: 'flex', flexDirection: 'column' as const, gap: 20 }}>
 
-          {/* VICTORY / DEFEAT headline */}
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
             <div style={{
               fontSize: 56, fontWeight: 900, letterSpacing: '.1em', lineHeight: 1,
@@ -144,7 +349,6 @@ export default function MatchResultPage() {
             </div>
           </div>
 
-          {/* Gold reward + record row */}
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, padding: '12px 16px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--line)', borderRadius: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>골드 보상</span>
@@ -152,14 +356,6 @@ export default function MatchResultPage() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>이번 대회</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--green)' }}>{wins}승</span>
-                <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>·</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--red)' }}>{losses}패</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>통산전적</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--green)' }}>{wins}승</span>
                 <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>·</span>
@@ -176,7 +372,6 @@ export default function MatchResultPage() {
             </div>
           </div>
 
-          {/* Player growthStats */}
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--violet-glow)', letterSpacing: '.1em' }}>내 성장 스탯</div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6, padding: '12px 16px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--line)', borderRadius: 12 }}>
@@ -189,7 +384,6 @@ export default function MatchResultPage() {
             </div>
           </div>
 
-          {/* Battle stat comparison */}
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--violet-glow)', letterSpacing: '.1em' }}>전투 결과</div>
             <div className="arena-panel" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
@@ -205,164 +399,16 @@ export default function MatchResultPage() {
           </div>
         </div>
 
-        {/* Right panel: skill selection (win) or next (defeat) */}
+        {/* Right panel */}
         <div style={{ flex: 7, overflowY: 'auto' as const, padding: '28px 24px', display: 'flex', flexDirection: 'column' as const, gap: 16 }}>
-          {won ? (
-            <>
-              {/* Header */}
-              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--violet-glow)' }}>상대에게서 스킬을 배운다</div>
-                <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>하나를 선택해 습득합니다</div>
-                <div style={{ fontSize: 11, color: 'var(--ink-dim)' }}>
-                  스킬 슬롯 {currentSkills.length}/{MAX_SKILL_SLOTS}{isFull ? ' · 슬롯 가득 — 교체 가능' : ''}
-                </div>
-              </div>
-
-              {/* Skill pick phase — 가로 배치 */}
-              {hasPendingSkills && pickPhase === 'pick' && (
-                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    {pendingBattleSkillOpts!.map(sid => {
-                      const sk = findSkill(sid)
-                      if (!sk) return null
-                      const tc = TIER_COLOR[sk.tier] ?? 'var(--ink-mute)'
-                      return (
-                        <div
-                          key={sid}
-                          title={`${sk.name} | ${sk.description} | CD:${sk.cooldown}턴 MP:${sk.cost}`}
-                          style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 8, background: 'rgba(255,255,255,.03)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px' }}
-                        >
-                          <span style={{ fontSize: 9, fontWeight: 700, color: tc, border: `1px solid ${tc}55`, borderRadius: 999, padding: '1px 6px', alignSelf: 'flex-start' as const }}>{TIER_LABEL[sk.tier] ?? sk.tier}</span>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{sk.name}</span>
-                          <span style={{ fontSize: 11, color: 'var(--ink-mute)', flex: 1 }}>{sk.description}</span>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <span style={{ fontSize: 10, color: 'var(--ink-dim)', background: 'rgba(255,255,255,.05)', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 6px' }}>CD {sk.cooldown}턴</span>
-                            <span style={{ fontSize: 10, color: 'var(--ink-dim)', background: 'rgba(255,255,255,.05)', border: '1px solid var(--line)', borderRadius: 6, padding: '2px 6px' }}>MP {sk.cost}</span>
-                          </div>
-                          <button
-                            className="arena-btn arena-btn-primary"
-                            style={{ padding: '6px 0', fontSize: 12, borderRadius: 8, width: '100%' }}
-                            onClick={() => handlePickSkill(sid)}
-                          >
-                            {isFull ? '교체' : '습득'}
-                          </button>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <button className="arena-btn" style={{ alignSelf: 'flex-start' as const, fontSize: 12, padding: '6px 16px' }} onClick={handleSkip}>건너뛰기</button>
-                </div>
-              )}
-
-              {/* Replace phase */}
-              {hasPendingSkills && pickPhase === 'replace' && (
-                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--violet-glow)' }}>교체할 스킬을 선택하세요</div>
-                  {chosenSkill && (() => {
-                    const sk = findSkill(chosenSkill)
-                    const tc = TIER_COLOR[sk?.tier ?? ''] ?? 'var(--ink-mute)'
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(94,240,168,.06)', border: '1px solid rgba(94,240,168,.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 4 }}>
-                        <div style={{ flex: 1 }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: tc, border: `1px solid ${tc}55`, borderRadius: 999, padding: '1px 6px' }}>{TIER_LABEL[sk?.tier ?? ''] ?? sk?.tier}</span>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginTop: 4 }}>{sk?.name}</div>
-                        </div>
-                        <span style={{ fontSize: 11, color: 'var(--green)', whiteSpace: 'nowrap' as const }}>습득 예정</span>
-                      </div>
-                    )
-                  })()}
-                  <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>현재 보유 스킬 중 하나를 교체합니다:</div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {currentSkills.map(sid => {
-                      const sk = findSkill(sid)
-                      if (!sk) return null
-                      const tc = TIER_COLOR[sk.tier] ?? 'var(--ink-mute)'
-                      return (
-                        <div
-                          key={sid}
-                          title={`${sk.name} | ${sk.description} | CD:${sk.cooldown}턴 MP:${sk.cost}`}
-                          style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6, padding: '10px 8px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--line)', borderRadius: 10, textAlign: 'center' as const }}
-                        >
-                          <span style={{ fontSize: 8, fontWeight: 700, color: tc, border: `1px solid ${tc}55`, borderRadius: 999, padding: '1px 5px' }}>{TIER_LABEL[sk.tier] ?? sk.tier}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.3 }}>{sk.name}</span>
-                          <button
-                            className="arena-btn"
-                            style={{ padding: '3px 8px', fontSize: 10, borderRadius: 6, borderColor: 'rgba(255,92,110,.5)', color: 'var(--red)', whiteSpace: 'nowrap' as const, marginTop: 'auto' }}
-                            onClick={() => handleReplace(sid)}
-                          >
-                            교체
-                          </button>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <button className="arena-btn" style={{ alignSelf: 'flex-start' as const, fontSize: 12, padding: '6px 16px' }} onClick={handleSkip}>취소 (건너뛰기)</button>
-                </div>
-              )}
-
-              {/* Current skill slots — 가로 배치 */}
-              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--violet-glow)', letterSpacing: '.1em' }}>현재 스킬 슬롯</div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {Array.from({ length: MAX_SKILL_SLOTS }).map((_, i) => {
-                    const sid = currentSkills[i]
-                    const sk = sid ? findSkill(sid) : null
-                    const tc = sk ? (TIER_COLOR[sk.tier] ?? 'var(--ink-mute)') : 'transparent'
-                    return (
-                      <div
-                        key={i}
-                        title={sk ? `${sk.name} | ${sk.description} | CD:${sk.cooldown}턴 MP:${sk.cost}` : undefined}
-                        style={{
-                          flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
-                          gap: 6, padding: '10px 8px', minHeight: 80,
-                          background: sk ? 'rgba(255,255,255,.03)' : 'transparent',
-                          border: sk ? '1px solid var(--line)' : '1px dashed rgba(255,255,255,.12)',
-                          borderRadius: 10, textAlign: 'center' as const,
-                        }}
-                      >
-                        {sk ? (
-                          <>
-                            <span style={{ fontSize: 8, fontWeight: 700, color: tc, border: `1px solid ${tc}55`, borderRadius: 999, padding: '1px 5px', whiteSpace: 'nowrap' as const }}>{TIER_LABEL[sk.tier] ?? sk.tier}</span>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{sk.name}</span>
-                            {pickPhase === 'replace' && (
-                              <button
-                                className="arena-btn"
-                                style={{ padding: '3px 8px', fontSize: 10, borderRadius: 6, borderColor: 'rgba(255,92,110,.5)', color: 'var(--red)', whiteSpace: 'nowrap' as const, marginTop: 'auto' }}
-                                onClick={() => handleReplace(sid)}
-                              >
-                                교체
-                              </button>
-                            )}
-                          </>
-                        ) : (
-                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.15)', marginTop: 'auto', marginBottom: 'auto' }}>{i + 1}</span>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Next button (shown after pick is done or no pending skills) */}
-              {(!hasPendingSkills || pickPhase === 'done') && (
-                <button
-                  className="arena-btn arena-btn-primary"
-                  style={{ padding: '12px 32px', fontSize: 14, borderRadius: 12, alignSelf: 'flex-start' as const, marginTop: 8 }}
-                  onClick={handleNext}
-                >
-                  스킬 학습 →
-                </button>
-              )}
-            </>
-          ) : (
-            /* Defeat panel */
+          {won ? renderWinPanel() : (
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 16 }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--red)' }}>다음 준비</div>
               <div style={{ fontSize: 13, color: 'var(--ink-mute)' }}>아쉽지만 다음 기회를 노리세요.</div>
               <button
                 className="arena-btn"
                 style={{ padding: '12px 32px', fontSize: 14, borderRadius: 12, alignSelf: 'flex-start' as const, marginTop: 8 }}
-                onClick={handleNext}
+                onClick={() => completeMatchAndAdvance(false)}
               >
                 토너먼트 결과 →
               </button>

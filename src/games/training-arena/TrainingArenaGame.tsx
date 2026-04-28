@@ -11,11 +11,13 @@ import EncyclopediaPage  from './pages/EncyclopediaPage'
 import RankingPage       from './pages/RankingPage'
 import RewardPage        from './pages/RewardPage'
 import SkillLearnPage    from './pages/SkillLearnPage'
-import SkillSelectPage   from './pages/SkillSelectPage'
 import ShopPage          from './pages/ShopPage'
+import StageOverviewPage from './pages/StageOverviewPage'
 import ReplayPage        from './pages/ReplayPage'
 import SimulationPage    from './pages/SimulationPage'
 import MyRecordsPage     from './pages/MyRecordsPage'
+import PassiveRewardPage from './pages/PassiveRewardPage'
+import SkillEnhancePage  from './pages/SkillEnhancePage'
 
 export default function TrainingArenaGame() {
   const phase = useGameStore(s => s.phase)
@@ -29,6 +31,7 @@ export default function TrainingArenaGame() {
       <>
         {phase === 'char_select'   && <CharSelectPage />}
         {phase === 'gacha'         && <GachaPage />}
+        {phase === 'stage_overview' && <StageOverviewPage />}
         {phase === 'match_preview' && <MatchPreviewPage />}
         {phase === 'battle'        && <BattlePage />}
         {phase === 'match_result'  && <MatchResultPage />}
@@ -36,10 +39,11 @@ export default function TrainingArenaGame() {
         {phase === 'tournament'    && <TournamentPage />}
         {phase === 'bracket'       && <BracketPage />}
         {phase === 'reward'        && <RewardPage />}
-        {phase === 'skill_select'  && <SkillSelectPage />}
         {phase === 'shop'          && <ShopPage />}
-        {phase === 'replay'        && <ReplayPage />}
-        {phase === 'my_records'    && <MyRecordsPage />}
+        {phase === 'replay'         && <ReplayPage />}
+        {phase === 'my_records'     && <MyRecordsPage />}
+        {phase === 'passive_reward' && <PassiveRewardPage />}
+        {phase === 'skill_enhance'  && <SkillEnhancePage />}
       </>
     )
   }

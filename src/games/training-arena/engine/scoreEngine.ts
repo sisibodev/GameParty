@@ -15,7 +15,7 @@ const SKILLS_BY_ID: Record<string, SkillDef> = Object.fromEntries(
 export const MAX_RUN_RECORDS = 20
 
 function growthTotal(g: GrowthStats): number {
-  return g.hp + g.str + g.agi + g.int + g.luk
+  return g.vit + g.str + g.agi + g.int + g.luk
 }
 
 function skillTierScore(skillIds: string[]): number {

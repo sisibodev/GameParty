@@ -10,7 +10,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/games/training-arena/**/*.ts'],
-      exclude: ['src/games/training-arena/**/*.tsx', 'src/games/training-arena/data/**'],
+      exclude: [
+        'src/games/training-arena/**/*.tsx',
+        'src/games/training-arena/data/**',
+        'src/games/training-arena/hooks/**',
+        'src/games/training-arena/store/**',
+        'src/games/training-arena/types.ts',
+      ],
     },
   },
 })

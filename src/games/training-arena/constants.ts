@@ -38,18 +38,36 @@ export const GACHA_GRADES: readonly GachaGrade[] = ['C', 'B', 'A', 'S', 'SS', 'S
 
 // ─── Skill ────────────────────────────────────────────────────────────────────
 
-export const MAX_SKILL_SLOTS = 5
+export const MAX_SKILL_SLOTS = 6
 export const INITIAL_SKILL_COUNT = 3
+
+// ─── Skill Enhancement (v0.5.0) ───────────────────────────────────────────────
+// 골드 소비로 스킬 강화 (최대 10레벨)
+
+export const MAX_SKILL_ENHANCE_LEVEL = 10
+// 강화 비용: level 1→2, 2→3, ..., 9→10
+export const SKILL_ENHANCE_COSTS: readonly number[] = [50, 100, 200, 350, 500, 700, 1000, 1400, 2000, 3000]
+// 강화 효과 배율: level 1=+10%, 2=+20%, ..., 10=+190% (누적)
+export const SKILL_ENHANCE_MULT: readonly number[] = [0.10, 0.20, 0.32, 0.46, 0.62, 0.80, 1.00, 1.25, 1.55, 1.90]
+
+// ─── Passive Skill (v0.5.0) ──────────────────────────────────────────────────
+// 캐릭터당 최대 6개 패시브 보유
+
+export const MAX_PASSIVE_SLOTS = 6
+
+// NPC 골드 시뮬레이션: 토너먼트 내 NPC가 이 이상 골드 보유 시 스킬 강화 시도
+export const NPC_ENHANCE_GOLD_THRESHOLD = 200
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 export const MAX_GROWTH_STAT = 9999
 
-// v0.4.1: 초기 스탯 고정 — 플레이어 1/1/1/1/1, NPC 10/10/10/10/10
+// v0.5.0: 초기 스탯 고정 — 플레이어 1/1/1/1/1, NPC 1/1/1/1/1 (라운드마다 +1)
 export const INITIAL_PLAYER_STAT = 1
-export const INITIAL_NPC_STAT = 10
+export const INITIAL_NPC_STAT = 1
 
-export const GROWTH_STAT_KEYS: GrowthStatKey[] = ['hp', 'str', 'agi', 'int', 'luk']
+// v0.7.0: 성장 스탯 5개 — VIT/STR/AGI/INT/LUK (기존 hp → vit 마이그레이션)
+export const GROWTH_STAT_KEYS: GrowthStatKey[] = ['vit', 'str', 'agi', 'int', 'luk']
 
 // ─── Combat ───────────────────────────────────────────────────────────────────
 
@@ -62,14 +80,14 @@ export const CRIT_MULTIPLIER_CAP = 3.0
 export const MIN_DAMAGE = 1
 export const MAX_TURNS = 50
 
-// 데미지: atk × multiplier × DEF_FORMULA_BASE / (DEF_FORMULA_BASE + def)
-export const DEF_FORMULA_BASE = 100
-
 // INT → 스킬 쿨다운 감소: INT 성장치 INT_CD_REDUCTION_PER 당 -1턴 (최대 -3)
 export const INT_CD_REDUCTION_PER = 40
 
-// 회피 상쇄: 공격자 SPD × 이 계수만큼 수비자 EVA 감소
-export const AGI_EVA_COUNTER_COEFF = 0.3
+// v0.7.0: 데미지 공식 — base = mult · myAtk² / (myAtk + oppAtk), DEF 소폭 감쇠 K/(K+DEF)
+// K가 클수록 DEF 영향 약함 (DEF=100 → 80% 감쇠, DEF=400 → 50% 감쇠)
+export const DAMAGE_DEF_K = 400
+// 최소 명중률 (회피 메커니즘)
+export const MIN_HIT_CHANCE = 10  // 최소 10% 명중 보장
 
 // 행동 시 자연 회복: maxHp × 이 비율 (HP가 높은 직업일수록 유리)
 export const HP_REGEN_PER_TURN_RATIO = 0.008
@@ -119,7 +137,7 @@ export const GOLD_BY_RESULT: Record<PlayerTournamentResult, number> = {
 }
 
 // 상점 진열 수 및 리롤 비용 (UI 숨김)
-export const SHOP_SIZE = 6
+export const SHOP_SIZE = 8
 export const SHOP_REROLL_COST = 30
 
 // 등급별 진열 확률 (라운드에 따라 상위 등급 확률 증가 로직은 Phase 2.5에서)
@@ -152,61 +170,91 @@ export const SKILL_LEARN_TURNS: Record<SkillTier, number> = {
   legend: 10,
 }
 
-// ─── Archetype Growth Coefficients ───────────────────────────────────────────
-// 각 계수의 의미:
-//   hp_to_maxHp : HP 성장 1당 maxHp 증가
-//   str_to_atk  : STR 성장 1당 ATK 증가
-//   str_to_def  : STR 성장 1당 DEF 증가
-//   agi_to_spd  : AGI 성장 1당 SPD 증가
-//   agi_to_eva  : AGI 성장 1당 EVA 증가
-//   luk_to_crit : LUK 성장 1당 CRIT 증가
-//   int_to_mana : INT 성장 1당 maxMana 증가
-//   hp_to_def   : HP 성장 1당 DEF 추가 보너스
-//   int_to_atk  : INT 성장 1당 ATK 추가 보너스
-//   int_to_spd  : INT 성장 1당 SPD 추가 보너스
-//   luk_to_eva  : LUK 성장 1당 EVA 추가 보너스
-//   str_to_crit : STR 성장 1당 CRIT 추가 보너스
-//   int_to_maxHp: INT 성장 1당 maxHp 추가 보너스
+// ─── Archetype Growth Coefficients (v0.7.0) ──────────────────────────────────
+// 각 계수의 의미 (성장 1포인트당 해당 전투 스탯 증가):
+//   1차 변환 (스탯 정의):
+//     vit_to_maxHp, vit_to_pDef        : VIT → 체력·물리방어
+//     str_to_pAtk,  str_to_pDef        : STR → 물리공격·물리방어
+//     int_to_mAtk,  int_to_mDef        : INT → 마법공격·마법방어
+//     int_to_maxMana                   : INT → 마나
+//     agi_to_spd,   agi_to_acc, agi_to_eva : AGI → 속도·명중·회피
+//     luk_to_crit,  luk_to_critDmg     : LUK → 치명타·치명타배율
+//   보조 (Phase 4 에서 직군별로 부여, 영점 시작):
+//     vit_to_pAtk, vit_to_mAtk, vit_to_mDef
+//     str_to_mAtk, str_to_crit, str_to_spd
+//     agi_to_pAtk, agi_to_critDmg
+//     int_to_pAtk, int_to_spd, int_to_pDef
+//     luk_to_eva,  luk_to_acc
 
 export interface ArchetypeCoeffs {
-  hp_to_maxHp: number
-  str_to_atk:  number
-  str_to_def:  number
-  agi_to_spd:  number
-  agi_to_eva:  number
-  luk_to_crit: number
-  int_to_mana: number
-  hp_to_def:   number
-  int_to_atk:  number
-  int_to_spd:  number
-  luk_to_eva:  number
-  str_to_crit: number
-  int_to_maxHp:number
-  str_to_spd:  number
+  // 1차
+  vit_to_maxHp:  number
+  vit_to_pDef:   number
+  str_to_pAtk:   number
+  str_to_pDef:   number
+  int_to_mAtk:   number
+  int_to_mDef:   number
+  int_to_maxMana:number
+  agi_to_spd:    number
+  agi_to_acc:    number
+  agi_to_eva:    number
+  luk_to_crit:   number
+  luk_to_critDmg:number
+  // 보조 (Phase 4 부여)
+  vit_to_pAtk:   number
+  vit_to_mAtk:   number
+  vit_to_mDef:   number
+  str_to_mAtk:   number
+  str_to_crit:   number
+  str_to_spd:    number
+  agi_to_pAtk:   number
+  agi_to_critDmg:number
+  int_to_pAtk:   number
+  int_to_spd:    number
+  int_to_pDef:   number
+  luk_to_eva:    number
+  luk_to_acc:    number
 }
 
-const DEFAULT_COEFFS: ArchetypeCoeffs = {
-  hp_to_maxHp: 10, str_to_atk: 3, str_to_def: 1, agi_to_spd: 2,
-  agi_to_eva: 0.5, luk_to_crit: 0.5, int_to_mana: 5,
-  hp_to_def: 0, int_to_atk: 0, int_to_spd: 0, luk_to_eva: 0,
-  str_to_crit: 0, int_to_maxHp: 0, str_to_spd: 0,
+// v0.7.0 영점 베이스 — 1차 변환만 활성, 보조는 모두 0
+const DEFAULT_COEFFS_V2: ArchetypeCoeffs = {
+  // 1차
+  vit_to_maxHp:   10,
+  vit_to_pDef:    0.5,
+  str_to_pAtk:    3,
+  str_to_pDef:    0.5,
+  int_to_mAtk:    3,
+  int_to_mDef:    1,
+  int_to_maxMana: 5,
+  agi_to_spd:     2,
+  agi_to_acc:     0.5,
+  agi_to_eva:     0.5,
+  luk_to_crit:    0.5,
+  luk_to_critDmg: 0.001,
+  // 보조 (Phase 4 부여)
+  vit_to_pAtk:    0,
+  vit_to_mAtk:    0,
+  vit_to_mDef:    0.5,
+  str_to_mAtk:    0,
+  str_to_crit:    0,
+  str_to_spd:     0,
+  agi_to_pAtk:    0,
+  agi_to_critDmg: 0,
+  int_to_pAtk:    0,
+  int_to_spd:     0,
+  int_to_pDef:    0,
+  luk_to_eva:     0,
+  luk_to_acc:     0,
 }
 
+// Phase 4 직군별 보조 계수 튜닝
 export const ARCHETYPE_GROWTH_COEFFS: Record<string, ArchetypeCoeffs> = {
-  // 탱크: 체력·방어 중심, 공격력 보강
-  tank:      { ...DEFAULT_COEFFS, hp_to_maxHp: 10, str_to_atk: 3.0, str_to_def: 1.5, hp_to_def: 0.1, str_to_spd: 0.3 },
-  // 버서커: 높은 공격·크리 (과도한 폭발 억제)
-  berserker: { ...DEFAULT_COEFFS, hp_to_maxHp: 8,  str_to_atk: 4, luk_to_crit: 0.7, str_to_crit: 0.2 },
-  // 어쌔신: 기본 스탯이 이미 강해 성장 배율 완화, 회피 강화
-  assassin:  { ...DEFAULT_COEFFS, str_to_atk: 2.2, agi_to_spd: 2.0, luk_to_crit: 0.5, luk_to_eva: 0.4 },
-  // 레인저: 크리 계수 소폭 상향 (LOW 구간 탈출)
-  ranger:    { ...DEFAULT_COEFFS, luk_to_crit: 0.4 },
-  // 마법사: INT쌓을수록 속도·공격 증가 (느린 초반 → 강한 후반)
-  mage:      { ...DEFAULT_COEFFS, str_to_atk: 1.5, int_to_mana: 8, int_to_atk: 2.0, int_to_spd: 1.2 },
-  // 성기사: 높은 체력·방어, INT→체력·속도 보너스
-  paladin:   { ...DEFAULT_COEFFS, hp_to_maxHp: 12, str_to_atk: 2, str_to_def: 2, int_to_maxHp: 3, int_to_spd: 0.7 },
-  // 서포트: INT→속도·마나·공격, LUK→회피
-  support:   { ...DEFAULT_COEFFS, str_to_atk: 2.5, luk_to_crit: 0.3, int_to_mana: 7, int_to_spd: 0.8, luk_to_eva: 0.3, int_to_atk: 0.4 },
-  // 워리어: STR→공격 소폭 상향 (균형)
-  warrior:   { ...DEFAULT_COEFFS, str_to_atk: 3.5 },
+  warrior:   { ...DEFAULT_COEFFS_V2 },
+  berserker: { ...DEFAULT_COEFFS_V2, str_to_crit: 0.5 },
+  assassin:  { ...DEFAULT_COEFFS_V2 },                           // 순수 속도 정체성 (base AGI로만)
+  ranger:    { ...DEFAULT_COEFFS_V2, luk_to_acc: 0.3 },
+  mage:      { ...DEFAULT_COEFFS_V2, int_to_mAtk: 3.0, int_to_spd: 0.15 },
+  paladin:   { ...DEFAULT_COEFFS_V2, int_to_mAtk: 2.5, vit_to_pAtk: 0.5 },
+  support:   { ...DEFAULT_COEFFS_V2, int_to_mAtk: 3.0, int_to_spd: 0 },
+  tank:      { ...DEFAULT_COEFFS_V2, vit_to_pAtk: 0.5 },
 }
