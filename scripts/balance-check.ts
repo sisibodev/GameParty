@@ -129,7 +129,7 @@ function makeStatState(char: CharacterDef): BattleCharState {
     passives:          [],
     items:             [],
     skillEnhancements: {},
-    growthStats:       { hp: 0, str: 0, agi: 0, int: 0, luk: 0 },
+    growthStats:       { vit: 0, str: 0, agi: 0, int: 0, luk: 0 },
     baseCombat:        char.baseCombat,
     archetype:         char.archetype,
   }
