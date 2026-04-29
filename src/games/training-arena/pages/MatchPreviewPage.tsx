@@ -364,9 +364,11 @@ export default function MatchPreviewPage() {
     ? `${rawAchievement} ${npcStat.bestStageCount}회`
     : rawAchievement
 
-  const prevMatches = playerMatches.slice(0, playerMatchIndex)
-  const totalWins   = prevMatches.filter(m => m.playerWon).length
-  const totalLosses = prevMatches.filter(m => !m.playerWon).length
+  const prevMatches        = playerMatches.slice(0, playerMatchIndex)
+  const currentRoundWins   = prevMatches.filter(m => m.playerWon).length
+  const currentRoundLosses = prevMatches.filter(m => !m.playerWon).length
+  const totalWins   = (activeSlot.totalWins   ?? 0) + currentRoundWins
+  const totalLosses = (activeSlot.totalLosses ?? 0) + currentRoundLosses
   const h2h         = prevMatches.filter(m => m.opponentId === opponentId)
   const h2hWins     = h2h.filter(m => m.playerWon).length
   const h2hLosses   = h2h.filter(m => !m.playerWon).length
@@ -487,7 +489,8 @@ export default function MatchPreviewPage() {
               maxHp={playerMaxHp}
               stats={playerStats}
               isPlayer
-              skillIds={playerSkillIds}
+              uniqueSkillIds={activeSlot.initialSkills}
+              skillIds={activeSlot.acquiredSkills}
               pendingSkills={activeSlot.pendingSkills}
               passives={playerPassives}
               records={playerRecords}

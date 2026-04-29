@@ -222,6 +222,11 @@ export default function BattlePage() {
             <div style={{ fontSize: 56, fontWeight: 900, color: 'var(--gold)', lineHeight: 1, textShadow: '0 0 28px rgba(255,214,107,.55)' }}>
               {currentTurn}
             </div>
+            {tacticCard && (
+              <div style={{ fontSize: 9, color: 'var(--violet-glow)', letterSpacing: '.05em', textAlign: 'center', marginTop: 2 }}>
+                {tacticCard.name}
+              </div>
+            )}
           </div>
           <CharPanel
             char={oppChar} tone={oppId % 6}
