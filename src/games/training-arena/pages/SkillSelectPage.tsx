@@ -44,7 +44,7 @@ function SkillCardFull({ skill, selected, onSelect }: { skill: SkillDef; selecte
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
         <TierBadge tier={skill.tier} />
-        <span style={{ fontWeight: 700, fontSize: '1rem', flex: 1, color: '#e8e8ff' }}>{skill.name}</span>
+        <span style={{ fontWeight: 700, fontSize: '1rem', flex: 1, color: tierColor }}>{skill.name}</span>
         <span style={{ fontSize: '0.75rem', color: '#888' }}>{skill.category}</span>
       </div>
       <p style={{ fontSize: '0.85rem', color: '#bbb', margin: 0 }}>{skill.description}</p>
@@ -71,7 +71,7 @@ function SkillCardCompact({ skill, selected, onSelect }: { skill: SkillDef; sele
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' as const }}>
         <TierBadge tier={skill.tier} />
-        <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#e8e8ff' }}>{skill.name}</span>
+        <span style={{ fontWeight: 700, fontSize: '0.85rem', color: tierColor }}>{skill.name}</span>
       </div>
       <p style={{ fontSize: '0.75rem', color: '#999', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>{skill.description}</p>
     </button>
@@ -116,7 +116,7 @@ export default function SkillSelectPage() {
           <div style={s.newSkillBox}>
             <span style={s.newLabel}>새 스킬:</span>
             <TierBadge tier={newSkill.tier} />
-            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#e8e8ff' }}>{newSkill.name}</span>
+            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: TIER_COLOR[newSkill.tier] ?? '#9aa3b2' }}>{newSkill.name}</span>
           </div>
         )}
         <div style={s.grid3}>
