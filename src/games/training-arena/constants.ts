@@ -94,7 +94,7 @@ export const HP_REGEN_PER_TURN_RATIO = 0.008
 
 // ─── HP 회복 ──────────────────────────────────────────────────────────────────
 
-export const INTER_MATCH_HP_REGEN_RATIO = 0.30  // 경기 사이 max HP × 30% 회복
+export const INTER_MATCH_HP_REGEN_RATIO = 0.10  // 경기 사이 max HP × 10% 회복 (단계 전환 시 풀피)
 
 // ─── Tournament ───────────────────────────────────────────────────────────────
 
@@ -129,12 +129,23 @@ export const REWARD_DARKHORSE = 8
 // 라운드 종료 시 플레이어 성적에 따른 일괄 골드 지급 (MVP: per-match 아님)
 
 export const GOLD_BY_RESULT: Record<PlayerTournamentResult, number> = {
-  winner:         400,
-  finalist:       200,
-  tournament_out: 100,
-  group_out:       60,
-  qualifier_out:   30,
+  winner:         800,
+  finalist:       400,
+  tournament_out: 200,
+  group_out:      120,
+  qualifier_out:   60,
 }
+
+// 경기별 즉시 지급 골드 (v0.8.0): 라운드 종료 보상과 별개로 경기 직후 지급
+export const MATCH_BONUS_GOLD_WIN: Record<string, number> = {
+  qualifier:   30,
+  group:       60,
+  bracket_r1:  80,
+  bracket_r2: 120,
+  bracket_r3: 160,
+  bracket_r4: 200,
+}
+export const MATCH_BONUS_GOLD_LOSS = 10
 
 // 상점 진열 수 및 리롤 비용 (UI 숨김)
 export const SHOP_SIZE = 8

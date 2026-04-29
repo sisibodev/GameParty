@@ -23,6 +23,8 @@ import {
   INITIAL_PLAYER_STAT,
   INITIAL_SKILL_COUNT,
   INITIAL_UNLOCKED_CHAR_IDS,
+  MATCH_BONUS_GOLD_LOSS,
+  MATCH_BONUS_GOLD_WIN,
   MAX_INVENTORY_SIZE,
   MAX_PASSIVE_SLOTS,
   MAX_SKILL_ENHANCE_LEVEL,
@@ -290,6 +292,15 @@ function extractPlayerMatches(
     })
 }
 
+function matchBonusGoldKey(matchInfo: PlayerMatchInfo): string {
+  const stage = matchInfo.matchResult.stage
+  const round = matchInfo.matchResult.bracketRound
+  if (stage === 'qualifier') return 'qualifier'
+  if (stage === 'group')     return 'group'
+  if (stage === 'bracket')   return `bracket_r${round ?? 1}`
+  return 'qualifier'
+}
+
 function buildTournamentState(
   activeSlot: SaveSlot,
   _seed: number,
@@ -433,6 +444,87 @@ function determineNextMatch(
     return { nextIndex: next, nextPhase: 'stage_overview' }
   }
   return { nextIndex: next, nextPhase: 'match_preview' }
+}
+
+// ─── Bracket Path Extension ──────────────────────────────────────────────────
+// pre-run에서 플레이어가 패배로 예측된 브래킷 경기를 실제로 이겼을 때,
+// lastTournament에서 다음 라운드 상대를 찾아 playerMatches를 연장한다.
+
+function buildExtendedBracketMatch(
+  playerMatches: PlayerMatchInfo[],
+  currentIdx: number,
+  lastTournament: TournamentResult,
+  pid: number,
+  round: number,
+): PlayerMatchInfo | null {
+  const currentMatch = playerMatches[currentIdx]
+  if (!currentMatch || currentMatch.matchResult.stage !== 'bracket') return null
+
+  const currentRound    = currentMatch.matchResult.bracketRound ?? 0
+  const nextRound       = currentRound + 1
+  const prerunOpponentId = currentMatch.opponentId
+
+  // pre-run에서 currentRound에 prerunOpponentId가 포함된 경기를 찾아 실제 진출자를 얻는다.
+  // 확장 경기(buildExtendedBracketMatch로 만든)의 상대는 pre-run에서 currentRound 이후
+  // 탈락했을 수 있으므로, pre-run 승자(advancingId)를 기준으로 nextRound 경기를 찾아야 한다.
+  const prerunCurrentMatch = lastTournament.allMatches.find(
+    m => m.stage === 'bracket' &&
+         m.bracketRound === currentRound &&
+         (m.char1Id === prerunOpponentId || m.char2Id === prerunOpponentId),
+  )
+  const advancingId = prerunCurrentMatch?.winnerId ?? prerunOpponentId
+
+  // pre-run에서 advancingId가 진출한 다음 라운드 경기를 찾는다
+  const nextPrerunMatch = lastTournament.allMatches.find(
+    m => m.stage === 'bracket' &&
+         m.bracketRound === nextRound &&
+         (m.char1Id === advancingId || m.char2Id === advancingId),
+  )
+  if (!nextPrerunMatch) return null
+
+  // 실제 다음 상대 = pre-run 진출자가 아닌 다른 참가자
+  const opponentId = nextPrerunMatch.char1Id === advancingId
+    ? nextPrerunMatch.char2Id
+    : nextPrerunMatch.char1Id
+
+  const BRACKET_LABELS: Record<number, string> = { 1: '16강', 2: '8강', 3: '4강', 4: '결승' }
+  const stageLabel = BRACKET_LABELS[nextRound] ?? `${nextRound}라운드`
+
+  const opponentSkills = nextPrerunMatch.char1Id === opponentId
+    ? nextPrerunMatch.char1Skills
+    : nextPrerunMatch.char2Skills
+
+  // tournamentId = 'tournament_SEED_rROUND' 에서 시드 추출
+  const seedMatch      = lastTournament.tournamentId.match(/tournament_(\d+)_r/)
+  const tournamentSeed = seedMatch ? parseInt(seedMatch[1], 10) : 0
+  const opponentItems  = npcItems(opponentId, round, tournamentSeed)
+
+  const syntheticResult: MatchResult = {
+    matchId:      `ext-r${nextRound}-${pid}`,
+    seed:         0,
+    char1Id:      pid,
+    char2Id:      opponentId,
+    winnerId:     opponentId,
+    loserId:      pid,
+    totalTurns:   0,
+    log:          [],
+    initialHp:    {},
+    initialMana:  {},
+    char1Skills:  [],
+    char2Skills:  opponentSkills,
+    stage:        'bracket',
+    bracketRound: nextRound,
+  }
+
+  return {
+    matchResult:    syntheticResult,
+    stageLabel,
+    opponentId,
+    playerWon:      false,
+    opponentItems,
+    opponentSkills,
+    wasPlayed:      false,
+  }
 }
 
 // ─── NPC Stat Helper ──────────────────────────────────────────────────────────
@@ -648,7 +740,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       buildTournamentState(activeSlot, seed, result, reward, unlockedCharIds, itemsMap)
 
     const npcStats = updateNpcStats(activeSlot.npcStats, result)
-    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats }
+    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats, savedReward: reward }
     await saveSlot(slotWithNpc)
 
     if (newlyUnlocked.length > 0) {
@@ -723,7 +815,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       buildTournamentState(activeSlot, seed, result, reward, unlockedCharIds, itemsMap)
 
     const npcStats = updateNpcStats(activeSlot.npcStats, result)
-    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats }
+    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats, savedReward: reward }
     await saveSlot(slotWithNpc)
 
     if (newlyUnlocked.length > 0) {
@@ -820,6 +912,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       ...matchInfo,
       matchResult: updatedResult,
       playerWon:   updatedResult.winnerId === pid,
+      wasPlayed:   true,
     }
 
     const newPlayerMatches: PlayerMatchInfo[] = [
@@ -845,8 +938,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const { activeSlot, playerMatchIndex, playerMatches } = get()
     if (!activeSlot) return
 
+    // 경기 패배 즉시 보너스 골드
+    const matchBonus = won ? 0 : MATCH_BONUS_GOLD_LOSS
+
     // 교체 대상 스킬 즉시 제거 (슬롯 초과 시 선택)
-    let slotWithSkill = activeSlot
+    let slotWithSkill: SaveSlot = { ...activeSlot, gold: (activeSlot.gold ?? 0) + matchBonus }
     if (replaceSkillId) {
       slotWithSkill = {
         ...slotWithSkill,
@@ -886,7 +982,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   },
 
   claimReward: async () => {
-    const { activeSlot, pendingReward, lastTournament } = get()
+    const { activeSlot, pendingReward, lastTournament, playerMatches } = get()
     if (!activeSlot || !pendingReward) return
 
     const randomIdx     = Math.floor(Math.random() * GROWTH_STAT_KEYS.length)
@@ -912,10 +1008,16 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const newGold = (activeSlot.gold ?? 0) + pendingReward.goldEarned
 
     // 이번 라운드 기록 저장
-    const record    = lastTournament ? buildRunRecord(activeSlot, lastTournament) : null
+    const playedMatches = playerMatches.filter(m => m.wasPlayed)
+    const record = lastTournament
+      ? buildRunRecord(activeSlot, lastTournament, playedMatches.length > 0 ? playedMatches : undefined)
+      : null
     const newRecords = record
       ? addRunRecord(activeSlot.runRecords ?? [], record)
       : (activeSlot.runRecords ?? [])
+
+    const roundWins   = playerMatches.filter(m => m.wasPlayed && m.playerWon).length
+    const roundLosses = playerMatches.filter(m => m.wasPlayed && !m.playerWon).length
 
     const updated: SaveSlot = {
       ...activeSlot,
@@ -925,6 +1027,9 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       gold:           newGold,
       runRecords:     newRecords,
       savedPhase:     nextPhase,
+      totalWins:      (activeSlot.totalWins ?? 0) + roundWins,
+      totalLosses:    (activeSlot.totalLosses ?? 0) + roundLosses,
+      savedReward:    undefined,
       updatedAt:      Date.now(),
     }
     await saveSlot(updated)
@@ -1071,7 +1176,12 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const { activeSlot, playerMatchIndex, playerMatches } = get()
     if (!activeSlot) return
 
-    let updated = activeSlot
+    // 경기 승리 즉시 보너스 골드
+    const matchInfo  = playerMatches[playerMatchIndex]
+    const bonusKey   = matchInfo ? matchBonusGoldKey(matchInfo) : 'qualifier'
+    const matchBonus = MATCH_BONUS_GOLD_WIN[bonusKey] ?? 30
+
+    let updated: SaveSlot = { ...activeSlot, gold: (activeSlot.gold ?? 0) + matchBonus }
 
     // 교체: 기존 스킬 제거
     if (replaceId) {
@@ -1101,9 +1211,24 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     set({ activeSlot: saved, pendingSkillOpts: null, pendingPassiveOpts: null })
 
     const { nextIndex, nextPhase } = determineNextMatch(playerMatches, playerMatchIndex, true)
+    let finalMatches   = playerMatches
+    let finalNextIndex = nextIndex
+    let finalNextPhase = nextPhase
+    if (nextPhase === 'tournament') {
+      const { lastTournament } = get()
+      if (lastTournament && saved) {
+        const ext = buildExtendedBracketMatch(playerMatches, playerMatchIndex, lastTournament, saved.characterId, saved.currentRound)
+        if (ext) {
+          finalMatches   = [...playerMatches, ext]
+          finalNextIndex = finalMatches.length - 1
+          finalNextPhase = 'match_preview'
+        }
+      }
+    }
     set({
-      playerMatchIndex: nextPhase === 'tournament' ? playerMatchIndex : nextIndex,
-      phase:            nextPhase,
+      playerMatches:    finalMatches,
+      playerMatchIndex: finalNextPhase === 'tournament' ? playerMatchIndex : finalNextIndex,
+      phase:            finalNextPhase,
     })
   },
 
@@ -1134,9 +1259,24 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     set({ activeSlot: saved, pendingPassiveOpts: null, pendingSkillOpts: null })
 
     const { nextIndex, nextPhase } = determineNextMatch(playerMatches, playerMatchIndex, true)
+    let finalMatches   = playerMatches
+    let finalNextIndex = nextIndex
+    let finalNextPhase = nextPhase
+    if (nextPhase === 'tournament') {
+      const { lastTournament } = get()
+      if (lastTournament && saved) {
+        const ext = buildExtendedBracketMatch(playerMatches, playerMatchIndex, lastTournament, saved.characterId, saved.currentRound)
+        if (ext) {
+          finalMatches   = [...playerMatches, ext]
+          finalNextIndex = finalMatches.length - 1
+          finalNextPhase = 'match_preview'
+        }
+      }
+    }
     set({
-      playerMatchIndex: nextPhase === 'tournament' ? playerMatchIndex : nextIndex,
-      phase:            nextPhase,
+      playerMatches:    finalMatches,
+      playerMatchIndex: finalNextPhase === 'tournament' ? playerMatchIndex : finalNextIndex,
+      phase:            finalNextPhase,
     })
   },
 
@@ -1170,6 +1310,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   enhanceSkill: async (skillId) => {
     const { activeSlot } = get()
     if (!activeSlot) return
+
+    if (!activeSlot.initialSkills.includes(skillId)) throw new Error('고유 스킬만 강화할 수 있습니다')
 
     const enhancements = activeSlot.skillEnhancements ?? {}
     const currentLevel = enhancements[skillId] ?? 0

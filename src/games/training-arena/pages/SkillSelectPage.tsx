@@ -9,10 +9,74 @@ const skillMap = Object.fromEntries(
 )
 
 const TIER_COLOR: Record<string, string> = {
-  common: '#888', rare: '#44aaff', hero: '#b44eff', legend: '#ffd700',
+  common: '#9aa3b2', rare: '#44aaff', hero: '#b44eff', legend: '#ffd700',
+}
+
+const TIER_LABEL: Record<string, string> = {
+  common: '보통', rare: '희귀', hero: '영웅', legend: '전설',
 }
 
 type Step = 'pick_new' | 'pick_replace'
+
+function TierBadge({ tier }: { tier: string }) {
+  const color = TIER_COLOR[tier] ?? '#9aa3b2'
+  return (
+    <span style={{
+      fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 999,
+      border: `1px solid ${color}55`, color, flexShrink: 0,
+    }}>
+      {TIER_LABEL[tier] ?? tier}
+    </span>
+  )
+}
+
+function SkillCardFull({ skill, selected, onSelect }: { skill: SkillDef; selected: boolean; onSelect: () => void }) {
+  const tierColor = TIER_COLOR[skill.tier] ?? '#9aa3b2'
+  return (
+    <button
+      style={{
+        display: 'flex', flexDirection: 'column', gap: '0.5rem',
+        padding: '1rem', borderRadius: '10px', cursor: 'pointer', textAlign: 'left', width: '100%',
+        border: selected ? `2px solid ${tierColor}` : `1px solid ${tierColor}44`,
+        background: selected ? `${tierColor}18` : '#1a1a2e',
+      }}
+      onClick={onSelect}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <TierBadge tier={skill.tier} />
+        <span style={{ fontWeight: 700, fontSize: '1rem', flex: 1, color: '#e8e8ff' }}>{skill.name}</span>
+        <span style={{ fontSize: '0.75rem', color: '#888' }}>{skill.category}</span>
+      </div>
+      <p style={{ fontSize: '0.85rem', color: '#bbb', margin: 0 }}>{skill.description}</p>
+      <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#666' }}>
+        <span>비용 {skill.cost}</span>
+        <span>쿨다운 {skill.cooldown}</span>
+        <span>대상 {skill.target}</span>
+      </div>
+    </button>
+  )
+}
+
+function SkillCardCompact({ skill, selected, onSelect }: { skill: SkillDef; selected: boolean; onSelect: () => void }) {
+  const tierColor = TIER_COLOR[skill.tier] ?? '#9aa3b2'
+  return (
+    <button
+      style={{
+        display: 'flex', flexDirection: 'column', gap: '0.4rem',
+        padding: '0.7rem 0.8rem', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', width: '100%',
+        border: selected ? `2px solid ${tierColor}` : `1px solid ${tierColor}44`,
+        background: selected ? `${tierColor}18` : '#1a1a2e',
+      }}
+      onClick={onSelect}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' as const }}>
+        <TierBadge tier={skill.tier} />
+        <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#e8e8ff' }}>{skill.name}</span>
+      </div>
+      <p style={{ fontSize: '0.75rem', color: '#999', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>{skill.description}</p>
+    </button>
+  )
+}
 
 export default function SkillSelectPage() {
   const { pendingReward, activeSlot, acquireSkill, setPhase } = useGameStore()
@@ -41,33 +105,6 @@ export default function SkillSelectPage() {
     }
   }
 
-  function SkillCard({ skill, selected, onSelect }: { skill: SkillDef; selected: boolean; onSelect: () => void }) {
-    return (
-      <button
-        style={{
-          ...s.card,
-          border: selected ? '2px solid #c0aaff' : '1px solid #333',
-          background: selected ? '#2a1a4e' : '#1a1a2e',
-        }}
-        onClick={onSelect}
-      >
-        <div style={s.cardHeader}>
-          <span style={{ ...s.tier, color: TIER_COLOR[skill.tier] ?? '#888' }}>
-            [{skill.tier.toUpperCase()}]
-          </span>
-          <span style={s.skillName}>{skill.name}</span>
-          <span style={s.cat}>{skill.category}</span>
-        </div>
-        <p style={s.desc}>{skill.description}</p>
-        <div style={s.meta}>
-          <span>비용 {skill.cost}</span>
-          <span>쿨다운 {skill.cooldown}</span>
-          <span>대상 {skill.target}</span>
-        </div>
-      </button>
-    )
-  }
-
   // ── 교체 대상 선택 단계 ──
   if (step === 'pick_replace') {
     const newSkill = pickedNew ? skillMap[pickedNew] : null
@@ -78,35 +115,21 @@ export default function SkillSelectPage() {
         {newSkill && (
           <div style={s.newSkillBox}>
             <span style={s.newLabel}>새 스킬:</span>
-            <span style={{ color: TIER_COLOR[newSkill.tier] ?? '#888', fontSize: '0.8rem' }}>
-              [{newSkill.tier.toUpperCase()}]
-            </span>
-            <span style={s.skillName}>{newSkill.name}</span>
+            <TierBadge tier={newSkill.tier} />
+            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#e8e8ff' }}>{newSkill.name}</span>
           </div>
         )}
-        <div style={s.list}>
+        <div style={s.grid3}>
           {currentSkills.map(id => {
             const sk = skillMap[id]
             if (!sk) return null
             return (
-              <button
+              <SkillCardCompact
                 key={id}
-                style={{
-                  ...s.card,
-                  border: pickedReplace === id ? '2px solid #ff6b35' : '1px solid #333',
-                  background: pickedReplace === id ? '#3e1a0e' : '#1a1a2e',
-                }}
-                onClick={() => setPickedReplace(id)}
-              >
-                <div style={s.cardHeader}>
-                  <span style={{ ...s.tier, color: TIER_COLOR[sk.tier] ?? '#888' }}>
-                    [{sk.tier.toUpperCase()}]
-                  </span>
-                  <span style={s.skillName}>{sk.name}</span>
-                  <span style={s.cat}>{sk.category}</span>
-                </div>
-                <p style={s.desc}>{sk.description}</p>
-              </button>
+                skill={sk}
+                selected={pickedReplace === id}
+                onSelect={() => setPickedReplace(id)}
+              />
             )
           })}
         </div>
@@ -136,7 +159,7 @@ export default function SkillSelectPage() {
       {choices.length > 0 ? (
         <div style={s.list}>
           {choices.map(skill => (
-            <SkillCard
+            <SkillCardFull
               key={skill.id}
               skill={skill}
               selected={pickedNew === skill.id}
@@ -169,13 +192,7 @@ const s: Record<string, React.CSSProperties> = {
   title:       { fontSize: '1.5rem', fontWeight: 700, color: '#c0aaff', margin: 0 },
   sub:         { color: '#888', margin: 0 },
   list:        { display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '460px' },
-  card:        { display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', borderRadius: '10px', cursor: 'pointer', textAlign: 'left', width: '100%' },
-  cardHeader:  { display: 'flex', alignItems: 'center', gap: '0.6rem' },
-  tier:        { fontSize: '0.75rem', fontWeight: 700 },
-  skillName:   { fontWeight: 700, fontSize: '1rem', flex: 1 },
-  cat:         { fontSize: '0.75rem', color: '#888' },
-  desc:        { fontSize: '0.85rem', color: '#bbb', margin: 0 },
-  meta:        { display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#666' },
+  grid3:       { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem', width: '100%', maxWidth: '700px' },
   empty:       { color: '#666' },
   newSkillBox: { display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#1a2e1a', border: '1px solid #44ffaa', borderRadius: '8px', padding: '0.6rem 1rem' },
   newLabel:    { color: '#44ffaa', fontWeight: 700, fontSize: '0.85rem' },

@@ -125,16 +125,36 @@ export default function GachaPage() {
                 <div className="arena-mono" style={{ fontSize: 11, color: 'var(--ink-mute)', textAlign: 'center', marginBottom: 12, letterSpacing: '.15em' }}>
                   — MY GACHA HISTORY —
                 </div>
+
+                {/* 과거 기록 (소형 로그) */}
+                {history.length > 5 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 8px', marginBottom: 12, padding: '6px 10px', background: 'rgba(255,255,255,.02)', borderRadius: 8 }}>
+                    {history.slice(0, history.length - 5).map((h, i) => {
+                      const c = GRADE_COLOR[h.grade] ?? '#888'
+                      return (
+                        <span key={i} style={{ fontSize: 10, color: 'var(--ink-mute)' }}>
+                          <span style={{ color: 'var(--ink-dim)' }}>R{h.round}</span>
+                          {' '}
+                          <span style={{ color: c, fontWeight: 700 }}>{h.grade}</span>
+                          {' '}
+                          <span>{STAT_LABEL[h.statKey]} +{h.statGain}</span>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* 최근 5라운드 (대형 카드) */}
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {history.map((h, i) => {
+                  {history.slice(-5).map((h, i) => {
                     const c         = GRADE_COLOR[h.grade] ?? '#888'
                     const isCurrent = h.round === activeSlot.currentRound
                     return (
                       <div
                         key={i}
                         style={{
-                          display: 'flex', flexDirection: 'column', gap: 4,
-                          padding: '10px 14px', borderRadius: 12, minWidth: 72, alignItems: 'center',
+                          display: 'flex', flexDirection: 'column', gap: 5,
+                          padding: '14px 18px', borderRadius: 14, minWidth: 88, alignItems: 'center',
                           background: isCurrent ? `${c}18` : 'rgba(255,255,255,.04)',
                           border: `1px solid ${isCurrent ? c : 'var(--line)'}`,
                           position: 'relative',
@@ -148,9 +168,9 @@ export default function GachaPage() {
                           }}>NEW</div>
                         )}
                         <div className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>R{h.round}</div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: c }}>{h.grade}</div>
-                        <div style={{ fontSize: 10, color: 'var(--ink-mute)' }}>{STAT_LABEL[h.statKey]}</div>
-                        <div className="arena-mono" style={{ fontSize: 13, fontWeight: 700, color: c }}>+{h.statGain}</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: c }}>{h.grade}</div>
+                        <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{STAT_LABEL[h.statKey]}</div>
+                        <div className="arena-mono" style={{ fontSize: 18, fontWeight: 900, color: c }}>+{h.statGain}</div>
                       </div>
                     )
                   })}

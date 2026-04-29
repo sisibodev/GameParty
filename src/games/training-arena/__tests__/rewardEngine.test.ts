@@ -27,18 +27,18 @@ describe('calcReward', () => {
       expect(calcReward('qualifier_out', false, ALL_SKILLS, [], SEED).randomStatGain).toBe(1)
     })
 
-    it('darkhorse adds REWARD_DARKHORSE (8) on top of base', () => {
+    it('darkhorse gets at least REWARD_WINNER bonus', () => {
       const base = calcReward('finalist', false, ALL_SKILLS, [], SEED).randomStatGain
       const dark = calcReward('finalist', true, ALL_SKILLS, [], SEED).randomStatGain
-      expect(dark).toBe(base + REWARD_DARKHORSE)
+      expect(dark).toBeGreaterThanOrEqual(REWARD_WINNER)
+      expect(dark).toBeGreaterThanOrEqual(base)
     })
 
-    it('darkhorse works for every result type', () => {
+    it('darkhorse is not less than REWARD_WINNER for every result type', () => {
       const types = ['winner', 'finalist', 'tournament_out', 'group_out', 'qualifier_out'] as const
       for (const type of types) {
-        const base = calcReward(type, false, [], [], SEED).randomStatGain
         const dark = calcReward(type, true, [], [], SEED).randomStatGain
-        expect(dark).toBe(base + REWARD_DARKHORSE)
+        expect(dark).toBeGreaterThanOrEqual(REWARD_WINNER)
       }
     })
   })

@@ -53,7 +53,7 @@ export default function RewardPage() {
           </span>
         </div>
         <div style={s.rewardRow}>
-          <span style={s.label}>획득 골드</span>
+          <span style={s.label}>토너먼트 결과 보상</span>
           <span style={s.val}>+{pendingReward.goldEarned} G</span>
         </div>
       </div>

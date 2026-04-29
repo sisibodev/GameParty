@@ -18,6 +18,7 @@ import {
   SKILL_ENHANCE_MULT,
   DAMAGE_DEF_K,
   MIN_HIT_CHANCE,
+  ARCHETYPE_GROWTH_COEFFS,
 } from '../constants'
 import { SeededRng } from '../utils/rng'
 import { deriveStats } from './statDeriver'
@@ -127,7 +128,15 @@ function applyPassivesAtBattleStart(state: BattleCharState): BattleCharState {
         if (stat === 'spd')   bc.spd   = Math.floor(bc.spd   * (1 + pct / 100))
         if (stat === 'crit')  bc.crit  = Math.min(100, bc.crit  + pct)
         if (stat === 'eva')   bc.eva   = Math.min(100, bc.eva   + pct)
-        if (stat === 'maxHp') bc.maxHp = Math.floor(bc.maxHp * (1 + pct / 100))
+        if (stat === 'maxHp') {
+          // 성장 스탯(vit) 기여분까지 포함한 전체 maxHp에 배율 적용.
+          // bc.maxHp만 곱하면 vit 성장 부분이 배율에서 누락되므로 전체를 계산 후
+          // vit 기여분을 뺀 값을 bc.maxHp에 저장 → deriveStats가 vit를 다시 더할 때 합이 정확해짐.
+          const c = ARCHETYPE_GROWTH_COEFFS[s.archetype] ?? ARCHETYPE_GROWTH_COEFFS['warrior']
+          const vitHp = Math.floor(s.growthStats.vit * c.vit_to_maxHp)
+          const boosted = Math.floor((bc.maxHp + vitHp) * (1 + pct / 100))
+          bc.maxHp = boosted - vitHp
+        }
         break
       }
       case 'mana_affinity':
@@ -239,6 +248,28 @@ function selectSkill(state: BattleCharState, rng: SeededRng): string | null {
     if (!state.skills.includes(s.id)) return false
     if ((state.cooldowns[s.id] ?? 0) > 0) return false
     if (state.currentMana < s.cost * manaCostMult) return false
+    // Activation condition check
+    const cond = (s as { activationCondition?: import('../types').ActivationCondition }).activationCondition
+    if (cond) {
+      switch (cond.type) {
+        case 'hp_below': {
+          const hpPct = stats.maxHp > 0 ? (state.currentHp / stats.maxHp) * 100 : 100
+          if (hpPct > (cond.threshold ?? 50)) return false
+          break
+        }
+        case 'hp_above': {
+          const hpPct = stats.maxHp > 0 ? (state.currentHp / stats.maxHp) * 100 : 100
+          if (hpPct < (cond.threshold ?? 50)) return false
+          break
+        }
+        case 'has_buff':
+          if (state.buffs.length === 0) return false
+          break
+        case 'combo':
+          if ((state.comboCount ?? 0) < (cond.count ?? 2)) return false
+          break
+      }
+    }
     return true
   })
 
@@ -675,6 +706,12 @@ export function simulateMatch(
 
     actor    = result.actor
     defender = result.target
+
+    // Combo tracking: successful hit increments actor combo, resets defender combo
+    if (result.damage > 0 && !result.evaded) {
+      actor = { ...actor, comboCount: (actor.comboCount ?? 0) + 1 }
+      defender = { ...defender, comboCount: 0 }
+    }
 
     // v0.5.0: 가시 패시브 (defender의 가시 → actor에게 반사 피해)
     if (result.damage > 0) {

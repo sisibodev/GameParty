@@ -1,10 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { CharacterDef } from '../types'
+import type { CharacterDef, PlayerMatchInfo } from '../types'
+import { MATCH_BONUS_GOLD_WIN, MATCH_BONUS_GOLD_LOSS } from '../constants'
 import charactersRaw from '../data/characters.json'
 import passiveSkillsRaw from '../data/passiveSkills.json'
 import skillsRaw from '../data/skills.json'
 import '../styles/arena.css'
+
+function getMatchBonusGold(matchInfo: PlayerMatchInfo, won: boolean): number {
+  if (!won) return MATCH_BONUS_GOLD_LOSS
+  const stage = matchInfo.matchResult.stage
+  const round = matchInfo.matchResult.bracketRound
+  let key = 'qualifier'
+  if (stage === 'group')   key = 'group'
+  else if (stage === 'bracket') key = `bracket_r${round ?? 1}`
+  return MATCH_BONUS_GOLD_WIN[key] ?? 30
+}
 
 const CHARACTERS = charactersRaw as CharacterDef[]
 const charName = (id: number) => CHARACTERS.find(c => c.id === id)?.name ?? `#${id}`
@@ -351,8 +362,12 @@ export default function MatchResultPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, padding: '12px 16px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--line)', borderRadius: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>골드 보상</span>
-              <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--gold)' }}>+{pendingReward?.goldEarned ?? 0} G</span>
+              <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>경기 보너스</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--gold)' }}>+{getMatchBonusGold(matchInfo, won)} G</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>라운드 종료 보상 (예정)</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,214,107,.55)' }}>+{pendingReward?.goldEarned ?? 0} G</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 12, color: 'var(--ink-mute)' }}>이번 대회</span>

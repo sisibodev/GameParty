@@ -4,6 +4,7 @@ import type { Archetype, CharacterDef, CombatStats, GrowthStats, MatchLogEntry, 
 import { deriveStats } from '../engine/statDeriver'
 import { NPC_BASE_GROWTH, RIVAL_STAT_PER_ROUND } from '../constants'
 import Portrait from '../components/ui/Portrait'
+import { TACTIC_CARDS } from '../data/tacticCards'
 import charactersRaw from '../data/characters.json'
 import skillsRaw    from '../data/skills.json'
 import '../styles/arena.css'
@@ -58,9 +59,11 @@ function computeAtbGauges(
   }
 }
 
+const MAGIC_ARCHETYPES = new Set<Archetype>(['mage', 'support', 'paladin'])
+
 export default function BattlePage() {
   const {
-    playerMatches, playerMatchIndex, activeSlot, lastTournament,
+    playerMatches, playerMatchIndex, activeSlot, lastTournament, selectedTacticCardId,
   } = useGameStore()
 
   const matchInfo = playerMatches[playerMatchIndex]
@@ -112,6 +115,16 @@ export default function BattlePage() {
   const oppStats: CombatStats | null = oppChar
     ? deriveStats(oppChar.baseCombat, oppGrowth, oppChar.archetype) : null
 
+  // 공통 스킬 = 전체 전투 스킬 중 고유 스킬(CharacterDef.skills) 제외
+  const playerUniqueSet = new Set<string>(playerChar?.skills ?? [])
+  const playerCommonSkills = playerSkills.filter(id => !playerUniqueSet.has(id))
+  const oppUniqueSet    = new Set<string>(oppChar?.skills ?? [])
+  const oppCommonSkills = oppSkills.filter(id => !oppUniqueSet.has(id))
+
+  const tacticCard = selectedTacticCardId
+    ? TACTIC_CARDS.find(c => c.id === selectedTacticCardId)
+    : null
+
   const isWinnerCandidate = lastTournament?.winner === oppId
   const isDarkhorse       = (lastTournament?.darkhorses ?? []).includes(oppId)
 
@@ -157,12 +170,19 @@ export default function BattlePage() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, color: 'var(--ink-dim)' }}>
-            {matchInfo.stageLabel} ·{' '}
-            <span style={{ color: 'var(--violet-glow)', fontWeight: 700 }}>{charName(pid)}</span>
-            {' vs '}
-            <span style={{ color: 'var(--red)', fontWeight: 700 }}>{charName(oppId)}</span>
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 13, color: 'var(--ink-dim)' }}>
+              {matchInfo.stageLabel} ·{' '}
+              <span style={{ color: 'var(--violet-glow)', fontWeight: 700 }}>{charName(pid)}</span>
+              {' vs '}
+              <span style={{ color: 'var(--red)', fontWeight: 700 }}>{charName(oppId)}</span>
+            </span>
+            {tacticCard && (
+              <span style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 700 }}>
+                ⚔ 전술: {tacticCard.name}
+              </span>
+            )}
+          </div>
           <div className="arena-mono" style={{ padding: '6px 12px', borderRadius: 999, background: 'rgba(124,80,240,.15)', border: '1px solid rgba(124,80,240,.4)', fontSize: 11, fontWeight: 700, color: 'var(--violet-glow)' }}>
             ROUND {round}
           </div>
@@ -192,8 +212,10 @@ export default function BattlePage() {
             mana={pidMana} maxMana={match.initialMana[pid]}
             isActing={entry?.actorId === pid}
             stats={playerStats}
+            oppArch={oppChar?.archetype}
             uniqueSkills={playerChar?.skills ?? []}
-            commonSkills={playerSkills}
+            commonSkills={playerCommonSkills}
+            enhancementMap={activeSlot.skillEnhancements ?? {}}
           />
           <div style={{ flexShrink: 0, width: 72, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
             <div className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-mute)', letterSpacing: '.15em' }}>TURN</div>
@@ -208,8 +230,9 @@ export default function BattlePage() {
             mana={oppMana} maxMana={match.initialMana[oppId]}
             isActing={entry?.actorId === oppId}
             stats={oppStats}
+            oppArch={playerChar?.archetype}
             uniqueSkills={oppChar?.skills ?? []}
-            commonSkills={oppSkills}
+            commonSkills={oppCommonSkills}
           />
         </div>
 
@@ -305,7 +328,7 @@ export default function BattlePage() {
 
 function CharPanel({
   char, tone, isPlayer, isRival, isWinnerCandidate, isDarkhorse,
-  hp, maxHp, mana, maxMana, isActing, stats, uniqueSkills, commonSkills,
+  hp, maxHp, mana, maxMana, isActing, stats, oppArch, uniqueSkills, commonSkills, enhancementMap,
 }: {
   char: CharacterDef | undefined
   tone: number
@@ -319,13 +342,22 @@ function CharPanel({
   maxMana: number
   isActing: boolean
   stats: CombatStats | null
+  oppArch?: Archetype
   uniqueSkills: string[]
   commonSkills: string[]
+  enhancementMap?: Record<string, number>
 }) {
   const arch        = char?.archetype ?? 'warrior'
   const hpPct       = maxHp   > 0 ? (hp   / maxHp)   * 100 : 0
   const manaPct     = maxMana > 0 ? (mana / maxMana) * 100 : 0
   const hpFillClass = hpPct > 60 ? 'arena-hp-fill' : hpPct > 30 ? 'arena-hp-fill arena-hp-warn' : 'arena-hp-fill arena-hp-danger'
+
+  const isMagic     = MAGIC_ARCHETYPES.has(arch)
+  const oppIsMagic  = oppArch ? MAGIC_ARCHETYPES.has(oppArch) : false
+  const atkLabel    = isMagic    ? '마법 공격' : '물리 공격'
+  const defLabel    = oppIsMagic ? '마법 방어' : '물리 방어'
+  const atkVal      = stats ? (isMagic    ? stats.mAtk : stats.pAtk)  : null
+  const defVal      = stats ? (oppIsMagic ? stats.mDef : stats.pDef)  : null
 
   return (
     <div
@@ -359,13 +391,29 @@ function CharPanel({
             )}
           </div>
           {stats && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,122,182,.1)', border: '1px solid rgba(255,122,182,.3)', color: '#ff7ab6', alignSelf: 'flex-start' }}>
-                ATK {Math.round(stats.pAtk)}
-              </span>
-              <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(74,158,255,.1)', border: '1px solid rgba(74,158,255,.3)', color: '#4a9eff', alignSelf: 'flex-start' }}>
-                DEF {Math.round(stats.pDef)}
-              </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(255,122,182,.1)', border: '1px solid rgba(255,122,182,.3)', color: '#ff7ab6' }}>
+                  {atkLabel} {atkVal !== null ? Math.round(atkVal) : '-'}
+                </span>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(74,158,255,.1)', border: '1px solid rgba(74,158,255,.3)', color: '#4a9eff' }}>
+                  {defLabel} {defVal !== null ? Math.round(defVal) : '-'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const }}>
+                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--ink-dim)' }}>
+                  명중 {Math.round(stats.acc)}%
+                </span>
+                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--gold)' }}>
+                  치명 {Math.round(stats.crit)}%
+                </span>
+                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--ink-dim)' }}>
+                  회피 {Math.round(stats.eva)}%
+                </span>
+                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--gold)' }}>
+                  크리 ×{stats.critDmg.toFixed(1)}
+                </span>
+              </div>
             </div>
           )}
         </div>
@@ -374,7 +422,7 @@ function CharPanel({
       {/* HP / MP */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>HP</span>
+          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>체력</span>
           <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-dim)' }}>{Math.ceil(hp)}/{maxHp}</span>
         </div>
         <div className="arena-hpbar"><div className={hpFillClass} style={{ width: `${hpPct}%` }} /></div>
@@ -393,10 +441,15 @@ function CharPanel({
           const def   = id ? SKILLS.find(s => s.id === id) : undefined
           const name  = def?.name ?? id ?? ''
           const color = def ? (SKILL_TIER_COLOR[def.tier] ?? '#aaa') : '#aaa'
+          const enh   = id && enhancementMap ? (enhancementMap[id] ?? 0) : 0
+          const tip   = def ? `${def.description}${def.cooldown > 0 ? `\n쿨다운: ${def.cooldown}턴` : ''}${enh > 0 ? `\n강화: +Lv.${enh}` : ''}` : undefined
           return id ? (
-            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 6px', borderRadius: 4, background: `${color}0a`, height: 22 }}>
+            <div key={id} title={tip} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 6px', borderRadius: 4, background: `${color}0a`, height: 22, cursor: 'default' }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
-              <span style={{ fontSize: 11, color, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{name}</span>
+              <span style={{ fontSize: 11, color, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flex: 1 }}>{name}</span>
+              {enh > 0 && (
+                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--gold)', flexShrink: 0, letterSpacing: '.02em' }}>+{enh}</span>
+              )}
             </div>
           ) : (
             <div key={`empty-u${i}`} style={{ height: 22, borderRadius: 4, background: 'rgba(255,255,255,.02)', border: '1px dashed rgba(255,255,255,.06)' }} />
@@ -409,8 +462,9 @@ function CharPanel({
           const def   = id ? SKILLS.find(s => s.id === id) : undefined
           const name  = def?.name ?? id ?? ''
           const color = def ? (SKILL_TIER_COLOR[def.tier] ?? '#aaa') : '#aaa'
+          const tip   = def ? `${def.description}${def.cooldown > 0 ? `\n쿨다운: ${def.cooldown}턴` : ''}` : undefined
           return id ? (
-            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 6px', borderRadius: 4, background: `${color}0a`, height: 22 }}>
+            <div key={id} title={tip} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 6px', borderRadius: 4, background: `${color}0a`, height: 22, cursor: 'default' }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
               <span style={{ fontSize: 11, color, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{name}</span>
             </div>
@@ -425,26 +479,66 @@ function CharPanel({
 
 function LogRow({ entry, pid }: { entry: MatchLogEntry; pid: number }) {
   const isMyAction = entry.actorId === pid
+  const isKill = !entry.evaded && entry.damage > 0 && (entry.hpAfter[entry.targetId] ?? 1) <= 0
   const actionDesc = entry.action === 'skill'
     ? `${skillName(entry.skillId ?? '')} → ${charName(entry.targetId)}`
     : `일반 공격 → ${charName(entry.targetId)}`
+
+  let bg = isMyAction ? 'rgba(124,80,240,.08)' : 'rgba(255,255,255,.02)'
+  if (isKill && isMyAction) bg = 'rgba(220,38,38,.12)'
+  else if (isKill) bg = 'rgba(220,38,38,.08)'
+  else if (entry.critical && isMyAction) bg = 'rgba(255,214,107,.06)'
+
+  let border = 'none'
+  if (isKill) border = '1px solid rgba(220,38,38,.35)'
+  else if (entry.critical && isMyAction) border = '1px solid rgba(255,214,107,.2)'
 
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 5,
       padding: '4px 8px', borderRadius: 4, fontSize: 11,
-      background: isMyAction ? 'rgba(124,80,240,.08)' : 'rgba(255,255,255,.02)',
+      background: bg, border,
     }}>
       <span className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-mute)', minWidth: 20, flexShrink: 0 }}>T{entry.turn}</span>
-      <span style={{ fontWeight: 700, minWidth: 48, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flexShrink: 0, color: isMyAction ? 'var(--violet-glow)' : 'var(--red)' }}>
+      <span style={{
+        fontWeight: 700, minWidth: 48, overflow: 'hidden', textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap' as const, flexShrink: 0,
+        color: isMyAction ? 'var(--violet-glow)' : 'var(--red)',
+      }}>
         {charName(entry.actorId)}
       </span>
       {entry.critical && (
-        <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 3, background: 'rgba(255,214,107,.2)', border: '1px solid rgba(255,214,107,.5)', color: 'var(--gold)', flexShrink: 0 }}>CRIT</span>
+        <span style={{
+          fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+          background: 'rgba(255,214,107,.25)', border: '1px solid rgba(255,214,107,.7)',
+          color: 'var(--gold)', letterSpacing: '.05em',
+          textShadow: '0 0 6px rgba(255,214,107,.6)',
+        }}>
+          CRIT
+        </span>
       )}
-      <span style={{ flex: 1, color: 'var(--ink-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{actionDesc}</span>
-      <span className="arena-mono" style={{ fontSize: 11, fontWeight: 700, flexShrink: 0, textAlign: 'right' as const, minWidth: 44, color: entry.evaded ? 'var(--ink-mute)' : 'var(--red)' }}>
-        {entry.evaded ? 'MISS' : `-${entry.damage}`}
+      {isKill && (
+        <span style={{ fontSize: 10, flexShrink: 0 }} title="KO">💀</span>
+      )}
+      <span style={{
+        flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+        color: entry.evaded ? 'var(--ink-mute)' : 'var(--ink-dim)',
+        fontStyle: entry.evaded ? 'italic' as const : 'normal' as const,
+      }}>
+        {actionDesc}
+      </span>
+      <span className="arena-mono" style={{
+        fontSize: 11, fontWeight: 700, flexShrink: 0,
+        textAlign: 'right' as const, minWidth: 48,
+        color: entry.evaded
+          ? 'var(--ink-mute)'
+          : isKill
+            ? '#ef4444'
+            : entry.critical
+              ? 'var(--gold)'
+              : 'var(--red)',
+      }}>
+        {entry.evaded ? '— DODGE' : isKill ? `💥${entry.damage}` : `-${entry.damage}`}
       </span>
     </div>
   )

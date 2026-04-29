@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { ItemDef, ItemTier, ItemKind, GrowthStats } from '../types'
+import type { ItemDef, ItemTier, ItemKind, GrowthStats, CharacterDef } from '../types'
 import { randomSeed } from '../utils/rng'
 import { getItemById, sumGoldMultiplier } from '../data/items'
-import { SHOP_REROLL_COST, MAX_INVENTORY_SIZE } from '../constants'
+import { SHOP_REROLL_COST, MAX_INVENTORY_SIZE, ARCHETYPE_GROWTH_COEFFS } from '../constants'
+import charactersRaw from '../data/characters.json'
 import HeaderBar from '../components/ui/HeaderBar'
 import '../styles/arena.css'
 
@@ -69,6 +70,11 @@ export default function ShopPage() {
   }, [])
 
   if (!activeSlot) return null
+
+  const characters = charactersRaw as CharacterDef[]
+  const playerChar = characters.find(c => c.id === activeSlot.characterId)
+  const playerArchetype = playerChar?.archetype ?? 'warrior'
+  const coeffs = ARCHETYPE_GROWTH_COEFFS[playerArchetype] ?? ARCHETYPE_GROWTH_COEFFS['warrior']
 
   const gold      = activeSlot.gold ?? 0
   const inventory = activeSlot.inventory ?? []
@@ -273,7 +279,7 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {tooltip && <InventoryTooltip item={tooltip.def} x={tooltip.x} y={tooltip.y} />}
+      {tooltip && <InventoryTooltip item={tooltip.def} x={tooltip.x} y={tooltip.y} coeffs={coeffs} />}
     </div>
   )
 }
@@ -284,7 +290,7 @@ interface ShopCardProps {
   onBuy:     () => void
 }
 
-function InventoryTooltip({ item, x, y }: { item: ItemDef; x: number; y: number }) {
+function InventoryTooltip({ item, x, y, coeffs }: { item: ItemDef; x: number; y: number; coeffs?: Record<string, number> }) {
   const color = TIER_COLOR[item.tier]
   const icon  = getItemIcon(item)
 
@@ -314,6 +320,45 @@ function InventoryTooltip({ item, x, y }: { item: ItemDef; x: number; y: number 
       </div>
       <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginBottom: 6 }}>{KIND_LABEL[item.kind]}</div>
       <div style={{ fontSize: 12, color: 'var(--green)', lineHeight: 1.5 }}>{item.description}</div>
+      {item.kind === 'stat' && item.statBonus && coeffs && (() => {
+        const impacts: string[] = []
+        const bonus = item.statBonus
+        if (bonus.vit) {
+          impacts.push(`HP +${Math.floor(bonus.vit * (coeffs.vit_to_maxHp ?? 10))}`)
+          const def = Math.round(bonus.vit * (coeffs.vit_to_pDef ?? 0.5) * 10) / 10
+          if (def > 0) impacts.push(`DEF +${def}`)
+        }
+        if (bonus.str) {
+          impacts.push(`ATK +${Math.floor(bonus.str * (coeffs.str_to_pAtk ?? 3))}`)
+          const def = Math.round(bonus.str * (coeffs.str_to_pDef ?? 0.5) * 10) / 10
+          if (def > 0) impacts.push(`DEF +${def}`)
+        }
+        if (bonus.agi) {
+          const spd = Math.round(bonus.agi * (coeffs.agi_to_spd ?? 0.5) * 10) / 10
+          if (spd > 0) impacts.push(`SPD +${spd}`)
+          const acc = Math.round(bonus.agi * (coeffs.agi_to_acc ?? 0.5) * 10) / 10
+          if (acc > 0) impacts.push(`ACC +${acc}`)
+          const eva = Math.round(bonus.agi * (coeffs.agi_to_eva ?? 0.5) * 10) / 10
+          if (eva > 0) impacts.push(`EVA +${eva}`)
+        }
+        if (bonus.int) {
+          impacts.push(`MATK +${Math.floor(bonus.int * (coeffs.int_to_mAtk ?? 3))}`)
+          const mdef = Math.round(bonus.int * (coeffs.int_to_mDef ?? 1) * 10) / 10
+          if (mdef > 0) impacts.push(`MDEF +${mdef}`)
+        }
+        if (bonus.luk) {
+          const crit = Math.round(bonus.luk * (coeffs.luk_to_crit ?? 0.5) * 10) / 10
+          if (crit > 0) impacts.push(`CRIT +${crit}%`)
+        }
+        if (impacts.length === 0) return null
+        return (
+          <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,.08)' }}>
+            {impacts.map((line, i) => (
+              <div key={i} style={{ fontSize: 11, color: '#86efac', fontFamily: 'monospace' }}>{line}</div>
+            ))}
+          </div>
+        )
+      })()}
       <div style={{ marginTop: 8, fontSize: 12, color: 'var(--gold)', fontWeight: 700 }}>● {item.price} G</div>
     </div>
   )

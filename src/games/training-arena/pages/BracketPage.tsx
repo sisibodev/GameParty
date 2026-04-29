@@ -2,20 +2,22 @@ import { useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import type { CharacterDef, MatchResult, GroupResult } from '../types'
 import charactersRaw from '../data/characters.json'
+import skillsRaw    from '../data/skills.json'
 import HeaderBar from '../components/ui/HeaderBar'
 import '../styles/arena.css'
 
 const characters = charactersRaw as CharacterDef[]
 const charName = (id: number) => characters.find(c => c.id === id)?.name ?? `#${id}`
+const skillName = (id: string) => (skillsRaw as Array<{ id: string; name: string }>).find(s => s.id === id)?.name ?? id
 
 const ROUND_LABELS = ['16강', '8강', '4강', '결승']
 type TabKey = 'qualifier' | 'group' | 'bracket'
 
 // ─── MatchCard ────────────────────────────────────────────────────────────────
 
-interface MatchCardProps { match: MatchResult; pid: number; winRate: (id: number) => number }
+interface MatchCardProps { match: MatchResult; pid: number; winRate: (id: number) => number; hideResult?: boolean; getTooltip: (id: number) => string }
 
-function MatchCard({ match, pid, winRate }: MatchCardProps) {
+function MatchCard({ match, pid, winRate, hideResult, getTooltip }: MatchCardProps) {
   const isPlayerMatch = match.char1Id === pid || match.char2Id === pid
   const ids = [match.char1Id, match.char2Id]
   return (
@@ -27,7 +29,7 @@ function MatchCard({ match, pid, winRate }: MatchCardProps) {
       display: 'flex', flexDirection: 'column' as const, gap: 5,
     }}>
       {ids.map(id => {
-        const isWinner = id === match.winnerId
+        const isWinner = hideResult ? false : id === match.winnerId
         const isPlayer = id === pid
         const wr = winRate(id)
         return (
@@ -35,19 +37,22 @@ function MatchCard({ match, pid, winRate }: MatchCardProps) {
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '3px 5px', borderRadius: 6,
             background: isPlayer ? 'rgba(124,80,240,.2)' : 'transparent',
-            opacity: isWinner ? 1 : 0.5,
+            opacity: hideResult ? 1 : (isWinner ? 1 : 0.5),
           }}>
             <div style={{
               width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
               background: isPlayer ? 'var(--violet-glow)' : 'var(--ink-dim)',
             }} />
-            <span style={{
-              flex: 1, fontSize: 11, fontWeight: isWinner ? 700 : 400,
-              color: isPlayer ? 'var(--violet-glow)' : isWinner ? 'var(--ink)' : 'var(--ink-mute)',
-              overflow: 'hidden', whiteSpace: 'nowrap' as const, textOverflow: 'ellipsis',
-            }}>{charName(id)}</span>
+            <span
+              title={getTooltip(id)}
+              style={{
+                flex: 1, fontSize: 11, fontWeight: isWinner ? 700 : 400,
+                color: isPlayer ? 'var(--violet-glow)' : isWinner ? 'var(--ink)' : 'var(--ink-mute)',
+                overflow: 'hidden', whiteSpace: 'nowrap' as const, textOverflow: 'ellipsis',
+                cursor: 'help',
+              }}>{charName(id)}</span>
             <span style={{ fontSize: 9, color: 'var(--ink-dim)', flexShrink: 0 }}>{wr}%</span>
-            {isWinner && (
+            {isWinner && !hideResult && (
               <span style={{
                 fontSize: 8, fontWeight: 700, padding: '1px 4px', borderRadius: 4,
                 background: 'rgba(94,240,168,.15)', color: 'var(--green)', flexShrink: 0,
@@ -62,9 +67,9 @@ function MatchCard({ match, pid, winRate }: MatchCardProps) {
 
 // ─── GroupCard ────────────────────────────────────────────────────────────────
 
-interface GroupCardProps { group: GroupResult; pid: number; featured?: boolean }
+interface GroupCardProps { group: GroupResult; pid: number; featured?: boolean; getTooltip: (id: number) => string }
 
-function GroupCard({ group, pid, featured }: GroupCardProps) {
+function GroupCard({ group, pid, featured, getTooltip }: GroupCardProps) {
   const rankBadge = (id: number) => {
     if (id === group.rank1) return { label: '1위', color: 'var(--green)', bg: 'rgba(94,240,168,.12)' }
     if (id === group.rank2) return { label: '2위', color: '#67e8f9', bg: 'rgba(103,232,249,.12)' }
@@ -106,11 +111,14 @@ function GroupCard({ group, pid, featured }: GroupCardProps) {
                 width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
                 background: isPlayer ? 'var(--violet-glow)' : isElim ? 'var(--ink-dim)' : badge.color,
               }} />
-              <span style={{
-                flex: 1, fontSize: featured ? 13 : 11, fontWeight: isPlayer ? 700 : 400,
-                color: isPlayer ? 'var(--violet-glow)' : isElim ? 'var(--ink-mute)' : 'var(--ink)',
-                overflow: 'hidden', whiteSpace: 'nowrap' as const, textOverflow: 'ellipsis',
-              }}>{charName(id)}</span>
+              <span
+                title={getTooltip(id)}
+                style={{
+                  flex: 1, fontSize: featured ? 13 : 11, fontWeight: isPlayer ? 700 : 400,
+                  color: isPlayer ? 'var(--violet-glow)' : isElim ? 'var(--ink-mute)' : 'var(--ink)',
+                  overflow: 'hidden', whiteSpace: 'nowrap' as const, textOverflow: 'ellipsis',
+                  cursor: 'help',
+                }}>{charName(id)}</span>
               <span style={{
                 fontSize: 8, fontWeight: 700, padding: '1px 5px', borderRadius: 4, flexShrink: 0,
                 color: badge.color, background: badge.bg, border: `1px solid ${badge.color}33`,
@@ -126,7 +134,7 @@ function GroupCard({ group, pid, featured }: GroupCardProps) {
 // ─── BracketPage ──────────────────────────────────────────────────────────────
 
 export default function BracketPage() {
-  const { lastTournament, activeSlot, playerMatches } = useGameStore()
+  const { lastTournament, activeSlot, playerMatches, playerMatchIndex } = useGameStore()
   const [activeTab, setActiveTab] = useState<TabKey>('bracket')
 
   if (!lastTournament || !activeSlot) return null
@@ -146,6 +154,16 @@ export default function BracketPage() {
     return total > 0 ? Math.round(stat.totalWins / total * 100) : 0
   }
 
+  // playerMatchIndex 이전까지 진행한 경기의 matchId 집합 (스포일러 방지)
+  const doneMatchIds = new Set(
+    playerMatches.slice(0, playerMatchIndex).map(m => m.matchResult.matchId)
+  )
+
+  // 플레이어가 탈락했으면 우승자 공개
+  const lastMatch = playerMatches.length > 0 ? playerMatches.at(-1) : undefined
+  const playerEliminated = lastMatch?.wasPlayed === true && lastMatch?.playerWon === false
+  const inProgress = playerMatches.length > 0 && !playerEliminated
+
   // Bracket matches — stage filter with slice fallback
   const stageBracket = allMatches.filter(m => m.stage === 'bracket')
   const bm = stageBracket.length >= 15 ? stageBracket : allMatches.slice(-15)
@@ -161,9 +179,10 @@ export default function BracketPage() {
     getRound(4, 14, 15),
   ]
 
-  const pbMatches = bm.filter(m => m.char1Id === pid || m.char2Id === pid)
-  const pbWins    = pbMatches.filter(m => m.winnerId === pid).length
-  const pbLosses  = pbMatches.filter(m => m.loserId  === pid).length
+  const pbMatches     = bm.filter(m => m.char1Id === pid || m.char2Id === pid)
+  const pbDoneMatches = pbMatches.filter(m => doneMatchIds.has(m.matchId))
+  const pbWins        = pbDoneMatches.filter(m => m.winnerId === pid).length
+  const pbLosses      = pbDoneMatches.filter(m => m.loserId  === pid).length
 
   const myGroup     = lastTournament.groups.find(g => g.players.includes(pid))
   const otherGroups = lastTournament.groups.filter(g => g.groupId !== myGroup?.groupId)
@@ -174,6 +193,43 @@ export default function BracketPage() {
     { key: 'group',     label: '✓ 본선' },
     { key: 'bracket',   label: '● 토너먼트' },
   ]
+
+  function buildTooltip(id: number): string {
+    const name = charName(id)
+    const isPlayer = id === pid
+
+    // 누적 전적
+    const stat = npcStats[id]
+    const cumRecord = stat
+      ? `누적 ${stat.totalWins}승 ${stat.totalLosses}패 · 최고 ${stat.bestStage}`
+      : isPlayer
+        ? `누적 ${activeSlot.totalWins ?? 0}승 ${activeSlot.totalLosses ?? 0}패`
+        : '전적 없음'
+
+    // 이번 토너먼트 전적
+    const tourMatches = allMatches.filter(m => m.char1Id === id || m.char2Id === id)
+    const tourWins    = tourMatches.filter(m => m.winnerId === id).length
+    const tourLosses  = tourMatches.filter(m => m.loserId  === id).length
+    const tourRecord  = tourMatches.length > 0 ? `이번 대회 ${tourWins}승 ${tourLosses}패` : ''
+
+    // 스킬 목록
+    let skills: string[]
+    if (isPlayer) {
+      skills = [...activeSlot.initialSkills, ...activeSlot.acquiredSkills]
+    } else {
+      const ref = tourMatches[0]
+      if (ref) {
+        skills = ref.char1Id === id ? (ref.char1Skills ?? []) : (ref.char2Skills ?? [])
+      } else {
+        skills = []
+      }
+    }
+    const skillLine = skills.length > 0
+      ? `스킬: ${skills.map(s => skillName(s)).join(', ')}`
+      : ''
+
+    return [name, cumRecord, tourRecord, skillLine].filter(Boolean).join('\n')
+  }
 
   return (
     <div className="arena-bg-arena" style={{ display: 'flex', flexDirection: 'column' as const, minHeight: '100vh' }}>
@@ -222,10 +278,13 @@ export default function BracketPage() {
                     border: `1px solid ${isPlayer ? 'rgba(164,120,255,.5)' : qualified ? 'rgba(94,240,168,.2)' : 'rgba(255,92,110,.15)'}`,
                     opacity: qualified ? 1 : 0.55,
                   }}>
-                    <span style={{
-                      fontSize: 12, fontWeight: isPlayer ? 700 : 400,
-                      color: isPlayer ? 'var(--violet-glow)' : qualified ? 'var(--ink)' : 'var(--ink-mute)',
-                    }}>{charName(id)}</span>
+                    <span
+                      title={buildTooltip(id)}
+                      style={{
+                        fontSize: 12, fontWeight: isPlayer ? 700 : 400,
+                        color: isPlayer ? 'var(--violet-glow)' : qualified ? 'var(--ink)' : 'var(--ink-mute)',
+                        cursor: 'help',
+                      }}>{charName(id)}</span>
                     <span style={{
                       fontSize: 8, fontWeight: 700, padding: '1px 5px', borderRadius: 4,
                       color: qualified ? 'var(--green)' : 'var(--red)',
@@ -241,10 +300,10 @@ export default function BracketPage() {
         {/* ── 본선 탭 ── */}
         {activeTab === 'group' && (
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 16 }}>
-            {myGroup && <GroupCard group={myGroup} pid={pid} featured />}
+            {myGroup && <GroupCard group={myGroup} pid={pid} featured getTooltip={buildTooltip} />}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
               {otherGroups.map(g => (
-                <GroupCard key={g.groupId} group={g} pid={pid} />
+                <GroupCard key={g.groupId} group={g} pid={pid} getTooltip={buildTooltip} />
               ))}
             </div>
           </div>
@@ -269,7 +328,16 @@ export default function BracketPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' as const, flex: 1, gap: 6, justifyContent: ri === 3 ? 'center' : 'space-evenly' }}>
                     {roundMatches.map((m, mi) => (
-                      <MatchCard key={mi} match={m} pid={pid} winRate={winRate} />
+                      <MatchCard
+                        key={mi}
+                        match={m}
+                        pid={pid}
+                        winRate={winRate}
+                        hideResult={
+                          (m.char1Id === pid || m.char2Id === pid) && !doneMatchIds.has(m.matchId)
+                        }
+                        getTooltip={buildTooltip}
+                      />
                     ))}
                   </div>
                 </div>
@@ -283,16 +351,22 @@ export default function BracketPage() {
                 <div style={{ display: 'flex', flexDirection: 'column' as const, flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                   <div style={{
                     background: 'rgba(255,214,107,.08)',
-                    border: `1px solid ${winner === pid ? 'rgba(164,120,255,.6)' : 'rgba(255,214,107,.5)'}`,
+                    border: `1px solid ${!inProgress && winner === pid ? 'rgba(164,120,255,.6)' : 'rgba(255,214,107,.5)'}`,
                     borderRadius: 12, padding: '14px 16px',
                     display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6,
                   }}>
                     <span style={{ fontSize: 20 }}>👑</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: winner === pid ? 'var(--violet-glow)' : 'var(--gold)' }}>
-                      {charName(winner)}
-                    </span>
-                    {winner === pid && (
-                      <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--violet-glow)', background: 'rgba(124,80,240,.2)', padding: '2px 8px', borderRadius: 999 }}>나</span>
+                    {inProgress ? (
+                      <span style={{ fontSize: 11, color: 'var(--ink-dim)' }}>?</span>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: winner === pid ? 'var(--violet-glow)' : 'var(--gold)' }}>
+                          {charName(winner)}
+                        </span>
+                        {winner === pid && (
+                          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--violet-glow)', background: 'rgba(124,80,240,.2)', padding: '2px 8px', borderRadius: 999 }}>나</span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

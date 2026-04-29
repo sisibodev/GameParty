@@ -19,7 +19,11 @@ export default function SlotSelectPage() {
     const slot = slots.find(s => s.slotId === slotId)
     if (!slot) return
     const phase = (slot.savedPhase as GamePhase | undefined) ?? 'gacha'
-    useGameStore.setState({ activeSlot: slot, phase })
+    useGameStore.setState({
+      activeSlot:    slot,
+      phase,
+      pendingReward: slot.savedReward ?? null,
+    })
   }
 
   function handleNew(slotId: SlotId) {

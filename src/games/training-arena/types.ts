@@ -35,6 +35,12 @@ export type SkillCategory = 'attack' | 'defense' | 'buff' | 'debuff' | 'heal' | 
 export type SkillTarget = 'self' | 'single' | 'all_enemies'
 export type DamageType = 'physical' | 'magical'
 
+export interface ActivationCondition {
+  type: 'hp_below' | 'hp_above' | 'has_buff' | 'combo'
+  threshold?: number  // for hp_below/hp_above: HP percentage (0-100)
+  count?: number      // for combo: consecutive hits required
+}
+
 export interface SkillDef {
   id: string
   name: string
@@ -46,6 +52,7 @@ export interface SkillDef {
   priority: number
   description: string
   damageType?: DamageType  // attack/special 카테고리 스킬에만 의미. 일반 공격은 archetype 매핑.
+  activationCondition?: ActivationCondition
 }
 
 // 스킬 학습 대기 (v0.4.3): 전투 횟수 기반 카운트다운
@@ -166,6 +173,7 @@ export interface BattleCharState {
   passives: string[]                    // v0.5.0: 패시브 스킬 ID 목록
   skillEnhancements: Record<string, number>  // v0.5.0: skillId → 강화 레벨
   ironWillUsed?: boolean               // v0.5.0: iron_will 패시브 1회 소모 추적
+  comboCount?: number                  // consecutive hits without taking damage
 }
 
 // ─── Tactic Card (v0.4.2 Phase 3) ────────────────────────────────────────────
@@ -238,6 +246,7 @@ export interface PlayerMatchInfo {
   playerWon: boolean
   opponentItems: string[]
   opponentSkills: string[]
+  wasPlayed?: boolean
 }
 
 // ─── Tournament ───────────────────────────────────────────────────────────────
@@ -338,6 +347,9 @@ export interface SaveSlot {
   createdAt: number
   updatedAt: number
   npcStats?: Record<number, NpcStat>
+  totalWins?: number    // v0.8.0: 누적 승수 (라운드 간 유지)
+  totalLosses?: number  // v0.8.0: 누적 패수 (라운드 간 유지)
+  savedReward?: RewardPackage  // v0.9.0: 미수령 보상 — 리로드 후 RewardPage 복원용, claimReward 후 삭제
 }
 
 // 전투용 스킬 목록 (initialSkills + acquiredSkills, 최대 5개)

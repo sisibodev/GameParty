@@ -45,8 +45,9 @@ export function calcReward(
 ): RewardPackage {
   const rng = new SeededRng(seed)
 
-  const randomStatGain =
-    BASE_STAT_GAINS[result] + (isDarkhorse ? REWARD_DARKHORSE : 0)
+  const randomStatGain = isDarkhorse
+    ? Math.max(BASE_STAT_GAINS[result], REWARD_WINNER)
+    : BASE_STAT_GAINS[result]
 
   const unowned      = availableSkillIds.filter(id => !acquiredSkillIds.includes(id))
   const skillChoices = pickN(unowned, Math.min(SKILL_CHOICE_COUNT, unowned.length), rng)

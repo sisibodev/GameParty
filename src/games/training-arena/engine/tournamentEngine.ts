@@ -460,9 +460,9 @@ export function runTournament(
     bracketEliminations, npcStates, playerCharId, tacticCardId, playerPassives, playerEnhancements,
   )
 
-  const eliminated = qualifiers.filter(id => !finalists.includes(id))
-  const darkhorseCount = Math.floor(finalists.length * DARKHORSE_RATIO)
-  const darkhorses = pickN(eliminated, darkhorseCount, rng)
+  const qualifierLosers = participants.map(c => c.id).filter(id => !qualifiers.includes(id))
+  const darkhorseCount  = Math.floor(qualifierLosers.length * DARKHORSE_RATIO)
+  const darkhorses      = pickN(qualifierLosers, darkhorseCount, rng)
 
   return {
     tournamentId: `tournament_${seed}_r${round}`,

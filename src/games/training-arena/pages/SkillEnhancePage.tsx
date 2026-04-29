@@ -5,7 +5,6 @@ import {
   SKILL_ENHANCE_MULT,
   MAX_SKILL_ENHANCE_LEVEL,
 } from '../constants'
-import { mergePlayerSkills } from '../types'
 import skillsRaw from '../data/skills.json'
 import '../styles/arena.css'
 
@@ -41,11 +40,11 @@ export default function SkillEnhancePage() {
 
   if (!activeSlot) return null
 
-  const playerSkills  = mergePlayerSkills(activeSlot)
   const enhancements  = activeSlot.skillEnhancements ?? {}
   const gold          = activeSlot.gold ?? 0
 
-  const skillDefs = playerSkills
+  // 고유 스킬(initialSkills)만 강화 가능
+  const skillDefs = activeSlot.initialSkills
     .map(id => SKILLS_BY_ID[id])
     .filter((d): d is SkillDef => !!d)
 

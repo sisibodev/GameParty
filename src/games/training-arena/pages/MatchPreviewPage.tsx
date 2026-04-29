@@ -345,8 +345,8 @@ export default function MatchPreviewPage() {
   const { matchResult, stageLabel, opponentId, opponentItems, opponentSkills } = matchInfo
   const pid              = activeSlot.characterId
   const isRival          = (activeSlot.rivalIds ?? []).includes(opponentId)
-  const isWinnerCandidate = lastTournament?.winner === opponentId
-  const isDarkhorse      = (lastTournament?.darkhorses ?? []).includes(opponentId)
+  const isWinnerCandidate = false
+  const isDarkhorse       = false
 
   const playerChar    = findChar(pid)
   const opponentChar  = findChar(opponentId)
@@ -464,7 +464,7 @@ export default function MatchPreviewPage() {
         )
       })()}
       <HeaderBar
-        subtitle={`${stageLabel} · ${playerMatchIndex + 1}/${playerMatches.length} 경기`}
+        subtitle={`${stageLabel}`}
         round={activeSlot.currentRound}
         phase="매치 프리뷰"
         onExit={() => { if (confirm('메인 화면으로 나가시겠습니까?\n현재까지의 진행은 저장되어 있습니다.')) useGameStore.setState({ phase: 'slot_select' }) }}
