@@ -898,10 +898,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const seed = (Date.now() ^ (pid * 31) ^ playerMatchIndex) >>> 0
     const newMatchResult = simulateMatch(playerState, oppState, seed)
 
-    // 원본 매치의 스테이지 정보 보존
+    // 원본 매치의 스테이지/ID 정보 보존 (BracketPage doneMatchIds 매칭에 필요)
     const orig = matchInfo.matchResult
     const updatedResult = {
       ...newMatchResult,
+      matchId:        orig.matchId,
       stage:          orig.stage,
       groupId:        orig.groupId,
       groupMatchType: orig.groupMatchType,

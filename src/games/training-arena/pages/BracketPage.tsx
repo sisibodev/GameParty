@@ -154,6 +154,12 @@ export default function BracketPage() {
     return total > 0 ? Math.round(stat.totalWins / total * 100) : 0
   }
 
+  // 실제 플레이한 경기 결과 맵 (matchId → 재시뮬레이션 결과)
+  // startBattleForCurrentMatch가 matchId를 보존하므로 pre-run matchId로 조회 가능
+  const playedResultMap = new Map(
+    playerMatches.filter(m => m.wasPlayed).map(m => [m.matchResult.matchId, m.matchResult])
+  )
+
   // playerMatchIndex 이전까지 진행한 경기의 matchId 집합 (스포일러 방지)
   const doneMatchIds = new Set(
     playerMatches.slice(0, playerMatchIndex).map(m => m.matchResult.matchId)
@@ -327,18 +333,20 @@ export default function BracketPage() {
                     {ROUND_LABELS[ri]}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' as const, flex: 1, gap: 6, justifyContent: ri === 3 ? 'center' : 'space-evenly' }}>
-                    {roundMatches.map((m, mi) => (
-                      <MatchCard
-                        key={mi}
-                        match={m}
-                        pid={pid}
-                        winRate={winRate}
-                        hideResult={
-                          (m.char1Id === pid || m.char2Id === pid) && !doneMatchIds.has(m.matchId)
-                        }
-                        getTooltip={buildTooltip}
-                      />
-                    ))}
+                    {roundMatches.map((m, mi) => {
+                      const isPlayerMatch = m.char1Id === pid || m.char2Id === pid
+                      const actualMatch   = isPlayerMatch ? (playedResultMap.get(m.matchId) ?? m) : m
+                      return (
+                        <MatchCard
+                          key={mi}
+                          match={actualMatch}
+                          pid={pid}
+                          winRate={winRate}
+                          hideResult={isPlayerMatch && !doneMatchIds.has(m.matchId)}
+                          getTooltip={buildTooltip}
+                        />
+                      )
+                    })}
                   </div>
                 </div>
               ))}

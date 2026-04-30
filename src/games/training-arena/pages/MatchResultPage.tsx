@@ -83,10 +83,10 @@ export default function MatchResultPage() {
   const oppEvades  = match.log.filter(e => e.targetId === oppId && e.evaded).length
 
   const matchesThru = playerMatches.slice(0, playerMatchIndex + 1)
-  const wins   = matchesThru.filter(m => m.playerWon).length
-  const losses = matchesThru.filter(m => !m.playerWon).length
+  const wins   = matchesThru.filter(m => m.wasPlayed && m.playerWon).length
+  const losses = matchesThru.filter(m => m.wasPlayed && !m.playerWon).length
 
-  const h2h       = matchesThru.filter(m => m.opponentId === oppId)
+  const h2h       = matchesThru.filter(m => m.wasPlayed && m.opponentId === oppId)
   const h2hWins   = h2h.filter(m => m.playerWon).length
   const h2hLosses = h2h.filter(m => !m.playerWon).length
 

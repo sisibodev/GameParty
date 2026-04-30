@@ -15,7 +15,7 @@ const BRACKET_LABELS: Record<number, string> = {
 }
 
 export default function TournamentPage() {
-  const { activeSlot, lastTournament } = useGameStore()
+  const { activeSlot, lastTournament, playerMatches } = useGameStore()
 
   if (!activeSlot || !lastTournament) return (
     <div className="arena-bg-arena" style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh' }}>
@@ -27,17 +27,31 @@ export default function TournamentPage() {
   const result = lastTournament
 
   function PlayerBadge() {
-    if (result.winner === pid) {
+    // Use actual played matches — pre-run bracketEliminations can differ when player beats
+    // opponents they were predicted to lose to.
+    const playedMatches = playerMatches.filter(m => m.wasPlayed)
+    const last = playedMatches[playedMatches.length - 1]
+
+    if (!last) {
+      return <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:999, background:'rgba(255,92,110,.1)', border:'1px solid rgba(255,92,110,.4)', color:'var(--red)', fontWeight:700, fontSize:14 }}>💀 예선 탈락</span>
+    }
+
+    const { stage, bracketRound } = last.matchResult
+
+    if (last.playerWon && stage === 'bracket' && (bracketRound ?? 0) >= 4) {
       return <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:999, background:'rgba(255,214,107,.15)', border:'1px solid rgba(255,214,107,.6)', color:'var(--gold)', fontWeight:700, fontSize:14 }}>🏆 우승!</span>
     }
-    if (result.finalists.includes(pid)) {
-      const r = result.bracketEliminations[pid] ?? 0
+
+    if (stage === 'bracket') {
+      const r = bracketRound ?? 1
       const label = BRACKET_LABELS[r] ?? '토너먼트 탈락'
       return <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:999, background:'rgba(164,120,255,.15)', border:'1px solid rgba(164,120,255,.5)', color:'var(--violet-glow)', fontWeight:700, fontSize:14 }}>⚔️ {label}</span>
     }
-    if (result.qualifiers.includes(pid)) {
+
+    if (stage === 'group') {
       return <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:999, background:'rgba(103,232,249,.1)', border:'1px solid rgba(103,232,249,.4)', color:'var(--cyan)', fontWeight:700, fontSize:14 }}>🛡 조별리그 탈락</span>
     }
+
     return <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:999, background:'rgba(255,92,110,.1)', border:'1px solid rgba(255,92,110,.4)', color:'var(--red)', fontWeight:700, fontSize:14 }}>💀 예선 탈락</span>
   }
 

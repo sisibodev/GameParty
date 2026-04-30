@@ -350,13 +350,14 @@ export default function MatchPreviewPage() {
 
   const playerChar    = findChar(pid)
   const opponentChar  = findChar(opponentId)
-  const playerMaxHp   = matchResult.initialHp[pid]        ?? 0
-  const opponentMaxHp = matchResult.initialHp[opponentId] ?? 0
 
   const round         = activeSlot.currentRound
   const oppGrowth     = npcGrowth(round, (activeSlot.rivalIds ?? []).includes(opponentId))
   const playerStats   = playerChar ? deriveStats(playerChar.baseCombat, activeSlot.growthStats, playerChar.archetype) : null
   const opponentStats = opponentChar ? deriveStats(opponentChar.baseCombat, oppGrowth, opponentChar.archetype) : null
+
+  const playerMaxHp   = playerStats?.maxHp   ?? 0
+  const opponentMaxHp = opponentStats?.maxHp  ?? 0
 
   const rawAchievement = lastTournament ? getOpponentAchievement(opponentId, lastTournament) : null
   const npcStat        = activeSlot.npcStats?.[opponentId]
@@ -365,11 +366,11 @@ export default function MatchPreviewPage() {
     : rawAchievement
 
   const prevMatches        = playerMatches.slice(0, playerMatchIndex)
-  const currentRoundWins   = prevMatches.filter(m => m.playerWon).length
-  const currentRoundLosses = prevMatches.filter(m => !m.playerWon).length
+  const currentRoundWins   = prevMatches.filter(m => m.wasPlayed && m.playerWon).length
+  const currentRoundLosses = prevMatches.filter(m => m.wasPlayed && !m.playerWon).length
   const totalWins   = (activeSlot.totalWins   ?? 0) + currentRoundWins
   const totalLosses = (activeSlot.totalLosses ?? 0) + currentRoundLosses
-  const h2h         = prevMatches.filter(m => m.opponentId === opponentId)
+  const h2h         = prevMatches.filter(m => m.wasPlayed && m.opponentId === opponentId)
   const h2hWins     = h2h.filter(m => m.playerWon).length
   const h2hLosses   = h2h.filter(m => !m.playerWon).length
 
