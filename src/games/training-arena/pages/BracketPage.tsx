@@ -209,7 +209,7 @@ export default function BracketPage() {
     const cumRecord = stat
       ? `누적 ${stat.totalWins}승 ${stat.totalLosses}패 · 최고 ${stat.bestStage}`
       : isPlayer
-        ? `누적 ${activeSlot.totalWins ?? 0}승 ${activeSlot.totalLosses ?? 0}패`
+        ? `누적 ${activeSlot!.totalWins ?? 0}승 ${activeSlot!.totalLosses ?? 0}패`
         : '전적 없음'
 
     // 이번 토너먼트 전적
@@ -221,7 +221,7 @@ export default function BracketPage() {
     // 스킬 목록
     let skills: string[]
     if (isPlayer) {
-      skills = [...activeSlot.initialSkills, ...activeSlot.acquiredSkills]
+      skills = [...activeSlot!.initialSkills, ...activeSlot!.acquiredSkills]
     } else {
       const ref = tourMatches[0]
       if (ref) {

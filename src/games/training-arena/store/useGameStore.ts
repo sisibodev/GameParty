@@ -7,6 +7,7 @@ import type {
   GrowthStats,
   InventoryItem,
   ItemDef,
+  MatchResult,
   NpcStat,
   PendingSkill,
   PlayerMatchInfo,

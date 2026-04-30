@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { calcReward } from '../engine/rewardEngine'
-import { GOLD_BY_RESULT, REWARD_DARKHORSE, REWARD_FINALIST, REWARD_TOURNAMENT_OUT, REWARD_WINNER } from '../constants'
+import { GOLD_BY_RESULT, REWARD_FINALIST, REWARD_TOURNAMENT_OUT, REWARD_WINNER } from '../constants'
 
 const ALL_SKILLS = ['sk_a', 'sk_b', 'sk_c', 'sk_d', 'sk_e', 'sk_f']
 const SEED = 42

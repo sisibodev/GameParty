@@ -342,7 +342,7 @@ export default function MatchPreviewPage() {
   const matchInfo = playerMatches[playerMatchIndex]
   if (!matchInfo) return null
 
-  const { matchResult, stageLabel, opponentId, opponentItems, opponentSkills } = matchInfo
+  const { matchResult: _matchResult, stageLabel, opponentId, opponentItems, opponentSkills } = matchInfo
   const pid              = activeSlot.characterId
   const isRival          = (activeSlot.rivalIds ?? []).includes(opponentId)
   const isWinnerCandidate = false
@@ -386,7 +386,6 @@ export default function MatchPreviewPage() {
     { label: '상대전적', value: `${h2hLosses}승 ${h2hWins}패` },
   ]
 
-  const playerSkillIds  = [...activeSlot.initialSkills, ...activeSlot.acquiredSkills]
   const playerPassives  = activeSlot.passiveSkills ?? []
   const oppPassives     = getNpcPassives(opponentId, round)
   const myItems         = (activeSlot.inventory ?? []).map(i => i.itemId)

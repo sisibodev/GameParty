@@ -1,7 +1,6 @@
 import type { PassiveSkillDef, PlayerTournamentResult, RewardPackage } from '../types'
 import {
   GOLD_BY_RESULT,
-  REWARD_DARKHORSE,
   REWARD_FINALIST,
   REWARD_TOURNAMENT_OUT,
   REWARD_WINNER,

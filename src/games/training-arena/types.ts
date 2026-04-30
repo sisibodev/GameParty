@@ -126,7 +126,7 @@ export interface CharacterDef {
   archetype: Archetype
   baseCombat: CharacterBaseCombat
   ipId?: number  // undefined = original character
-  skills?: [string, string, string]  // v0.5.0: 캐릭터 고정 3개 스킬 ID
+  skills?: string[]  // v0.5.0: 캐릭터 고정 스킬 ID 목록
 }
 
 // ─── Gacha ────────────────────────────────────────────────────────────────────

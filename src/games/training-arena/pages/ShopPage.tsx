@@ -279,7 +279,7 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {tooltip && <InventoryTooltip item={tooltip.def} x={tooltip.x} y={tooltip.y} coeffs={coeffs} />}
+      {tooltip && <InventoryTooltip item={tooltip.def} x={tooltip.x} y={tooltip.y} coeffs={coeffs as unknown as Record<string, number>} />}
     </div>
   )
 }
