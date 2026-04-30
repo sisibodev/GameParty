@@ -23,13 +23,18 @@ import {
   INITIAL_PLAYER_STAT,
   INITIAL_SKILL_COUNT,
   INITIAL_UNLOCKED_CHAR_IDS,
+  MATCH_BONUS_GOLD_LOSS,
+  MATCH_BONUS_GOLD_WIN,
   MAX_INVENTORY_SIZE,
+  MAX_PASSIVE_SLOTS,
+  MAX_SKILL_ENHANCE_LEVEL,
   MAX_SKILL_SLOTS,
   NPC_BASE_GROWTH,
   RIVAL_COUNT,
   RIVAL_GOLD_MULTIPLIER,
   RIVAL_STAT_PER_ROUND,
   SHOP_REROLL_COST,
+  SKILL_ENHANCE_COSTS,
   SKILL_LEARN_TURNS,
 } from '../constants'
 import { runTournament } from '../engine/tournamentEngine'
@@ -50,6 +55,7 @@ import { SeededRng }  from '../utils/rng'
 import { pickN }      from '../utils/fisherYates'
 import charactersRaw  from '../data/characters.json'
 import skillsRaw      from '../data/skills.json'
+import passiveSkillsRaw from '../data/passiveSkills.json'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,6 +66,7 @@ export type GamePhase =
   | 'simulation'
   | 'char_select'
   | 'gacha'
+  | 'stage_overview'
   | 'match_preview'
   | 'battle'
   | 'match_result'
@@ -67,26 +74,29 @@ export type GamePhase =
   | 'tournament'
   | 'bracket'
   | 'reward'
-  | 'skill_select'
   | 'shop'
+  | 'skill_enhance'
+  | 'passive_reward'
   | 'replay'
   | 'my_records'
 
 interface GameState {
-  phase:                  GamePhase
-  slots:                  SaveSlot[]
-  activeSlot:             SaveSlot | null
-  lastTournament:         TournamentResult | null
-  pendingReward:          RewardPackage | null
-  lastRandomStatKey:      GrowthStatKey | null
-  unlockedCharIds:        number[]
-  newCharIds:             number[]
-  playerMatches:          PlayerMatchInfo[]
-  playerMatchIndex:       number
-  shopItems:              ItemDef[]
-  selectedTacticCardId:   TacticCardId | null
-  pendingBattleSkillOpts: string[] | null
-  playedCharIds:          number[]
+  phase:                    GamePhase
+  slots:                    SaveSlot[]
+  activeSlot:               SaveSlot | null
+  lastTournament:           TournamentResult | null
+  pendingReward:            RewardPackage | null
+  lastRandomStatKey:        GrowthStatKey | null
+  unlockedCharIds:          number[]
+  newCharIds:               number[]
+  playerMatches:            PlayerMatchInfo[]
+  playerMatchIndex:         number
+  shopItems:                ItemDef[]
+  selectedTacticCardId:     TacticCardId | null
+  playedCharIds:            number[]
+  pendingPassiveOpts:       string[] | null  // 매치 승리 후 상대 패시브 선택지
+  pendingPassiveRewardOpts: string[] | null  // 라운드 종료 후 3개 랜덤 패시브
+  pendingSkillOpts:         string[] | null  // 매치 승리 후 상대 스킬 선택지
 }
 
 interface GameActions {
@@ -105,7 +115,12 @@ interface GameActions {
   buyItem:                 (itemId: string) => Promise<void>
   rerollShop:              (seed: number) => Promise<void>
   leaveShop:               () => void
+  initMatchPassives:       () => void
+  initMatchSkills:         () => void
+  acquireBattlePassive:    (passiveId: string | null, replaceId?: string) => Promise<void>
   acquireBattleSkill:      (skillId: string | null, replaceId?: string) => Promise<void>
+  acquirePassiveReward:    (passiveId: string | null, replaceId?: string) => Promise<void>
+  enhanceSkill:            (skillId: string) => Promise<void>
   setPhase:                (phase: GamePhase) => void
   clearNewChars:           () => void
   clearPlayedChars:        () => void
@@ -117,6 +132,7 @@ interface GameActions {
 const characters    = (charactersRaw as CharacterDef[]).filter(c => c.ipId == null)
 const allCharIds    = characters.map(c => c.id)
 const allSkillIds   = (skillsRaw as Array<{ id: string }>).map(s => s.id)
+const allPassiveIds = (passiveSkillsRaw as Array<{ id: string }>).map(p => p.id)
 
 // ─── Unlock helpers (localStorage) ───────────────────────────────────────────
 
@@ -147,17 +163,24 @@ function savePlayedChars(ids: number[]) {
 // v0.4.1: 플레이어 초기 성장 스탯 — 전 스탯 1/1/1/1/1
 function initialPlayerGrowth(): GrowthStats {
   const v = INITIAL_PLAYER_STAT
-  return { hp: v, str: v, agi: v, int: v, luk: v }
+  return { vit: v, str: v, agi: v, int: v, luk: v }
 }
 
 function npcGrowth(round: number, isRival: boolean = false): GrowthStats {
   const b = NPC_BASE_GROWTH + (round - 1) + (isRival ? RIVAL_STAT_PER_ROUND * round : 0)
-  return { hp: b, str: b, agi: b, int: b, luk: b }
+  return { vit: b, str: b, agi: b, int: b, luk: b }
 }
 
-function npcSkills(charId: number, round: number): string[] {
-  const rng = new SeededRng(charId * 1000 + round)
-  return pickN(allSkillIds, INITIAL_SKILL_COUNT, rng)
+// v0.6.0: 게임 시작 시 NPC에게 랜덤 스킬 3개 부여 (gameSeed 기반, 라운드 불변)
+function npcRandomSkills(charId: number, gameSeed: number): string[] {
+  const rng = new SeededRng(charId * 1337 + gameSeed)
+  return pickN(allSkillIds, Math.min(3, allSkillIds.length), rng)
+}
+
+// v0.5.0: NPC 초기 패시브 스킬 (결정론적 랜덤, 6개)
+function npcInitialPassives(charId: number, round: number): string[] {
+  const rng = new SeededRng(charId * 997 + round)
+  return pickN(allPassiveIds, Math.min(MAX_PASSIVE_SLOTS, allPassiveIds.length), rng)
 }
 
 // v0.4.2 — NPC 아이템 지급: (라운드-1)개, 라운드별 티어 가중치 적용
@@ -269,6 +292,15 @@ function extractPlayerMatches(
     })
 }
 
+function matchBonusGoldKey(matchInfo: PlayerMatchInfo): string {
+  const stage = matchInfo.matchResult.stage
+  const round = matchInfo.matchResult.bracketRound
+  if (stage === 'qualifier') return 'qualifier'
+  if (stage === 'group')     return 'group'
+  if (stage === 'bracket')   return `bracket_r${round ?? 1}`
+  return 'qualifier'
+}
+
 function buildTournamentState(
   activeSlot: SaveSlot,
   _seed: number,
@@ -296,7 +328,6 @@ function buildTournamentState(
   return { slotWithPhase, playerMatches, newUnlocked, newlyUnlocked }
 }
 
-<<<<<<< HEAD
 // ─── Match Navigation ────────────────────────────────────────────────────────
 // 실제 전투 결과(won)에 따라 다음 경기 인덱스와 페이즈를 결정.
 // playerMatches는 pre-run 기준이므로 re-sim 결과가 다르면 올바른 경로로 점프.
@@ -404,9 +435,96 @@ function determineNextMatch(
 
   // 기본: 다음 인덱스
   const next = currentIdx + 1
-  return next < playerMatches.length
-    ? { nextIndex: next, nextPhase: 'match_preview' }
-    : { nextIndex: currentIdx, nextPhase: 'tournament' }
+  if (next >= playerMatches.length) {
+    return { nextIndex: currentIdx, nextPhase: 'tournament' }
+  }
+  const nextMatch = playerMatches[next]
+  // 예선 → 본선 첫 진입: stage_overview 표시
+  if (stage === 'qualifier' && won && nextMatch.matchResult.stage === 'group') {
+    return { nextIndex: next, nextPhase: 'stage_overview' }
+  }
+  return { nextIndex: next, nextPhase: 'match_preview' }
+}
+
+// ─── Bracket Path Extension ──────────────────────────────────────────────────
+// pre-run에서 플레이어가 패배로 예측된 브래킷 경기를 실제로 이겼을 때,
+// lastTournament에서 다음 라운드 상대를 찾아 playerMatches를 연장한다.
+
+function buildExtendedBracketMatch(
+  playerMatches: PlayerMatchInfo[],
+  currentIdx: number,
+  lastTournament: TournamentResult,
+  pid: number,
+  round: number,
+): PlayerMatchInfo | null {
+  const currentMatch = playerMatches[currentIdx]
+  if (!currentMatch || currentMatch.matchResult.stage !== 'bracket') return null
+
+  const currentRound    = currentMatch.matchResult.bracketRound ?? 0
+  const nextRound       = currentRound + 1
+  const prerunOpponentId = currentMatch.opponentId
+
+  // pre-run에서 currentRound에 prerunOpponentId가 포함된 경기를 찾아 실제 진출자를 얻는다.
+  // 확장 경기(buildExtendedBracketMatch로 만든)의 상대는 pre-run에서 currentRound 이후
+  // 탈락했을 수 있으므로, pre-run 승자(advancingId)를 기준으로 nextRound 경기를 찾아야 한다.
+  const prerunCurrentMatch = lastTournament.allMatches.find(
+    m => m.stage === 'bracket' &&
+         m.bracketRound === currentRound &&
+         (m.char1Id === prerunOpponentId || m.char2Id === prerunOpponentId),
+  )
+  const advancingId = prerunCurrentMatch?.winnerId ?? prerunOpponentId
+
+  // pre-run에서 advancingId가 진출한 다음 라운드 경기를 찾는다
+  const nextPrerunMatch = lastTournament.allMatches.find(
+    m => m.stage === 'bracket' &&
+         m.bracketRound === nextRound &&
+         (m.char1Id === advancingId || m.char2Id === advancingId),
+  )
+  if (!nextPrerunMatch) return null
+
+  // 실제 다음 상대 = pre-run 진출자가 아닌 다른 참가자
+  const opponentId = nextPrerunMatch.char1Id === advancingId
+    ? nextPrerunMatch.char2Id
+    : nextPrerunMatch.char1Id
+
+  const BRACKET_LABELS: Record<number, string> = { 1: '16강', 2: '8강', 3: '4강', 4: '결승' }
+  const stageLabel = BRACKET_LABELS[nextRound] ?? `${nextRound}라운드`
+
+  const opponentSkills = nextPrerunMatch.char1Id === opponentId
+    ? nextPrerunMatch.char1Skills
+    : nextPrerunMatch.char2Skills
+
+  // tournamentId = 'tournament_SEED_rROUND' 에서 시드 추출
+  const seedMatch      = lastTournament.tournamentId.match(/tournament_(\d+)_r/)
+  const tournamentSeed = seedMatch ? parseInt(seedMatch[1], 10) : 0
+  const opponentItems  = npcItems(opponentId, round, tournamentSeed)
+
+  const syntheticResult: MatchResult = {
+    matchId:      `ext-r${nextRound}-${pid}`,
+    seed:         0,
+    char1Id:      pid,
+    char2Id:      opponentId,
+    winnerId:     opponentId,
+    loserId:      pid,
+    totalTurns:   0,
+    log:          [],
+    initialHp:    {},
+    initialMana:  {},
+    char1Skills:  [],
+    char2Skills:  opponentSkills,
+    stage:        'bracket',
+    bracketRound: nextRound,
+  }
+
+  return {
+    matchResult:    syntheticResult,
+    stageLabel,
+    opponentId,
+    playerWon:      false,
+    opponentItems,
+    opponentSkills,
+    wasPlayed:      false,
+  }
 }
 
 // ─── NPC Stat Helper ──────────────────────────────────────────────────────────
@@ -468,20 +586,22 @@ function updateNpcStats(
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useGameStore = create<GameState & GameActions>((set, get) => ({
-  phase:                  'slot_select',
-  slots:                  [],
-  activeSlot:             null,
-  lastTournament:         null,
-  pendingReward:          null,
-  lastRandomStatKey:      null,
-  unlockedCharIds:        loadUnlocked(),
-  newCharIds:             loadNewChars(),
-  playerMatches:          [],
-  playerMatchIndex:       0,
-  shopItems:              [],
-  selectedTacticCardId:   null,
-  pendingBattleSkillOpts: null,
-  playedCharIds:          loadPlayedChars(),
+  phase:                    'slot_select',
+  slots:                    [],
+  activeSlot:               null,
+  lastTournament:           null,
+  pendingReward:            null,
+  lastRandomStatKey:        null,
+  unlockedCharIds:          loadUnlocked(),
+  newCharIds:               loadNewChars(),
+  playerMatches:            [],
+  playerMatchIndex:         0,
+  shopItems:                [],
+  selectedTacticCardId:     null,
+  playedCharIds:            loadPlayedChars(),
+  pendingPassiveOpts:       null,
+  pendingPassiveRewardOpts: null,
+  pendingSkillOpts:         null,
 
   initSlots: async () => {
     const slots = await listSlots()
@@ -489,10 +609,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   },
 
   startNewGame: async (slotId, charId, seed) => {
-    const rng           = new SeededRng(seed)
-    const initialSkills = pickN(allSkillIds, INITIAL_SKILL_COUNT, rng)
+    const rng = new SeededRng(seed)
+    const char = characters.find(c => c.id === charId)
+    const initialSkills = char?.skills ? [...char.skills] : pickN(allSkillIds, INITIAL_SKILL_COUNT, rng)
     const candidateRivalIds = allCharIds.filter(id => id !== charId)
-    const rivalIds      = pickN(candidateRivalIds, Math.min(RIVAL_COUNT, candidateRivalIds.length), rng)
+    const rivalIds = pickN(candidateRivalIds, Math.min(RIVAL_COUNT, candidateRivalIds.length), rng)
     const now           = Date.now()
     const slot: SaveSlot = {
       slotId,
@@ -505,6 +626,9 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       gold:           0,
       inventory:      [],
       rivalIds,
+      passiveSkills:  [],
+      skillEnhancements: {},
+      gameSeed:       seed,
       createdAt:      now,
       updatedAt:      now,
     }
@@ -541,7 +665,15 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       newGrowth[card.statKey] = newGrowth[card.statKey] + card.statGain
     }
 
-    const updated: SaveSlot = { ...activeSlot, growthStats: newGrowth }
+    const topGain = result.playerGains.length
+      ? result.playerGains.reduce((a, b) => a.statGain >= b.statGain ? a : b)
+      : null
+    const prevHistory = activeSlot.gachaHistory ?? []
+    const newHistory = topGain
+      ? [...prevHistory, { round: activeSlot.currentRound, grade: topGain.grade, statKey: topGain.statKey, statGain: topGain.statGain }]
+      : prevHistory
+
+    const updated: SaveSlot = { ...activeSlot, growthStats: newGrowth, gachaHistory: newHistory }
     await saveSlot(updated)
     set({ activeSlot: updated })
     return result
@@ -552,6 +684,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     if (!activeSlot) throw new Error('No active slot')
 
     const round      = activeSlot.currentRound
+    const gameSeed   = activeSlot.gameSeed ?? activeSlot.createdAt
     const growthMap: Record<number, GrowthStats> = {}
     const skillMap:  Record<number, string[]>    = {}
     const itemsMap:  Record<number, string[]>    = {}
@@ -567,12 +700,25 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       } else {
         const isRival = (activeSlot.rivalIds ?? []).includes(c.id)
         growthMap[c.id] = npcGrowth(round, isRival)
-        skillMap[c.id]  = npcSkills(c.id, round)
+        skillMap[c.id]  = npcRandomSkills(c.id, gameSeed)
         itemsMap[c.id]  = npcItems(c.id, round, seed)
       }
     }
 
-    const result = runTournament(characters, growthMap, skillMap, seed, round, itemsMap, activeSlot.characterId)
+    const npcInitialPassivesMap: Record<number, string[]> = {}
+    for (const c of characters) {
+      if (c.id !== activeSlot.characterId) {
+        npcInitialPassivesMap[c.id] = npcInitialPassives(c.id, round)
+      }
+    }
+
+    const result = runTournament(
+      characters, growthMap, skillMap, seed, round, itemsMap,
+      activeSlot.characterId, undefined,
+      npcInitialPassivesMap, {},
+      activeSlot.passiveSkills ?? [],
+      activeSlot.skillEnhancements ?? {},
+    )
     await appendMatchLog(result.tournamentId, result.allMatches)
 
     const plResult   = derivePlayerResult(activeSlot, result)
@@ -584,6 +730,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       [...activeSlot.initialSkills, ...activeSlot.acquiredSkills],
       rewardSeed,
       (activeSlot.inventory ?? []).map(it => it.itemId),
+      allPassiveIds,
+      activeSlot.passiveSkills ?? [],
     )
     const reward     = applyRivalGoldBonus(baseReward, activeSlot, result)
 
@@ -592,7 +740,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       buildTournamentState(activeSlot, seed, result, reward, unlockedCharIds, itemsMap)
 
     const npcStats = updateNpcStats(activeSlot.npcStats, result)
-    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats }
+    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats, savedReward: reward }
     await saveSlot(slotWithNpc)
 
     if (newlyUnlocked.length > 0) {
@@ -610,6 +758,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     if (!activeSlot) throw new Error('No active slot')
 
     const round      = activeSlot.currentRound
+    const gameSeed   = activeSlot.gameSeed ?? activeSlot.createdAt
     const growthMap: Record<number, GrowthStats> = {}
     const skillMap:  Record<number, string[]>    = {}
     const itemsMap:  Record<number, string[]>    = {}
@@ -625,13 +774,26 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       } else {
         const isRival = (activeSlot.rivalIds ?? []).includes(c.id)
         growthMap[c.id] = npcGrowth(round, isRival)
-        skillMap[c.id]  = npcSkills(c.id, round)
+        skillMap[c.id]  = npcRandomSkills(c.id, gameSeed)
         itemsMap[c.id]  = npcItems(c.id, round, seed)
       }
     }
 
+    const npcInitialPassivesMap: Record<number, string[]> = {}
+    for (const c of characters) {
+      if (c.id !== activeSlot.characterId) {
+        npcInitialPassivesMap[c.id] = npcInitialPassives(c.id, round)
+      }
+    }
+
     // 전술카드는 각 전투 직전 MatchPreviewPage에서 선택 → 여기서는 undefined
-    const result = runTournament(characters, growthMap, skillMap, seed, round, itemsMap, activeSlot.characterId)
+    const result = runTournament(
+      characters, growthMap, skillMap, seed, round, itemsMap,
+      activeSlot.characterId, undefined,
+      npcInitialPassivesMap, {},
+      activeSlot.passiveSkills ?? [],
+      activeSlot.skillEnhancements ?? {},
+    )
     await appendMatchLog(result.tournamentId, result.allMatches)
 
     const plResult   = derivePlayerResult(activeSlot, result)
@@ -643,6 +805,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       [...activeSlot.initialSkills, ...activeSlot.acquiredSkills],
       rewardSeed,
       (activeSlot.inventory ?? []).map(it => it.itemId),
+      allPassiveIds,
+      activeSlot.passiveSkills ?? [],
     )
     const reward     = applyRivalGoldBonus(baseReward, activeSlot, result)
 
@@ -651,7 +815,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       buildTournamentState(activeSlot, seed, result, reward, unlockedCharIds, itemsMap)
 
     const npcStats = updateNpcStats(activeSlot.npcStats, result)
-    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats }
+    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats, savedReward: reward }
     await saveSlot(slotWithNpc)
 
     if (newlyUnlocked.length > 0) {
@@ -666,8 +830,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       pendingReward:          reward,
       playerMatches,
       playerMatchIndex:       0,
-      pendingBattleSkillOpts: null,
-      phase:                  'match_preview',
+      phase:                  'stage_overview',
     })
   },
 
@@ -676,11 +839,6 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     if (!activeSlot) return
 
     set({ selectedTacticCardId: tactic })
-
-    if (!tactic) {
-      set({ phase: 'battle' })
-      return
-    }
 
     const matchInfo = playerMatches[playerMatchIndex]
     if (!matchInfo) { set({ phase: 'battle' }); return }
@@ -698,6 +856,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const playerSkillList = [...activeSlot.initialSkills, ...activeSlot.acquiredSkills].slice(0, MAX_SKILL_SLOTS)
     const playerItems     = (activeSlot.inventory ?? []).map(it => it.itemId)
 
+    const oppPassives = npcInitialPassives(oppId, round)
+
     const playerState: BattleCharState = {
       charId:       pid,
       currentHp:    deriveStats(playerChar.baseCombat, activeSlot.growthStats, playerChar.archetype).maxHp,
@@ -711,7 +871,10 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       baseCombat:   playerChar.baseCombat,
       archetype:    playerChar.archetype,
       items:        playerItems,
-      tactic:       { cardId: tactic },
+      tactic:       tactic ? { cardId: tactic } : undefined,
+      passives:        activeSlot.passiveSkills ?? [],
+      skillEnhancements: activeSlot.skillEnhancements ?? {},
+      ironWillUsed:    false,
     }
 
     const oppState: BattleCharState = {
@@ -727,15 +890,19 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       baseCombat:   oppChar.baseCombat,
       archetype:    oppChar.archetype,
       items:        matchInfo.opponentItems,
+      passives:        oppPassives,
+      skillEnhancements: {},
+      ironWillUsed:    false,
     }
 
     const seed = (Date.now() ^ (pid * 31) ^ playerMatchIndex) >>> 0
     const newMatchResult = simulateMatch(playerState, oppState, seed)
 
-    // 원본 매치의 스테이지 정보 보존
+    // 원본 매치의 스테이지/ID 정보 보존 (BracketPage doneMatchIds 매칭에 필요)
     const orig = matchInfo.matchResult
     const updatedResult = {
       ...newMatchResult,
+      matchId:        orig.matchId,
       stage:          orig.stage,
       groupId:        orig.groupId,
       groupMatchType: orig.groupMatchType,
@@ -746,6 +913,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       ...matchInfo,
       matchResult: updatedResult,
       playerWon:   updatedResult.winnerId === pid,
+      wasPlayed:   true,
     }
 
     const newPlayerMatches: PlayerMatchInfo[] = [
@@ -758,8 +926,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   },
 
   advancePlayerMatch: () => {
-    const { playerMatchIndex, playerMatches, pendingBattleSkillOpts } = get()
-    if (pendingBattleSkillOpts !== null) return  // still waiting for skill pick
+    const { playerMatchIndex, playerMatches } = get()
     const nextIndex = playerMatchIndex + 1
     if (nextIndex >= playerMatches.length) {
       set({ phase: 'tournament' })
@@ -772,8 +939,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const { activeSlot, playerMatchIndex, playerMatches } = get()
     if (!activeSlot) return
 
+    // 경기 패배 즉시 보너스 골드
+    const matchBonus = won ? 0 : MATCH_BONUS_GOLD_LOSS
+
     // 교체 대상 스킬 즉시 제거 (슬롯 초과 시 선택)
-    let slotWithSkill = activeSlot
+    let slotWithSkill: SaveSlot = { ...activeSlot, gold: (activeSlot.gold ?? 0) + matchBonus }
     if (replaceSkillId) {
       slotWithSkill = {
         ...slotWithSkill,
@@ -813,7 +983,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
   },
 
   claimReward: async () => {
-    const { activeSlot, pendingReward, lastTournament } = get()
+    const { activeSlot, pendingReward, lastTournament, playerMatches } = get()
     if (!activeSlot || !pendingReward) return
 
     const randomIdx     = Math.floor(Math.random() * GROWTH_STAT_KEYS.length)
@@ -833,16 +1003,22 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         )
       : activeSlot.bestClearRound
 
-    // 스킬은 전투 승리 후 상대에게서 획득 — 보상 단계에서는 상점 또는 가챠로 이동
-    const nextPhase: GamePhase = newRound >= 2 ? 'shop' : 'gacha'
+    // 우승 시 게임 종료, 아니면 패시브 보상 → 상점/가챠
+    const nextPhase: GamePhase = isWinner ? 'slot_select' : 'passive_reward'
 
     const newGold = (activeSlot.gold ?? 0) + pendingReward.goldEarned
 
     // 이번 라운드 기록 저장
-    const record    = lastTournament ? buildRunRecord(activeSlot, lastTournament) : null
+    const playedMatches = playerMatches.filter(m => m.wasPlayed)
+    const record = lastTournament
+      ? buildRunRecord(activeSlot, lastTournament, playedMatches.length > 0 ? playedMatches : undefined)
+      : null
     const newRecords = record
       ? addRunRecord(activeSlot.runRecords ?? [], record)
       : (activeSlot.runRecords ?? [])
+
+    const roundWins   = playerMatches.filter(m => m.wasPlayed && m.playerWon).length
+    const roundLosses = playerMatches.filter(m => m.wasPlayed && !m.playerWon).length
 
     const updated: SaveSlot = {
       ...activeSlot,
@@ -852,14 +1028,21 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       gold:           newGold,
       runRecords:     newRecords,
       savedPhase:     nextPhase,
+      totalWins:      (activeSlot.totalWins ?? 0) + roundWins,
+      totalLosses:    (activeSlot.totalLosses ?? 0) + roundLosses,
+      savedReward:    undefined,
       updatedAt:      Date.now(),
     }
     await saveSlot(updated)
 
+    // 패시브 보상: pendingReward에서 passiveChoices 사용
+    const passiveRewardOpts = isWinner ? null : (pendingReward.passiveChoices ?? [])
+
     set({
-      activeSlot:        updated,
-      lastRandomStatKey: randomStatKey,
-      phase:             nextPhase,
+      activeSlot:               updated,
+      lastRandomStatKey:        randomStatKey,
+      pendingPassiveRewardOpts: passiveRewardOpts,
+      phase:                    nextPhase,
     })
   },
 
@@ -961,41 +1144,194 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     set({ shopItems: [], phase: 'gacha' })
   },
 
+  initMatchPassives: () => {
+    const { activeSlot, playerMatches, playerMatchIndex, pendingPassiveOpts } = get()
+    if (pendingPassiveOpts !== null) return
+    if (!activeSlot) return
+    const matchInfo = playerMatches[playerMatchIndex]
+    if (!matchInfo) return
+    if (matchInfo.matchResult.winnerId !== activeSlot.characterId) return
+    const oppPassives = npcInitialPassives(matchInfo.opponentId, activeSlot.currentRound)
+    const myPassives  = activeSlot.passiveSkills ?? []
+    const pickable    = oppPassives.filter(id => !myPassives.includes(id))
+    set({ pendingPassiveOpts: pickable.length > 0 ? pickable : null })
+  },
+
+  initMatchSkills: () => {
+    const { activeSlot, playerMatches, playerMatchIndex, pendingSkillOpts } = get()
+    if (pendingSkillOpts !== null) return
+    if (!activeSlot) return
+    const matchInfo = playerMatches[playerMatchIndex]
+    if (!matchInfo) return
+    if (matchInfo.matchResult.winnerId !== activeSlot.characterId) return
+    const mySkills = new Set([
+      ...activeSlot.initialSkills,
+      ...activeSlot.acquiredSkills,
+      ...(activeSlot.pendingSkills ?? []).map(p => p.skillId),
+    ])
+    const pickable = matchInfo.opponentSkills.filter(id => !mySkills.has(id))
+    set({ pendingSkillOpts: pickable.length > 0 ? pickable : null })
+  },
+
   acquireBattleSkill: async (skillId, replaceId) => {
     const { activeSlot, playerMatchIndex, playerMatches } = get()
     if (!activeSlot) return
 
-    let updatedSlot = activeSlot
+    // 경기 승리 즉시 보너스 골드
+    const matchInfo  = playerMatches[playerMatchIndex]
+    const bonusKey   = matchInfo ? matchBonusGoldKey(matchInfo) : 'qualifier'
+    const matchBonus = MATCH_BONUS_GOLD_WIN[bonusKey] ?? 30
+
+    let updated: SaveSlot = { ...activeSlot, gold: (activeSlot.gold ?? 0) + matchBonus }
+
+    // 교체: 기존 스킬 제거
+    if (replaceId) {
+      updated = {
+        ...updated,
+        initialSkills:  updated.initialSkills.filter(s => s !== replaceId),
+        acquiredSkills: updated.acquiredSkills.filter(s => s !== replaceId),
+      }
+    }
 
     if (skillId !== null) {
-      let initialSkills  = activeSlot.initialSkills
-      let acquiredSkills = activeSlot.acquiredSkills
-
-      if (replaceId) {
-        if (initialSkills.includes(replaceId)) {
-          initialSkills = initialSkills.filter(s => s !== replaceId)
-        } else {
-          acquiredSkills = acquiredSkills.filter(s => s !== replaceId)
+      const mySkills = new Set([...updated.initialSkills, ...updated.acquiredSkills])
+      if (!mySkills.has(skillId)) {
+        updated = {
+          ...updated,
+          acquiredSkills: [...updated.acquiredSkills, skillId],
+          updatedAt:      Date.now(),
         }
       }
+    }
 
-      updatedSlot = {
-        ...activeSlot,
-        initialSkills,
-        acquiredSkills: [...acquiredSkills, skillId],
-        updatedAt:      Date.now(),
+    // tick existing pending skills (from other sources)
+    const ticked = tickPendingSkills(updated)
+    const saved  = { ...ticked, updatedAt: Date.now() }
+    await saveSlot(saved)
+
+    set({ activeSlot: saved, pendingSkillOpts: null, pendingPassiveOpts: null })
+
+    const { nextIndex, nextPhase } = determineNextMatch(playerMatches, playerMatchIndex, true)
+    let finalMatches   = playerMatches
+    let finalNextIndex = nextIndex
+    let finalNextPhase = nextPhase
+    if (nextPhase === 'tournament') {
+      const { lastTournament } = get()
+      if (lastTournament && saved) {
+        const ext = buildExtendedBracketMatch(playerMatches, playerMatchIndex, lastTournament, saved.characterId, saved.currentRound)
+        if (ext) {
+          finalMatches   = [...playerMatches, ext]
+          finalNextIndex = finalMatches.length - 1
+          finalNextPhase = 'match_preview'
+        }
       }
-      await saveSlot(updatedSlot)
+    }
+    set({
+      playerMatches:    finalMatches,
+      playerMatchIndex: finalNextPhase === 'tournament' ? playerMatchIndex : finalNextIndex,
+      phase:            finalNextPhase,
+    })
+  },
+
+  acquireBattlePassive: async (passiveId, replaceId) => {
+    const { activeSlot, playerMatchIndex, playerMatches } = get()
+    if (!activeSlot) return
+
+    let updatedSlot = activeSlot
+    if (passiveId !== null) {
+      let current = activeSlot.passiveSkills ?? []
+      if (replaceId) {
+        current = current.filter(id => id !== replaceId)
+      }
+      if (!current.includes(passiveId) && (replaceId !== undefined || current.length < MAX_PASSIVE_SLOTS)) {
+        updatedSlot = {
+          ...activeSlot,
+          passiveSkills: [...current, passiveId],
+          updatedAt:     Date.now(),
+        }
+      }
     }
 
-    // Clear pending and advance to next match
-    set({ activeSlot: updatedSlot, pendingBattleSkillOpts: null })
-    const nextIndex = playerMatchIndex + 1
-    if (nextIndex >= playerMatches.length) {
-      set({ phase: 'tournament' })
-    } else {
-      set({ playerMatchIndex: nextIndex, phase: 'match_preview' })
+    // 1 battle = 1 tick (win path)
+    const ticked = tickPendingSkills(updatedSlot)
+    const saved  = { ...ticked, updatedAt: Date.now() }
+    await saveSlot(saved)
+
+    set({ activeSlot: saved, pendingPassiveOpts: null, pendingSkillOpts: null })
+
+    const { nextIndex, nextPhase } = determineNextMatch(playerMatches, playerMatchIndex, true)
+    let finalMatches   = playerMatches
+    let finalNextIndex = nextIndex
+    let finalNextPhase = nextPhase
+    if (nextPhase === 'tournament') {
+      const { lastTournament } = get()
+      if (lastTournament && saved) {
+        const ext = buildExtendedBracketMatch(playerMatches, playerMatchIndex, lastTournament, saved.characterId, saved.currentRound)
+        if (ext) {
+          finalMatches   = [...playerMatches, ext]
+          finalNextIndex = finalMatches.length - 1
+          finalNextPhase = 'match_preview'
+        }
+      }
     }
+    set({
+      playerMatches:    finalMatches,
+      playerMatchIndex: finalNextPhase === 'tournament' ? playerMatchIndex : finalNextIndex,
+      phase:            finalNextPhase,
+    })
+  },
+
+  acquirePassiveReward: async (passiveId, replaceId) => {
+    const { activeSlot } = get()
+    if (!activeSlot) return
+
+    let updatedSlot = activeSlot
+    if (passiveId !== null) {
+      let current = activeSlot.passiveSkills ?? []
+      if (replaceId) {
+        current = current.filter(id => id !== replaceId)
+      }
+      if (!current.includes(passiveId) && (replaceId !== undefined || current.length < MAX_PASSIVE_SLOTS)) {
+        updatedSlot = {
+          ...activeSlot,
+          passiveSkills: [...current, passiveId],
+          updatedAt:     Date.now(),
+        }
+        await saveSlot(updatedSlot)
+      }
+    }
+
+    set({
+      activeSlot:               updatedSlot,
+      pendingPassiveRewardOpts: null,
+      phase:                    activeSlot.currentRound >= 2 ? 'shop' : 'gacha',
+    })
+  },
+
+  enhanceSkill: async (skillId) => {
+    const { activeSlot } = get()
+    if (!activeSlot) return
+
+    if (!activeSlot.initialSkills.includes(skillId)) throw new Error('고유 스킬만 강화할 수 있습니다')
+
+    const enhancements = activeSlot.skillEnhancements ?? {}
+    const currentLevel = enhancements[skillId] ?? 0
+    if (currentLevel >= MAX_SKILL_ENHANCE_LEVEL) throw new Error('최대 강화 레벨에 도달했습니다')
+
+    const cost = SKILL_ENHANCE_COSTS[currentLevel]
+    if ((activeSlot.gold ?? 0) < cost) throw new Error('골드가 부족합니다')
+
+    const updated: SaveSlot = {
+      ...activeSlot,
+      gold: (activeSlot.gold ?? 0) - cost,
+      skillEnhancements: {
+        ...enhancements,
+        [skillId]: currentLevel + 1,
+      },
+      updatedAt: Date.now(),
+    }
+    await saveSlot(updated)
+    set({ activeSlot: updated })
   },
 
   setPhase: (phase) => set({ phase }),

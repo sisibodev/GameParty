@@ -1,105 +1,285 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { ItemDef, ItemTier } from '../types'
+import type { ItemDef, ItemTier, ItemKind, GrowthStats, CharacterDef } from '../types'
 import { randomSeed } from '../utils/rng'
-import { getItemById } from '../data/items'
-import { SHOP_REROLL_COST } from '../constants'
+import { getItemById, sumGoldMultiplier } from '../data/items'
+import { SHOP_REROLL_COST, MAX_INVENTORY_SIZE, ARCHETYPE_GROWTH_COEFFS } from '../constants'
+import charactersRaw from '../data/characters.json'
+import HeaderBar from '../components/ui/HeaderBar'
+import '../styles/arena.css'
+
+type FilterKey = 'all' | 'stat' | 'combat'
 
 const TIER_COLOR: Record<ItemTier, string> = {
-  common: '#aaa',
-  rare:   '#44aaff',
-  hero:   '#c05cfc',
-  legend: '#ffd700',
+  common: '#9aa3b2',
+  rare:   '#67e8f9',
+  hero:   '#c78bff',
+  legend: '#ffd66b',
 }
 
 const TIER_LABEL: Record<ItemTier, string> = {
-  common: '보통',
-  rare:   '희귀',
-  hero:   '영웅',
-  legend: '전설',
+  common: 'COMMON',
+  rare:   'RARE',
+  hero:   'HERO',
+  legend: 'LEGEND',
+}
+
+const KIND_LABEL: Record<ItemKind, string> = {
+  stat:    '영구 스탯',
+  combat:  '전투 발동',
+  utility: '유틸리티',
+}
+
+const STAT_ICON: Record<string, string> = {
+  hp: '💗', str: '⚔️', agi: '👟', int: '🔮', luk: '🍀',
+}
+
+const COMBAT_ICON: Record<string, string> = {
+  poison_dagger: '🗡️',
+  mana_seal:     '⛓️',
+  vampire_ring:  '💍',
+  indomitable:   '🛡️',
+  golden_glove:  '🧤',
+}
+
+function getItemIcon(item: ItemDef): string {
+  if (item.kind === 'stat' && item.statBonus) {
+    const key = Object.keys(item.statBonus)[0]
+    return STAT_ICON[key] ?? '📦'
+  }
+  return COMBAT_ICON[item.id] ?? '📦'
+}
+
+const STAT_DISPLAY: Array<[keyof GrowthStats, string]> = [
+  ['vit', 'VIT'], ['str', 'STR'], ['agi', 'AGI'], ['int', 'INT'], ['luk', 'LUK'],
+]
+
+interface TooltipItem {
+  def: ItemDef
+  x: number
+  y: number
 }
 
 export default function ShopPage() {
-  const { activeSlot, shopItems, enterShopPhase, buyItem, leaveShop, rerollShop } = useGameStore()
+  const { activeSlot, shopItems, enterShopPhase, buyItem, leaveShop, rerollShop, setPhase } = useGameStore()
+  const [filter, setFilter] = useState<FilterKey>('all')
+  const [tooltip, setTooltip] = useState<TooltipItem | null>(null)
 
   useEffect(() => {
-    if (shopItems.length === 0) {
-      enterShopPhase(randomSeed())
-    }
+    if (shopItems.length === 0) enterShopPhase(randomSeed())
   }, [])
 
   if (!activeSlot) return null
 
-  const gold = activeSlot.gold ?? 0
+  const characters = charactersRaw as CharacterDef[]
+  const playerChar = characters.find(c => c.id === activeSlot.characterId)
+  const playerArchetype = playerChar?.archetype ?? 'warrior'
+  const coeffs = ARCHETYPE_GROWTH_COEFFS[playerArchetype] ?? ARCHETYPE_GROWTH_COEFFS['warrior']
+
+  const gold      = activeSlot.gold ?? 0
   const inventory = activeSlot.inventory ?? []
   const canReroll = gold >= SHOP_REROLL_COST
 
-  const inventoryByTier: Record<ItemTier, ItemDef[]> = { common: [], rare: [], hero: [], legend: [] }
-  for (const inv of inventory) {
-    const def = getItemById(inv.itemId)
-    if (def) inventoryByTier[def.tier].push(def)
+  const filteredItems = shopItems.filter(item => {
+    if (filter === 'all')    return true
+    if (filter === 'stat')   return item.kind === 'stat'
+    if (filter === 'combat') return item.kind === 'combat' || item.kind === 'utility'
+    return true
+  })
+
+  const inventoryIds = inventory.map(i => i.itemId)
+
+  const accStats: Partial<Record<keyof GrowthStats, number>> = {}
+  for (const id of inventoryIds) {
+    const def = getItemById(id)
+    if (def?.statBonus) {
+      for (const [k, v] of Object.entries(def.statBonus)) {
+        const key = k as keyof GrowthStats
+        accStats[key] = (accStats[key] ?? 0) + (v ?? 0)
+      }
+    }
   }
 
+  const goldMult = sumGoldMultiplier(inventoryIds)
+  const goldPct  = Math.round((goldMult - 1) * 100)
+
+  // 5칸씩 확장: 4개 차면 10칸, 9개 차면 15칸 …
+  const slotCount = Math.min(
+    MAX_INVENTORY_SIZE,
+    Math.max(5, Math.ceil((inventory.length + 1) / 5) * 5),
+  )
+
+  const hasEffects = STAT_DISPLAY.some(([k]) => (accStats[k] ?? 0) > 0) || goldPct > 0
+
   return (
-    <div style={s.root}>
-      <h2 style={s.title}>상점</h2>
-      <p style={s.sub}>Round {activeSlot.currentRound} — 다음 라운드 준비</p>
+    <div className="arena-bg" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <HeaderBar subtitle="TRAVELING SHOP" round={activeSlot.currentRound} gold={gold} onExit={() => { if (confirm('메인 화면으로 나가시겠습니까?\n현재까지의 진행은 저장되어 있습니다.')) useGameStore.setState({ phase: 'slot_select' }) }} />
 
-      <div style={s.topBar}>
-        <div style={s.goldBadge}>💰 {gold} G</div>
-        <button
-          style={{ ...s.rerollBtn, opacity: canReroll ? 1 : 0.35, cursor: canReroll ? 'pointer' : 'not-allowed' }}
-          disabled={!canReroll}
-          onClick={() => rerollShop(randomSeed())}
-        >
-          🎲 리롤 ({SHOP_REROLL_COST} G)
-        </button>
-      </div>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-      <div style={s.grid}>
-        {shopItems.length === 0 ? (
-          <p style={s.empty}>모든 아이템 구매 완료</p>
-        ) : (
-          shopItems.map((item, i) => (
-            <ShopCard
-              key={`${item.id}-${i}`}
-              item={item}
-              canAfford={gold >= item.price}
-              onBuy={() => buyItem(item.id)}
-            />
-          ))
-        )}
-      </div>
+        {/* ── Left 7 ────────────────────────────────────────── */}
+        <div style={{ flex: 7, padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      <div style={s.invBox}>
-        <h3 style={s.invTitle}>보유 아이템 ({inventory.length})</h3>
-        {inventory.length === 0 ? (
-          <p style={s.invEmpty}>아직 구매한 아이템이 없습니다</p>
-        ) : (
-          <div style={s.invList}>
-            {(['legend', 'hero', 'rare', 'common'] as ItemTier[]).map(tier => (
-              inventoryByTier[tier].length > 0 && (
-                <div key={tier} style={s.invTierRow}>
-                  <span style={{ ...s.invTierLabel, color: TIER_COLOR[tier], borderColor: TIER_COLOR[tier] }}>
-                    {TIER_LABEL[tier]}
-                  </span>
-                  <div style={s.invItems}>
-                    {inventoryByTier[tier].map((def, i) => (
-                      <span key={`${def.id}-${i}`} style={{ ...s.invChip, borderColor: TIER_COLOR[tier] }}>
-                        {def.name}
-                      </span>
-                    ))}
-                  </div>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)', letterSpacing: '-.01em' }}>
+                떠들이 상인의 좌판
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 4 }}>
+                오늘 풀린 {shopItems.length}개 품목 중 원하는 것을 골라라.&nbsp;
+                인벤토리 {inventory.length} / {MAX_INVENTORY_SIZE}.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              {(['all', 'stat', 'combat'] as FilterKey[]).map(f => (
+                <button
+                  key={f}
+                  className="arena-btn"
+                  style={{
+                    fontSize: 12, padding: '6px 14px', borderRadius: 999,
+                    background: filter === f ? 'var(--violet)' : 'transparent',
+                    color: filter === f ? '#fff' : 'var(--ink-dim)',
+                    border: `1px solid ${filter === f ? 'var(--violet)' : 'var(--line)'}`,
+                  }}
+                  onClick={() => setFilter(f)}
+                >
+                  {f === 'all' ? '전체' : f === 'stat' ? '스탯' : '전투발동'}
+                </button>
+              ))}
+              <button
+                className="arena-btn"
+                style={{
+                  fontSize: 12, padding: '6px 14px',
+                  opacity: canReroll ? 1 : 0.35,
+                  cursor: canReroll ? 'pointer' : 'not-allowed',
+                }}
+                disabled={!canReroll}
+                onClick={() => rerollShop(randomSeed())}
+              >
+                🎲 리롤 ({SHOP_REROLL_COST} G)
+              </button>
+            </div>
+          </div>
+
+          {/* Item grid */}
+          {filteredItems.length === 0 ? (
+            <div style={{ color: 'var(--ink-mute)', textAlign: 'center', padding: '3rem', fontSize: 14 }}>
+              {shopItems.length === 0 ? '모든 아이템 구매 완료' : '해당 종류의 아이템 없음'}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+              {filteredItems.map((item, i) => (
+                <ShopCard
+                  key={`${item.id}-${i}`}
+                  item={item}
+                  canAfford={gold >= item.price}
+                  onBuy={() => buyItem(item.id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Right 3 ───────────────────────────────────────── */}
+        <div style={{
+          flex: 3, borderLeft: '1px solid var(--line)', padding: 20,
+          display: 'flex', flexDirection: 'column', gap: 16,
+          background: 'rgba(10,6,20,.6)', overflowY: 'auto',
+        }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 2 }}>
+              MY INVENTORY
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--violet-glow)' }}>
+              보유 아이템{' '}
+              <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--ink-mute)' }}>
+                ({inventory.length} / {MAX_INVENTORY_SIZE})
+              </span>
+            </div>
+          </div>
+
+          {/* Icon grid — 5열, 슬롯 동적 확장 */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 40px)', gap: 6, position: 'relative' }}>
+            {Array.from({ length: slotCount }).map((_, idx) => {
+              const inv   = inventory[idx]
+              const def   = inv ? getItemById(inv.itemId) : undefined
+              const icon  = def ? getItemIcon(def) : null
+              const color = def ? TIER_COLOR[def.tier] : undefined
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    width: 40, height: 40, borderRadius: 8,
+                    border: `1px solid ${color ?? 'rgba(160,130,255,.18)'}`,
+                    background: color ? `${color}18` : 'rgba(255,255,255,.03)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 18, cursor: def ? 'default' : undefined,
+                  }}
+                  onMouseEnter={def ? (e) => {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                    setTooltip({ def, x: rect.left, y: rect.top })
+                  } : undefined}
+                  onMouseLeave={() => setTooltip(null)}
+                >
+                  {icon}
                 </div>
               )
-            ))}
+            })}
           </div>
-        )}
+
+          {/* Accumulated effects */}
+          <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-mute)', marginBottom: 10, letterSpacing: '.05em' }}>
+              현재 누적 효과
+            </div>
+            {hasEffects ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {STAT_DISPLAY.map(([key, label]) => {
+                  const val = accStats[key] ?? 0
+                  if (val === 0) return null
+                  return (
+                    <div key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                      <span style={{ color: 'var(--ink-dim)' }}>{label}</span>
+                      <span style={{ color: 'var(--cyan)', fontWeight: 700 }}>+{val}</span>
+                    </div>
+                  )
+                })}
+                {goldPct > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                    <span style={{ color: 'var(--ink-dim)' }}>승리 시 골드</span>
+                    <span style={{ color: 'var(--gold)', fontWeight: 700 }}>+{goldPct}%</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--ink-mute)', textAlign: 'center', marginTop: 8 }}>
+                효과 없음
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              className="arena-btn"
+              style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '10px 0', fontSize: 13, border: '1px solid var(--violet)', color: 'var(--violet)' }}
+              onClick={() => setPhase('skill_enhance')}
+            >
+              스킬 강화 →
+            </button>
+            <button
+              className="arena-btn arena-btn-primary"
+              style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '12px 0', fontSize: 14 }}
+              onClick={leaveShop}
+            >
+              상점 떠나기 →
+            </button>
+          </div>
+        </div>
       </div>
 
-      <button style={s.btnLeave} onClick={leaveShop}>
-        가챠로 진행 →
-      </button>
+      {tooltip && <InventoryTooltip item={tooltip.def} x={tooltip.x} y={tooltip.y} coeffs={coeffs} />}
     </div>
   )
 }
@@ -110,47 +290,140 @@ interface ShopCardProps {
   onBuy:     () => void
 }
 
-function ShopCard({ item, canAfford, onBuy }: ShopCardProps) {
+function InventoryTooltip({ item, x, y, coeffs }: { item: ItemDef; x: number; y: number; coeffs?: Record<string, number> }) {
   const color = TIER_COLOR[item.tier]
+  const icon  = getItemIcon(item)
+
+  const left = x - 220 < 0 ? x + 50 : x - 220
+  const top  = Math.max(8, y - 10)
+
   return (
-    <div style={{ ...s.card, borderColor: color }}>
-      <div style={{ ...s.tierBadge, color, borderColor: color }}>
-        {TIER_LABEL[item.tier]}
+    <div style={{
+      position: 'fixed', left, top, zIndex: 9999,
+      width: 200, pointerEvents: 'none',
+      background: 'linear-gradient(180deg,rgba(28,18,54,.98),rgba(16,10,34,.98))',
+      border: `1px solid ${color}55`,
+      borderRadius: 12, padding: '12px 14px',
+      boxShadow: `0 8px 32px rgba(0,0,0,.6), 0 0 0 1px ${color}22`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <span style={{ fontSize: 22 }}>{icon}</span>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{item.name}</div>
+          <span style={{
+            fontSize: 9, fontWeight: 700, color,
+            border: `1px solid ${color}55`, borderRadius: 999, padding: '1px 6px',
+          }}>
+            {TIER_LABEL[item.tier]}
+          </span>
+        </div>
       </div>
-      <div style={s.itemName}>{item.name}</div>
-      <div style={s.itemDesc}>{item.description}</div>
-      <button
-        style={{ ...s.buyBtn, opacity: canAfford ? 1 : 0.35, cursor: canAfford ? 'pointer' : 'not-allowed' }}
-        disabled={!canAfford}
-        onClick={onBuy}
-      >
-        {item.price} G
-      </button>
+      <div style={{ fontSize: 11, color: 'var(--ink-mute)', marginBottom: 6 }}>{KIND_LABEL[item.kind]}</div>
+      <div style={{ fontSize: 12, color: 'var(--green)', lineHeight: 1.5 }}>{item.description}</div>
+      {item.kind === 'stat' && item.statBonus && coeffs && (() => {
+        const impacts: string[] = []
+        const bonus = item.statBonus
+        if (bonus.vit) {
+          impacts.push(`HP +${Math.floor(bonus.vit * (coeffs.vit_to_maxHp ?? 10))}`)
+          const def = Math.round(bonus.vit * (coeffs.vit_to_pDef ?? 0.5) * 10) / 10
+          if (def > 0) impacts.push(`DEF +${def}`)
+        }
+        if (bonus.str) {
+          impacts.push(`ATK +${Math.floor(bonus.str * (coeffs.str_to_pAtk ?? 3))}`)
+          const def = Math.round(bonus.str * (coeffs.str_to_pDef ?? 0.5) * 10) / 10
+          if (def > 0) impacts.push(`DEF +${def}`)
+        }
+        if (bonus.agi) {
+          const spd = Math.round(bonus.agi * (coeffs.agi_to_spd ?? 0.5) * 10) / 10
+          if (spd > 0) impacts.push(`SPD +${spd}`)
+          const acc = Math.round(bonus.agi * (coeffs.agi_to_acc ?? 0.5) * 10) / 10
+          if (acc > 0) impacts.push(`ACC +${acc}`)
+          const eva = Math.round(bonus.agi * (coeffs.agi_to_eva ?? 0.5) * 10) / 10
+          if (eva > 0) impacts.push(`EVA +${eva}`)
+        }
+        if (bonus.int) {
+          impacts.push(`MATK +${Math.floor(bonus.int * (coeffs.int_to_mAtk ?? 3))}`)
+          const mdef = Math.round(bonus.int * (coeffs.int_to_mDef ?? 1) * 10) / 10
+          if (mdef > 0) impacts.push(`MDEF +${mdef}`)
+        }
+        if (bonus.luk) {
+          const crit = Math.round(bonus.luk * (coeffs.luk_to_crit ?? 0.5) * 10) / 10
+          if (crit > 0) impacts.push(`CRIT +${crit}%`)
+        }
+        if (impacts.length === 0) return null
+        return (
+          <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,.08)' }}>
+            {impacts.map((line, i) => (
+              <div key={i} style={{ fontSize: 11, color: '#86efac', fontFamily: 'monospace' }}>{line}</div>
+            ))}
+          </div>
+        )
+      })()}
+      <div style={{ marginTop: 8, fontSize: 12, color: 'var(--gold)', fontWeight: 700 }}>● {item.price} G</div>
     </div>
   )
 }
 
-const s: Record<string, React.CSSProperties> = {
-  root:       { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff', gap: '1rem' },
-  title:      { fontSize: '1.5rem', fontWeight: 700, color: '#c0aaff', margin: 0 },
-  sub:        { color: '#888', margin: 0, fontSize: '0.9rem' },
-  goldBadge:  { background: 'linear-gradient(135deg,#ffb040,#ff8040)', border: 'none', borderRadius: '10px', padding: '0.5rem 1.25rem', color: '#1a1a2e', fontWeight: 800, fontSize: '1rem' },
-  grid:       { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', width: '100%', maxWidth: '560px' },
-  empty:      { gridColumn: '1 / -1', color: '#666', textAlign: 'center', padding: '2rem' },
-  card:       { background: '#1a1a2e', border: '2px solid', borderRadius: '10px', padding: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' },
-  tierBadge:  { fontSize: '0.7rem', fontWeight: 700, border: '1px solid', borderRadius: '4px', padding: '1px 8px' },
-  itemName:   { fontSize: '0.95rem', fontWeight: 700, color: '#e8e8ff', textAlign: 'center' },
-  itemDesc:   { fontSize: '0.8rem', color: '#44ffaa', textAlign: 'center' },
-  buyBtn:     { background: '#7c5cfc', border: 'none', borderRadius: '6px', color: '#fff', padding: '0.35rem 0.8rem', fontSize: '0.85rem', fontWeight: 700, marginTop: '0.25rem' },
-  btnLeave:   { background: 'linear-gradient(135deg,#7c5cfc,#c05cfc)', border: 'none', borderRadius: '12px', color: '#fff', padding: '0.9rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, marginTop: '0.5rem' },
-  topBar:     { display: 'flex', gap: '0.75rem', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' },
-  rerollBtn:  { background: '#2a2a3e', border: '1px solid #7c5cfc', borderRadius: '10px', color: '#c0aaff', padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 700 },
-  invBox:     { width: '100%', maxWidth: '560px', background: '#15152a', border: '1px solid #2a2a3e', borderRadius: '10px', padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' },
-  invTitle:   { margin: 0, fontSize: '0.95rem', color: '#c0aaff', fontWeight: 700 },
-  invEmpty:   { margin: 0, color: '#666', fontSize: '0.85rem', textAlign: 'center', padding: '0.5rem' },
-  invList:    { display: 'flex', flexDirection: 'column', gap: '0.4rem' },
-  invTierRow: { display: 'flex', gap: '0.5rem', alignItems: 'flex-start' },
-  invTierLabel: { fontSize: '0.7rem', fontWeight: 700, border: '1px solid', borderRadius: '4px', padding: '1px 6px', flexShrink: 0, minWidth: '32px', textAlign: 'center' },
-  invItems:   { display: 'flex', flexWrap: 'wrap', gap: '0.3rem', flex: 1 },
-  invChip:    { fontSize: '0.75rem', color: '#e8e8ff', border: '1px solid', borderRadius: '4px', padding: '1px 6px', background: '#1a1a2e' },
+function ShopCard({ item, canAfford, onBuy }: ShopCardProps) {
+  const color = TIER_COLOR[item.tier]
+  const icon  = getItemIcon(item)
+
+  return (
+    <div
+      className="arena-shop-card"
+      style={{
+        display: 'flex', flexDirection: 'column', gap: 0,
+        padding: 0, overflow: 'hidden',
+        border: `1px solid ${color}44`,
+      }}
+    >
+      {/* Image area */}
+      <div style={{
+        height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: `linear-gradient(135deg, ${color}28, ${color}08)`,
+        fontSize: 36,
+      }}>
+        {icon}
+      </div>
+
+      {/* Info area */}
+      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{item.name}</span>
+          <span style={{
+            fontSize: 9, fontWeight: 700, color,
+            border: `1px solid ${color}55`, borderRadius: 999,
+            padding: '1px 6px', whiteSpace: 'nowrap', flexShrink: 0,
+          }}>
+            {TIER_LABEL[item.tier]}
+          </span>
+        </div>
+
+        <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{KIND_LABEL[item.kind]}</div>
+        <div style={{ fontSize: 12, color: 'var(--green)', flex: 1, marginTop: 2 }}>{item.description}</div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, gap: 8 }}>
+          <span style={{
+            fontSize: 13, fontWeight: 700,
+            color: canAfford ? 'var(--gold)' : 'var(--ink-mute)',
+            opacity: canAfford ? 1 : 0.5,
+          }}>
+            ● {item.price}
+          </span>
+          <button
+            className="arena-btn arena-btn-primary"
+            style={{
+              opacity: canAfford ? 1 : 0.35,
+              cursor: canAfford ? 'pointer' : 'not-allowed',
+              padding: '5px 14px', borderRadius: 8, fontSize: 12,
+            }}
+            disabled={!canAfford}
+            onClick={onBuy}
+          >
+            {canAfford ? '구매' : '골드 부족'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }

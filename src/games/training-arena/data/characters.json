@@ -1,107 +1,2606 @@
 [
-  { "id": 1, "name": "강철기사", "description": "은빛 풀플레이트 아머, 대형 방패, 한손검", "archetype": "tank", "baseCombat": { "maxHp": 60, "atk": 20, "def": 30, "spd": 1, "crit": 15, "eva": 0, "maxMana": 20, "aggression": 15 } },
-  { "id": 2, "name": "광전사", "description": "상의 탈의, 거대 양손도끼, 붉은 문신, 분노의 눈빛", "archetype": "berserker", "baseCombat": { "maxHp": 40, "atk": 40, "def": 10, "spd": 6, "crit": 25, "eva": 0, "maxMana": 15, "aggression": 25 } },
-  { "id": 3, "name": "그림자 암살자", "description": "검은 후드 망토, 쌍단검, 얼굴 절반을 가리는 복면", "archetype": "assassin", "baseCombat": { "maxHp": 30, "atk": 30, "def": 5, "spd": 16, "crit": 35, "eva": 20, "maxMana": 15, "aggression": 10 } },
-  { "id": 4, "name": "엘프 궁수", "description": "녹색 외투, 긴 장궁, 은발, 뾰족한 귀", "archetype": "ranger", "baseCombat": { "maxHp": 35, "atk": 30, "def": 10, "spd": 21, "crit": 30, "eva": 10, "maxMana": 15, "aggression": 10 } },
-  { "id": 5, "name": "대마법사", "description": "별 무늬 로브, 수정 장식 지팡이, 흰 수염", "archetype": "mage", "baseCombat": { "maxHp": 30, "atk": 15, "def": 10, "spd": 1, "crit": 20, "eva": 5, "maxMana": 60, "aggression": 20 } },
-  { "id": 6, "name": "성기사", "description": "흰 망토, 빛나는 한손검, 성스러운 휘장 방패", "archetype": "paladin", "baseCombat": { "maxHp": 50, "atk": 20, "def": 25, "spd": 1, "crit": 15, "eva": 0, "maxMana": 35, "aggression": 15 } },
-  { "id": 7, "name": "도적", "description": "가죽 갑옷, 은제 단검, 날렵한 체격, 자신만만한 미소", "archetype": "assassin", "baseCombat": { "maxHp": 35, "atk": 25, "def": 10, "spd": 16, "crit": 30, "eva": 20, "maxMana": 15, "aggression": 10 } },
-  { "id": 8, "name": "사무라이", "description": "기모노 위 경갑, 카타나, 묶은 상투", "archetype": "warrior", "baseCombat": { "maxHp": 40, "atk": 30, "def": 15, "spd": 11, "crit": 35, "eva": 5, "maxMana": 15, "aggression": 10 } },
-  { "id": 9, "name": "총잡이", "description": "롱코트, 양손 리볼버, 카우보이 모자", "archetype": "ranger", "baseCombat": { "maxHp": 35, "atk": 35, "def": 5, "spd": 16, "crit": 35, "eva": 10, "maxMana": 15, "aggression": 10 } },
-  { "id": 10, "name": "음유시인", "description": "깃털 모자, 류트, 화려한 의상", "archetype": "support", "baseCombat": { "maxHp": 35, "atk": 20, "def": 10, "spd": 6, "crit": 20, "eva": 10, "maxMana": 50, "aggression": 10 } },
-  { "id": 11, "name": "드워프 전사", "description": "땅딸막한 체격, 금빛 수염, 양손 전투도끼, 판금 갑주", "archetype": "tank", "baseCombat": { "maxHp": 55, "atk": 25, "def": 30, "spd": 1, "crit": 15, "eva": 0, "maxMana": 20, "aggression": 15 } },
-  { "id": 12, "name": "바이킹 베르세르크", "description": "털가죽 망토, 뿔 투구, 양손도끼, 온몸의 룬 문신", "archetype": "berserker", "baseCombat": { "maxHp": 45, "atk": 40, "def": 10, "spd": 6, "crit": 25, "eva": 0, "maxMana": 15, "aggression": 20 } },
-  { "id": 13, "name": "전투 수녀", "description": "흰 수녀복 위 금속 가슴갑, 검은 철퇴, 성가집", "archetype": "support", "baseCombat": { "maxHp": 45, "atk": 20, "def": 20, "spd": 1, "crit": 15, "eva": 5, "maxMana": 40, "aggression": 15 } },
-  { "id": 14, "name": "검투사", "description": "로마식 투구, 그물과 삼지창, 근육질 체격", "archetype": "warrior", "baseCombat": { "maxHp": 50, "atk": 30, "def": 20, "spd": 6, "crit": 20, "eva": 5, "maxMana": 15, "aggression": 15 } },
-  { "id": 15, "name": "네크로맨서", "description": "해골 장식 검은 로브, 구부러진 지팡이, 창백한 얼굴", "archetype": "mage", "baseCombat": { "maxHp": 30, "atk": 20, "def": 10, "spd": 1, "crit": 20, "eva": 5, "maxMana": 60, "aggression": 15 } },
-  { "id": 16, "name": "몽크", "description": "민머리, 회색 승복, 맨주먹, 평온한 표정", "archetype": "warrior", "baseCombat": { "maxHp": 40, "atk": 30, "def": 20, "spd": 16, "crit": 25, "eva": 10, "maxMana": 10, "aggression": 10 } },
-  { "id": 17, "name": "거인 전사", "description": "3미터에 가까운 체격, 원시적인 통나무 몽둥이, 가죽만 걸친 모습", "archetype": "tank", "baseCombat": { "maxHp": 70, "atk": 30, "def": 20, "spd": 1, "crit": 15, "eva": 0, "maxMana": 10, "aggression": 15 } },
-  { "id": 18, "name": "드루이드", "description": "녹색 후드, 뿔 장식, 나무 지팡이, 동물 동반자", "archetype": "mage", "baseCombat": { "maxHp": 40, "atk": 15, "def": 15, "spd": 1, "crit": 15, "eva": 5, "maxMana": 55, "aggression": 15 } },
-  { "id": 19, "name": "해적 선장", "description": "삼각모, 붉은 코트, 사브르와 플린트록 권총, 안대", "archetype": "warrior", "baseCombat": { "maxHp": 40, "atk": 30, "def": 15, "spd": 11, "crit": 30, "eva": 10, "maxMana": 15, "aggression": 10 } },
-  { "id": 20, "name": "닌자", "description": "검은 복면, 카타나와 수리검, 그림자처럼 움직이는 실루엣", "archetype": "assassin", "baseCombat": { "maxHp": 35, "atk": 35, "def": 5, "spd": 16, "crit": 30, "eva": 20, "maxMana": 10, "aggression": 10 } },
-  { "id": 21, "name": "음양사", "description": "한복 도복, 부적을 손에 쥔 자세, 종이 인형", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 15, "def": 10, "spd": 6, "crit": 20, "eva": 5, "maxMana": 55, "aggression": 15 } },
-  { "id": 22, "name": "청룡 무장", "description": "중국식 갑주, 거대한 청룡언월도, 긴 수염", "archetype": "warrior", "baseCombat": { "maxHp": 55, "atk": 35, "def": 20, "spd": 1, "crit": 20, "eva": 0, "maxMana": 15, "aggression": 15 } },
-  { "id": 23, "name": "쿠노이치", "description": "붉은 스카프를 두른 여자 닌자, 쌍검과 독침", "archetype": "assassin", "baseCombat": { "maxHp": 30, "atk": 30, "def": 5, "spd": 21, "crit": 35, "eva": 20, "maxMana": 10, "aggression": 10 } },
-  { "id": 24, "name": "검성", "description": "백발, 흰 도복, 빛나는 일본도, 냉정한 눈빛", "archetype": "warrior", "baseCombat": { "maxHp": 40, "atk": 35, "def": 10, "spd": 16, "crit": 35, "eva": 5, "maxMana": 10, "aggression": 10 } },
-  { "id": 25, "name": "도사", "description": "흰 수염 노인, 부채형 지팡이, 신선풍 도복", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 20, "def": 10, "spd": 1, "crit": 20, "eva": 5, "maxMana": 55, "aggression": 15 } },
-  { "id": 26, "name": "승병", "description": "회색 승복, 긴 철봉, 묵주 목걸이", "archetype": "warrior", "baseCombat": { "maxHp": 45, "atk": 30, "def": 20, "spd": 11, "crit": 20, "eva": 5, "maxMana": 20, "aggression": 10 } },
-  { "id": 27, "name": "당랑권 무사", "description": "초록빛 도복, 맨손, 사마귀처럼 구부린 자세", "archetype": "assassin", "baseCombat": { "maxHp": 35, "atk": 30, "def": 10, "spd": 21, "crit": 30, "eva": 15, "maxMana": 10, "aggression": 10 } },
-  { "id": 28, "name": "요괴사냥꾼", "description": "붉은 부적을 두른 한복, 도깨비 퇴치용 손도끼", "archetype": "ranger", "baseCombat": { "maxHp": 35, "atk": 30, "def": 10, "spd": 11, "crit": 30, "eva": 10, "maxMana": 25, "aggression": 10 } },
-  { "id": 29, "name": "현상금 사냥꾼", "description": "먼지투성이 가죽 망토, 쌍권총, 낡은 모자", "archetype": "ranger", "baseCombat": { "maxHp": 35, "atk": 35, "def": 10, "spd": 16, "crit": 35, "eva": 10, "maxMana": 10, "aggression": 10 } },
-  { "id": 30, "name": "마적 두목", "description": "붉은 스카프, 굴곡진 언월도, 말을 탄 도적 인상", "archetype": "warrior", "baseCombat": { "maxHp": 40, "atk": 35, "def": 15, "spd": 11, "crit": 25, "eva": 10, "maxMana": 10, "aggression": 15 } },
-  { "id": 31, "name": "SWAT 요원", "description": "검은 방탄조끼, 돌격소총, 헬멧과 고글", "archetype": "ranger", "baseCombat": { "maxHp": 40, "atk": 35, "def": 15, "spd": 16, "crit": 25, "eva": 10, "maxMana": 10, "aggression": 10 } },
-  { "id": 32, "name": "특수부대 병사", "description": "위장복, 돌격소총, 야시경", "archetype": "ranger", "baseCombat": { "maxHp": 45, "atk": 35, "def": 15, "spd": 11, "crit": 25, "eva": 10, "maxMana": 10, "aggression": 10 } },
-  { "id": 33, "name": "사이보그", "description": "붉은 광학센서 오른눈, 기계 팔, 금속 외골격", "archetype": "tank", "baseCombat": { "maxHp": 55, "atk": 30, "def": 30, "spd": 6, "crit": 15, "eva": 0, "maxMana": 15, "aggression": 10 } },
-  { "id": 34, "name": "해커", "description": "후드티, 노트북, 빠른 타이핑을 하는 손", "archetype": "support", "baseCombat": { "maxHp": 35, "atk": 15, "def": 10, "spd": 6, "crit": 20, "eva": 10, "maxMana": 50, "aggression": 15 } },
-  { "id": 35, "name": "프로 복서", "description": "권투 글러브, 근육질 상체, 트레이닝복", "archetype": "warrior", "baseCombat": { "maxHp": 45, "atk": 35, "def": 15, "spd": 16, "crit": 25, "eva": 5, "maxMana": 10, "aggression": 10 } },
-  { "id": 36, "name": "카레이서", "description": "레이싱 슈트, 헬멧, 렌치를 들고 엔진을 만지는 자세", "archetype": "warrior", "baseCombat": { "maxHp": 35, "atk": 25, "def": 10, "spd": 21, "crit": 25, "eva": 20, "maxMana": 10, "aggression": 15 } },
-  { "id": 37, "name": "소방관", "description": "방화복과 산소통, 긴 파이크 액스", "archetype": "tank", "baseCombat": { "maxHp": 55, "atk": 25, "def": 25, "spd": 6, "crit": 15, "eva": 0, "maxMana": 20, "aggression": 15 } },
-  { "id": 38, "name": "응급 의사", "description": "흰 가운 위 작전복, 주사기, 휴대 제세동기", "archetype": "support", "baseCombat": { "maxHp": 40, "atk": 20, "def": 15, "spd": 6, "crit": 20, "eva": 5, "maxMana": 45, "aggression": 10 } },
-  { "id": 39, "name": "누아르 탐정", "description": "트렌치 코트, 중절모, 리볼버, 담배", "archetype": "ranger", "baseCombat": { "maxHp": 40, "atk": 30, "def": 10, "spd": 16, "crit": 35, "eva": 10, "maxMana": 10, "aggression": 10 } },
-  { "id": 40, "name": "바텐더", "description": "조끼와 나비 넥타이, 금속 셰이커, 날렵한 손놀림", "archetype": "support", "baseCombat": { "maxHp": 35, "atk": 25, "def": 10, "spd": 16, "crit": 25, "eva": 20, "maxMana": 20, "aggression": 10 } },
-  { "id": 41, "name": "기계공학자", "description": "가죽 앞치마, 고글, 큰 렌치, 그을음 묻은 얼굴", "archetype": "support", "baseCombat": { "maxHp": 40, "atk": 20, "def": 15, "spd": 6, "crit": 20, "eva": 5, "maxMana": 45, "aggression": 10 } },
-  { "id": 42, "name": "스팀 나이트", "description": "증기를 분출하는 강철 갑옷, 거대한 스팀 해머", "archetype": "tank", "baseCombat": { "maxHp": 60, "atk": 25, "def": 35, "spd": 1, "crit": 15, "eva": 0, "maxMana": 15, "aggression": 10 } },
-  { "id": 43, "name": "연금술사", "description": "붉은 로브, 여러 플라스크, 화약과 불꽃", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 25, "def": 10, "spd": 6, "crit": 25, "eva": 5, "maxMana": 45, "aggression": 10 } },
-  { "id": 44, "name": "발명가", "description": "기이한 렌즈 고글, 이상한 에너지 소총", "archetype": "ranger", "baseCombat": { "maxHp": 35, "atk": 30, "def": 10, "spd": 11, "crit": 30, "eva": 10, "maxMana": 25, "aggression": 10 } },
-  { "id": 45, "name": "비행사", "description": "비행 모자와 고글, 스카프, 소형 석궁", "archetype": "ranger", "baseCombat": { "maxHp": 35, "atk": 30, "def": 10, "spd": 16, "crit": 30, "eva": 15, "maxMana": 15, "aggression": 10 } },
-  { "id": 46, "name": "시계장인", "description": "회중시계가 매달린 조끼 차림의 노인, 시간을 만지는 듯한 손동작", "archetype": "support", "baseCombat": { "maxHp": 35, "atk": 15, "def": 10, "spd": 11, "crit": 15, "eva": 15, "maxMana": 50, "aggression": 10 } },
-  { "id": 47, "name": "모험 탐험가", "description": "사파리 의상, 채찍, 권총, 중절모", "archetype": "warrior", "baseCombat": { "maxHp": 40, "atk": 30, "def": 15, "spd": 16, "crit": 25, "eva": 10, "maxMana": 15, "aggression": 10 } },
-  { "id": 48, "name": "고고학자", "description": "낡은 배낭과 유물, 긴 채찍, 먼지투성이 복장", "archetype": "ranger", "baseCombat": { "maxHp": 40, "atk": 25, "def": 10, "spd": 16, "crit": 25, "eva": 15, "maxMana": 20, "aggression": 10 } },
-  { "id": 49, "name": "에테르 메이지", "description": "푸르스름한 아우라, 크리스탈 지팡이", "archetype": "mage", "baseCombat": { "maxHp": 30, "atk": 15, "def": 10, "spd": 1, "crit": 20, "eva": 5, "maxMana": 65, "aggression": 15 } },
-  { "id": 50, "name": "톱니바퀴 기사", "description": "노출된 기어와 증기관이 달린 갑옷, 거대한 한손검", "archetype": "tank", "baseCombat": { "maxHp": 55, "atk": 30, "def": 30, "spd": 1, "crit": 15, "eva": 0, "maxMana": 15, "aggression": 15 } },
-  { "id": 51, "name": "포스 유저", "description": "흰 로브, 빛나는 검, 차분한 눈빛", "archetype": "mage", "baseCombat": { "maxHp": 40, "atk": 30, "def": 15, "spd": 11, "crit": 25, "eva": 10, "maxMana": 20, "aggression": 10 } },
-  { "id": 52, "name": "우주 해병", "description": "거대 강화 외골격, 레일건", "archetype": "tank", "baseCombat": { "maxHp": 55, "atk": 30, "def": 25, "spd": 6, "crit": 20, "eva": 0, "maxMana": 15, "aggression": 10 } },
-  { "id": 53, "name": "스타파일럿", "description": "우주복, 헬멧, 레이저 권총", "archetype": "ranger", "baseCombat": { "maxHp": 35, "atk": 30, "def": 10, "spd": 16, "crit": 30, "eva": 15, "maxMana": 15, "aggression": 10 } },
-  { "id": 54, "name": "변이체", "description": "변형된 피부와 촉수, 일그러진 신체", "archetype": "warrior", "baseCombat": { "maxHp": 50, "atk": 35, "def": 15, "spd": 6, "crit": 20, "eva": 5, "maxMana": 20, "aggression": 10 } },
-  { "id": 55, "name": "드론 엔지니어", "description": "작업복, 제어기, 주변을 맴도는 호버 드론", "archetype": "support", "baseCombat": { "maxHp": 35, "atk": 20, "def": 10, "spd": 11, "crit": 20, "eva": 10, "maxMana": 45, "aggression": 10 } },
-  { "id": 56, "name": "스나이퍼", "description": "위장 길리슈트, 저격소총, 스코프", "archetype": "ranger", "baseCombat": { "maxHp": 35, "atk": 40, "def": 5, "spd": 6, "crit": 40, "eva": 10, "maxMana": 15, "aggression": 10 } },
-  { "id": 57, "name": "강습병", "description": "단단한 전술 갑옷, 샷건, 군화", "archetype": "warrior", "baseCombat": { "maxHp": 45, "atk": 35, "def": 20, "spd": 11, "crit": 25, "eva": 5, "maxMana": 10, "aggression": 10 } },
-  { "id": 58, "name": "의료병", "description": "붉은 십자 완장, 붕대와 치료 키트, 군복", "archetype": "support", "baseCombat": { "maxHp": 40, "atk": 20, "def": 15, "spd": 6, "crit": 15, "eva": 10, "maxMana": 45, "aggression": 10 } },
-  { "id": 59, "name": "정찰병", "description": "위장 망토, 쿠크리 단검, 쌍안경", "archetype": "assassin", "baseCombat": { "maxHp": 35, "atk": 30, "def": 10, "spd": 16, "crit": 30, "eva": 20, "maxMana": 10, "aggression": 10 } },
-  { "id": 60, "name": "중화기병", "description": "거대한 미니건을 든 체격 큰 병사, 탄띠를 두른 몸", "archetype": "tank", "baseCombat": { "maxHp": 55, "atk": 35, "def": 20, "spd": 6, "crit": 20, "eva": 0, "maxMana": 10, "aggression": 15 } },
-  { "id": 61, "name": "뱀파이어 로드", "description": "검은 망토, 창백한 피부, 붉은 눈, 날카로운 송곳니", "archetype": "assassin", "baseCombat": { "maxHp": 40, "atk": 35, "def": 10, "spd": 16, "crit": 35, "eva": 10, "maxMana": 10, "aggression": 5 } },
-  { "id": 62, "name": "늑대인간", "description": "털북숭이 인간-늑대 혼종, 찢어진 옷, 긴 발톱", "archetype": "berserker", "baseCombat": { "maxHp": 50, "atk": 40, "def": 15, "spd": 11, "crit": 25, "eva": 0, "maxMana": 10, "aggression": 10 } },
-  { "id": 63, "name": "마녀", "description": "뾰족 모자, 검은 드레스, 빗자루, 검은 고양이", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 20, "def": 10, "spd": 6, "crit": 20, "eva": 10, "maxMana": 50, "aggression": 10 } },
-  { "id": 64, "name": "좀비 사냥꾼", "description": "긴 가죽 코트, 소드오프 샷건, 마체테", "archetype": "ranger", "baseCombat": { "maxHp": 40, "atk": 35, "def": 15, "spd": 11, "crit": 30, "eva": 10, "maxMana": 10, "aggression": 10 } },
-  { "id": 65, "name": "구울", "description": "부패한 피부, 누더기 옷, 길쭉한 발톱", "archetype": "warrior", "baseCombat": { "maxHp": 50, "atk": 40, "def": 10, "spd": 11, "crit": 25, "eva": 5, "maxMana": 10, "aggression": 10 } },
-  { "id": 66, "name": "밴시", "description": "반투명한 흰 드레스의 유령 여인, 긴 흰머리, 비명 자세", "archetype": "mage", "baseCombat": { "maxHp": 30, "atk": 15, "def": 5, "spd": 11, "crit": 25, "eva": 20, "maxMana": 45, "aggression": 10 } },
-  { "id": 67, "name": "유령 자객", "description": "반투명한 갑옷, 잔상처럼 사라지는 실루엣", "archetype": "assassin", "baseCombat": { "maxHp": 30, "atk": 35, "def": 5, "spd": 16, "crit": 35, "eva": 20, "maxMana": 10, "aggression": 10 } },
-  { "id": 68, "name": "데몬 로드", "description": "붉은 피부, 뿔, 거대한 지옥검, 박쥐 날개", "archetype": "berserker", "baseCombat": { "maxHp": 50, "atk": 40, "def": 15, "spd": 6, "crit": 25, "eva": 0, "maxMana": 15, "aggression": 10 } },
-  { "id": 69, "name": "퇴마 신관", "description": "성수병과 퇴마 지팡이, 금욕적인 인상", "archetype": "support", "baseCombat": { "maxHp": 40, "atk": 20, "def": 15, "spd": 6, "crit": 20, "eva": 5, "maxMana": 45, "aggression": 10 } },
-  { "id": 70, "name": "오컬티스트", "description": "검은 정장, 타로 카드, 기이한 문신이 비치는 팔", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 20, "def": 10, "spd": 6, "crit": 25, "eva": 5, "maxMana": 50, "aggression": 10 } },
-  { "id": 71, "name": "번개의 후예", "description": "치솟은 금발, 번개가 감긴 창, 푸른 눈", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 30, "def": 10, "spd": 11, "crit": 25, "eva": 10, "maxMana": 35, "aggression": 5 } },
-  { "id": 72, "name": "바다의 후예", "description": "푸른 머리, 은빛 삼지창, 해조 장식", "archetype": "mage", "baseCombat": { "maxHp": 40, "atk": 25, "def": 15, "spd": 6, "crit": 20, "eva": 5, "maxMana": 40, "aggression": 10 } },
-  { "id": 73, "name": "전쟁의 후예", "description": "청동 갑옷, 붉은 망토, 장검과 원형 방패", "archetype": "warrior", "baseCombat": { "maxHp": 50, "atk": 35, "def": 20, "spd": 6, "crit": 20, "eva": 5, "maxMana": 15, "aggression": 10 } },
-  { "id": 74, "name": "지혜의 후예", "description": "헬멧과 긴 창, 어깨 위 올빼미", "archetype": "warrior", "baseCombat": { "maxHp": 45, "atk": 25, "def": 25, "spd": 6, "crit": 20, "eva": 10, "maxMana": 20, "aggression": 10 } },
-  { "id": 75, "name": "태양의 후예", "description": "금발, 황금 활, 빛나는 아우라", "archetype": "ranger", "baseCombat": { "maxHp": 35, "atk": 35, "def": 10, "spd": 16, "crit": 35, "eva": 10, "maxMana": 10, "aggression": 10 } },
-  { "id": 76, "name": "전령의 후예", "description": "날개 달린 샌들, 전령봉, 날렵한 체격", "archetype": "assassin", "baseCombat": { "maxHp": 30, "atk": 30, "def": 5, "spd": 26, "crit": 30, "eva": 20, "maxMana": 10, "aggression": 10 } },
-  { "id": 77, "name": "노래하는 기사", "description": "은빛 검과 류트를 함께 든 전사, 깃털 망토", "archetype": "support", "baseCombat": { "maxHp": 35, "atk": 25, "def": 10, "spd": 11, "crit": 25, "eva": 10, "maxMana": 35, "aggression": 10 } },
-  { "id": 78, "name": "피닉스의 후예", "description": "붉은 머리, 불의 날개, 재로 뒤덮인 창", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 25, "def": 10, "spd": 6, "crit": 25, "eva": 5, "maxMana": 45, "aggression": 10 } },
-  { "id": 79, "name": "드래곤 슬레이어", "description": "용 비늘 갑옷, 거대한 창, 용 두개골 투구", "archetype": "warrior", "baseCombat": { "maxHp": 45, "atk": 40, "def": 20, "spd": 6, "crit": 25, "eva": 5, "maxMana": 10, "aggression": 10 } },
-  { "id": 80, "name": "용의 자손", "description": "인간에 용 비늘과 작은 날개, 입에서 새어 나오는 불꽃", "archetype": "mage", "baseCombat": { "maxHp": 45, "atk": 30, "def": 15, "spd": 6, "crit": 20, "eva": 5, "maxMana": 30, "aggression": 10 } },
-  { "id": 81, "name": "광대 살인마", "description": "공포스러운 광대 분장, 칼과 풍선, 기괴한 웃음", "archetype": "assassin", "baseCombat": { "maxHp": 35, "atk": 30, "def": 5, "spd": 16, "crit": 40, "eva": 15, "maxMana": 10, "aggression": 10 } },
-  { "id": 82, "name": "쌍둥이 · 형", "description": "붉은 의상, 한손검, 공격적 자세", "archetype": "warrior", "baseCombat": { "maxHp": 40, "atk": 35, "def": 15, "spd": 11, "crit": 25, "eva": 10, "maxMana": 15, "aggression": 10 } },
-  { "id": 83, "name": "쌍둥이 · 동생", "description": "푸른 의상, 석궁, 침착한 눈빛", "archetype": "ranger", "baseCombat": { "maxHp": 40, "atk": 30, "def": 10, "spd": 16, "crit": 30, "eva": 15, "maxMana": 10, "aggression": 10 } },
-  { "id": 84, "name": "가면 검객", "description": "은빛 가면, 긴 레이피어, 검은 망토", "archetype": "warrior", "baseCombat": { "maxHp": 35, "atk": 35, "def": 10, "spd": 16, "crit": 30, "eva": 15, "maxMana": 10, "aggression": 10 } },
-  { "id": 85, "name": "전투 시인", "description": "화려한 깃털 모자, 쌍검과 류트, 반짝이는 의상", "archetype": "support", "baseCombat": { "maxHp": 40, "atk": 25, "def": 15, "spd": 11, "crit": 25, "eva": 10, "maxMana": 25, "aggression": 10 } },
-  { "id": 86, "name": "무당", "description": "한복 위 방울을 단 띠, 부채와 신칼", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 15, "def": 10, "spd": 6, "crit": 20, "eva": 10, "maxMana": 55, "aggression": 10 } },
-  { "id": 87, "name": "부족 주술사", "description": "뼈 장식과 부족 문신, 원시적인 창, 화려한 깃털", "archetype": "mage", "baseCombat": { "maxHp": 40, "atk": 25, "def": 15, "spd": 6, "crit": 20, "eva": 5, "maxMana": 40, "aggression": 10 } },
-  { "id": 88, "name": "오토마타", "description": "표정 없는 기계 인형, 등에 감긴 태엽", "archetype": "tank", "baseCombat": { "maxHp": 55, "atk": 30, "def": 30, "spd": 1, "crit": 15, "eva": 0, "maxMana": 20, "aggression": 10 } },
-  { "id": 89, "name": "정령사", "description": "네 정령에 둘러싸인 로브 차림", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 20, "def": 10, "spd": 6, "crit": 20, "eva": 5, "maxMana": 55, "aggression": 10 } },
-  { "id": 90, "name": "환술사", "description": "여러 잔상이 겹쳐 보이는 실루엣, 금색 가면", "archetype": "assassin", "baseCombat": { "maxHp": 35, "atk": 25, "def": 10, "spd": 11, "crit": 30, "eva": 20, "maxMana": 20, "aggression": 10 } },
-  { "id": 91, "name": "용병단장", "description": "중갑, 지휘관 풍채, 긴 한손검과 지휘봉", "archetype": "warrior", "baseCombat": { "maxHp": 50, "atk": 35, "def": 25, "spd": 6, "crit": 20, "eva": 0, "maxMana": 15, "aggression": 10 } },
-  { "id": 92, "name": "왕궁 근위대장", "description": "빛나는 금색 갑옷, 긴 장창, 엄숙한 표정", "archetype": "tank", "baseCombat": { "maxHp": 60, "atk": 25, "def": 30, "spd": 1, "crit": 15, "eva": 0, "maxMana": 20, "aggression": 10 } },
-  { "id": 93, "name": "암흑 기사", "description": "검은 풀플레이트, 붉게 빛나는 눈, 저주받은 검", "archetype": "warrior", "baseCombat": { "maxHp": 50, "atk": 40, "def": 20, "spd": 6, "crit": 20, "eva": 0, "maxMana": 15, "aggression": 10 } },
-  { "id": 94, "name": "성전사", "description": "눈부신 백금 갑옷, 거대한 양손검, 성스러운 빛", "archetype": "paladin", "baseCombat": { "maxHp": 55, "atk": 30, "def": 25, "spd": 1, "crit": 20, "eva": 0, "maxMana": 20, "aggression": 10 } },
-  { "id": 95, "name": "사막의 검객", "description": "사막풍 복장, 굴곡진 시미터, 얼굴을 가린 머리천", "archetype": "warrior", "baseCombat": { "maxHp": 40, "atk": 35, "def": 10, "spd": 16, "crit": 30, "eva": 10, "maxMana": 10, "aggression": 10 } },
-  { "id": 96, "name": "얼음 여왕", "description": "푸른 드레스, 얼음 왕관, 서리 지팡이, 차가운 눈빛", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 15, "def": 10, "spd": 1, "crit": 20, "eva": 5, "maxMana": 60, "aggression": 15 } },
-  { "id": 97, "name": "불의 주술사", "description": "붉은 문신, 불꽃을 두른 지팡이, 맨발", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 20, "def": 10, "spd": 6, "crit": 20, "eva": 5, "maxMana": 55, "aggression": 10 } },
-  { "id": 98, "name": "바람의 검사", "description": "흘러내리는 녹색 천 의상, 가느다란 장검", "archetype": "warrior", "baseCombat": { "maxHp": 35, "atk": 30, "def": 10, "spd": 26, "crit": 30, "eva": 10, "maxMana": 10, "aggression": 10 } },
-  { "id": 99, "name": "대지의 파수꾼", "description": "거대한 돌 망치, 갈색 가죽과 바위 조각으로 된 갑옷", "archetype": "tank", "baseCombat": { "maxHp": 65, "atk": 25, "def": 30, "spd": 1, "crit": 15, "eva": 0, "maxMana": 15, "aggression": 10 } },
-  { "id": 100, "name": "빛의 용사", "description": "백발, 빛나는 플레이트 메일, 성검", "archetype": "warrior", "baseCombat": { "maxHp": 45, "atk": 30, "def": 20, "spd": 11, "crit": 25, "eva": 5, "maxMana": 15, "aggression": 10 } },
-
-  { "id": 1100, "name": "몽키 D. 루피", "description": "밀짚모자, 빨간 조끼, 늘어나는 고무 신체, 왼쪽 눈 아래 흉터", "archetype": "warrior", "baseCombat": { "maxHp": 50, "atk": 35, "def": 15, "spd": 11, "crit": 20, "eva": 10, "maxMana": 10, "aggression": 10 }, "ipId": 100 },
-  { "id": 1101, "name": "롤로노아 조로", "description": "녹색 머리띠, 왼쪽 눈 흉터, 허리에 세 자루 검(삼도류)", "archetype": "warrior", "baseCombat": { "maxHp": 45, "atk": 40, "def": 15, "spd": 11, "crit": 25, "eva": 0, "maxMana": 10, "aggression": 15 }, "ipId": 100 },
-  { "id": 1200, "name": "쿠로사키 이치고", "description": "주황색 머리, 검은 시니가미 복장, 거대한 참백도", "archetype": "warrior", "baseCombat": { "maxHp": 45, "atk": 35, "def": 15, "spd": 11, "crit": 20, "eva": 5, "maxMana": 20, "aggression": 10 }, "ipId": 200 },
-  { "id": 1201, "name": "쿠치키 루키아", "description": "흑발 단발, 시니가미 복장, 새하얀 소데노시라유키", "archetype": "mage", "baseCombat": { "maxHp": 35, "atk": 25, "def": 10, "spd": 11, "crit": 20, "eva": 10, "maxMana": 40, "aggression": 10 }, "ipId": 200 }
+  {
+    "id": 1,
+    "name": "알드릭",
+    "title": "강철기사",
+    "description": "은빛 풀플레이트 아머, 대형 방패, 한손검",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 60,
+      "maxMana": 18,
+      "pAtk": 30,
+      "mAtk": 12,
+      "pDef": 35,
+      "mDef": 21,
+      "spd": 12,
+      "acc": 80,
+      "eva": 0,
+      "crit": 27,
+      "aggression": 15
+    },
+    "skills": [
+      "tnk_01",
+      "tnk_02",
+      "tnk_06"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "라그나르",
+    "title": "광전사",
+    "description": "상의 탈의, 거대 양손도끼, 붉은 문신, 분노의 눈빛",
+    "archetype": "berserker",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 15,
+      "pAtk": 40,
+      "mAtk": 29,
+      "pDef": 13,
+      "mDef": 10,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 31,
+      "aggression": 25
+    },
+    "skills": [
+      "ber_01",
+      "ber_02",
+      "ber_08"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "키라",
+    "title": "그림자 암살자",
+    "description": "검은 후드 망토, 쌍단검, 얼굴 절반을 가리는 복면",
+    "archetype": "assassin",
+    "baseCombat": {
+      "maxHp": 30,
+      "maxMana": 15,
+      "pAtk": 33,
+      "mAtk": 11,
+      "pDef": 5,
+      "mDef": 3,
+      "spd": 14,
+      "acc": 80,
+      "eva": 20,
+      "crit": 35,
+      "aggression": 10
+    },
+    "skills": [
+      "ass_01",
+      "ass_05",
+      "ass_08"
+    ]
+  },
+  {
+    "id": 4,
+    "name": "에일린드라",
+    "title": "엘프 궁수",
+    "description": "녹색 외투, 긴 장궁, 은발, 뾰족한 귀",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 16,
+      "pAtk": 31,
+      "mAtk": 12,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 19,
+      "acc": 80,
+      "eva": 10,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_01",
+      "ran_05",
+      "ran_08"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "엘릭",
+    "title": "대마법사",
+    "description": "별 무늬 로브, 수정 장식 지팡이, 흰 수염",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 30,
+      "maxMana": 52,
+      "pAtk": 5,
+      "mAtk": 35,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 19,
+      "aggression": 20
+    },
+    "skills": [
+      "mag_01",
+      "mag_04",
+      "mag_09"
+    ]
+  },
+  {
+    "id": 6,
+    "name": "세라프",
+    "title": "성기사",
+    "description": "흰 망토, 빛나는 한손검, 성스러운 휘장 방패",
+    "archetype": "paladin",
+    "baseCombat": {
+      "maxHp": 50,
+      "maxMana": 37,
+      "pAtk": 34,
+      "mAtk": 20,
+      "pDef": 31,
+      "mDef": 18,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 18,
+      "aggression": 15
+    },
+    "skills": [
+      "pal_01",
+      "pal_03",
+      "pal_08"
+    ]
+  },
+  {
+    "id": 7,
+    "name": "핀",
+    "title": "도적",
+    "description": "가죽 갑옷, 은제 단검, 날렵한 체격, 자신만만한 미소",
+    "archetype": "assassin",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 15,
+      "pAtk": 33,
+      "mAtk": 10,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 14,
+      "acc": 80,
+      "eva": 21,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "ass_01",
+      "ass_03",
+      "ass_06"
+    ]
+  },
+  {
+    "id": 8,
+    "name": "타케시",
+    "title": "사무라이",
+    "description": "기모노 위 경갑, 카타나, 묶은 상투",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 15,
+      "pAtk": 38,
+      "mAtk": 21,
+      "pDef": 16,
+      "mDef": 9,
+      "spd": 12,
+      "acc": 80,
+      "eva": 5,
+      "crit": 28,
+      "aggression": 10
+    },
+    "skills": [
+      "war_01",
+      "war_04",
+      "war_08"
+    ]
+  },
+  {
+    "id": 9,
+    "name": "콜트",
+    "title": "총잡이",
+    "description": "롱코트, 양손 리볼버, 카우보이 모자",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 16,
+      "pAtk": 36,
+      "mAtk": 14,
+      "pDef": 5,
+      "mDef": 3,
+      "spd": 15,
+      "acc": 80,
+      "eva": 10,
+      "crit": 28,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_02",
+      "ran_05",
+      "ran_08"
+    ]
+  },
+  {
+    "id": 10,
+    "name": "핀리",
+    "title": "음유시인",
+    "description": "깃털 모자, 류트, 화려한 의상",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 44,
+      "pAtk": 8,
+      "mAtk": 37,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 19,
+      "aggression": 10
+    },
+    "skills": [
+      "sup_02",
+      "sup_03",
+      "sup_07"
+    ]
+  },
+  {
+    "id": 11,
+    "name": "토르긴",
+    "title": "드워프 전사",
+    "description": "땅딸막한 체격, 금빛 수염, 양손 전투도끼, 판금 갑주",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 55,
+      "maxMana": 18,
+      "pAtk": 33,
+      "mAtk": 13,
+      "pDef": 35,
+      "mDef": 21,
+      "spd": 12,
+      "acc": 80,
+      "eva": 0,
+      "crit": 24,
+      "aggression": 15
+    },
+    "skills": [
+      "tnk_01",
+      "tnk_04",
+      "tnk_07"
+    ]
+  },
+  {
+    "id": 12,
+    "name": "비요른",
+    "title": "바이킹 베르세르크",
+    "description": "털가죽 망토, 뿔 투구, 양손도끼, 온몸의 룬 문신",
+    "archetype": "berserker",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 15,
+      "pAtk": 40,
+      "mAtk": 29,
+      "pDef": 13,
+      "mDef": 10,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 31,
+      "aggression": 20
+    },
+    "skills": [
+      "ber_01",
+      "ber_03",
+      "ber_06"
+    ]
+  },
+  {
+    "id": 13,
+    "name": "베라",
+    "title": "전투 수녀",
+    "description": "흰 수녀복 위 금속 가슴갑, 검은 철퇴, 성가집",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 36,
+      "pAtk": 8,
+      "mAtk": 36,
+      "pDef": 13,
+      "mDef": 22,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 16,
+      "aggression": 15
+    },
+    "skills": [
+      "sup_01",
+      "sup_04",
+      "pal_05"
+    ]
+  },
+  {
+    "id": 14,
+    "name": "다리우스",
+    "title": "검투사",
+    "description": "로마식 투구, 그물과 삼지창, 근육질 체격",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 50,
+      "maxMana": 13,
+      "pAtk": 38,
+      "mAtk": 24,
+      "pDef": 25,
+      "mDef": 15,
+      "spd": 11,
+      "acc": 80,
+      "eva": 6,
+      "crit": 25,
+      "aggression": 15
+    },
+    "skills": [
+      "war_01",
+      "war_05",
+      "tnk_05"
+    ]
+  },
+  {
+    "id": 15,
+    "name": "바리스",
+    "title": "네크로맨서",
+    "description": "해골 장식 검은 로브, 구부러진 지팡이, 창백한 얼굴",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 30,
+      "maxMana": 51,
+      "pAtk": 6,
+      "mAtk": 37,
+      "pDef": 5,
+      "mDef": 9,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 19,
+      "aggression": 15
+    },
+    "skills": [
+      "mag_02",
+      "mag_06",
+      "mag_09"
+    ]
+  },
+  {
+    "id": 16,
+    "name": "보디",
+    "title": "몽크",
+    "description": "민머리, 회색 승복, 맨주먹, 평온한 표정",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 11,
+      "pAtk": 36,
+      "mAtk": 20,
+      "pDef": 22,
+      "mDef": 13,
+      "spd": 13,
+      "acc": 80,
+      "eva": 11,
+      "crit": 27,
+      "aggression": 10
+    },
+    "skills": [
+      "war_01",
+      "war_03",
+      "sup_04"
+    ]
+  },
+  {
+    "id": 17,
+    "name": "그룸",
+    "title": "거인 전사",
+    "description": "3미터에 가까운 체격, 원시적인 통나무 몽둥이, 가죽만 걸친 모습",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 58,
+      "maxMana": 15,
+      "pAtk": 33,
+      "mAtk": 16,
+      "pDef": 31,
+      "mDef": 18,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 23,
+      "aggression": 15
+    },
+    "skills": [
+      "tnk_01",
+      "tnk_05",
+      "tnk_07"
+    ]
+  },
+  {
+    "id": 18,
+    "name": "실반",
+    "title": "드루이드",
+    "description": "녹색 후드, 뿔 장식, 나무 지팡이, 동물 동반자",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 49,
+      "pAtk": 6,
+      "mAtk": 37,
+      "pDef": 9,
+      "mDef": 15,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 15,
+      "aggression": 15
+    },
+    "skills": [
+      "mag_01",
+      "sup_03",
+      "mag_05"
+    ]
+  },
+  {
+    "id": 19,
+    "name": "드레이크",
+    "title": "해적 선장",
+    "description": "삼각모, 붉은 코트, 사브르와 플린트록 권총, 안대",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 15,
+      "pAtk": 38,
+      "mAtk": 21,
+      "pDef": 16,
+      "mDef": 9,
+      "spd": 12,
+      "acc": 80,
+      "eva": 11,
+      "crit": 24,
+      "aggression": 10
+    },
+    "skills": [
+      "war_02",
+      "ran_06",
+      "war_07"
+    ]
+  },
+  {
+    "id": 20,
+    "name": "류지",
+    "title": "닌자",
+    "description": "검은 복면, 카타나와 수리검, 그림자처럼 움직이는 실루엣",
+    "archetype": "assassin",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 10,
+      "pAtk": 32,
+      "mAtk": 14,
+      "pDef": 5,
+      "mDef": 3,
+      "spd": 14,
+      "acc": 80,
+      "eva": 21,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "ass_01",
+      "ass_05",
+      "ass_04"
+    ]
+  },
+  {
+    "id": 21,
+    "name": "하은",
+    "title": "음양사",
+    "description": "한복 도복, 부적을 손에 쥔 자세, 종이 인형",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 51,
+      "pAtk": 5,
+      "mAtk": 41,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 20,
+      "aggression": 15
+    },
+    "skills": [
+      "mag_02",
+      "mag_04",
+      "mag_07"
+    ]
+  },
+  {
+    "id": 22,
+    "name": "장웨이",
+    "title": "청룡 무장",
+    "description": "중국식 갑주, 거대한 청룡언월도, 긴 수염",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 55,
+      "maxMana": 13,
+      "pAtk": 38,
+      "mAtk": 26,
+      "pDef": 25,
+      "mDef": 15,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 25,
+      "aggression": 15
+    },
+    "skills": [
+      "war_03",
+      "war_06",
+      "war_08"
+    ]
+  },
+  {
+    "id": 23,
+    "name": "유키",
+    "title": "쿠노이치",
+    "description": "붉은 스카프를 두른 여자 닌자, 쌍검과 독침",
+    "archetype": "assassin",
+    "baseCombat": {
+      "maxHp": 30,
+      "maxMana": 10,
+      "pAtk": 30,
+      "mAtk": 11,
+      "pDef": 5,
+      "mDef": 3,
+      "spd": 16,
+      "acc": 80,
+      "eva": 20,
+      "crit": 35,
+      "aggression": 10
+    },
+    "skills": [
+      "ass_03",
+      "ass_06",
+      "ass_08"
+    ]
+  },
+  {
+    "id": 24,
+    "name": "하쿠로",
+    "title": "검성",
+    "description": "백발, 흰 도복, 빛나는 일본도, 냉정한 눈빛",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 11,
+      "pAtk": 38,
+      "mAtk": 23,
+      "pDef": 11,
+      "mDef": 6,
+      "spd": 12,
+      "acc": 80,
+      "eva": 5,
+      "crit": 28,
+      "aggression": 10
+    },
+    "skills": [
+      "war_01",
+      "war_07",
+      "war_08"
+    ]
+  },
+  {
+    "id": 25,
+    "name": "청풍",
+    "title": "도사",
+    "description": "흰 수염 노인, 부채형 지팡이, 신선풍 도복",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 42,
+      "maxMana": 48,
+      "pAtk": 6,
+      "mAtk": 38,
+      "pDef": 6,
+      "mDef": 12,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 20,
+      "aggression": 15
+    },
+    "skills": [
+      "mag_03",
+      "mag_07",
+      "mag_09"
+    ]
+  },
+  {
+    "id": 26,
+    "name": "현운",
+    "title": "승병",
+    "description": "회색 승복, 긴 철봉, 묵주 목걸이",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 15,
+      "pAtk": 38,
+      "mAtk": 24,
+      "pDef": 23,
+      "mDef": 13,
+      "spd": 12,
+      "acc": 80,
+      "eva": 6,
+      "crit": 23,
+      "aggression": 10
+    },
+    "skills": [
+      "war_01",
+      "war_05",
+      "sup_01"
+    ]
+  },
+  {
+    "id": 27,
+    "name": "단철",
+    "title": "당랑권 무사",
+    "description": "초록빛 도복, 맨손, 사마귀처럼 구부린 자세",
+    "archetype": "assassin",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 10,
+      "pAtk": 35,
+      "mAtk": 12,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 15,
+      "acc": 80,
+      "eva": 16,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "ass_01",
+      "ass_06",
+      "ass_07"
+    ]
+  },
+  {
+    "id": 28,
+    "name": "연우",
+    "title": "요괴사냥꾼",
+    "description": "붉은 부적을 두른 한복, 도깨비 퇴치용 손도끼",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 20,
+      "pAtk": 38,
+      "mAtk": 15,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 10,
+      "acc": 80,
+      "eva": 10,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_01",
+      "ran_04",
+      "pal_04"
+    ]
+  },
+  {
+    "id": 29,
+    "name": "더스크",
+    "title": "현상금 사냥꾼",
+    "description": "먼지투성이 가죽 망토, 쌍권총, 낡은 모자",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 10,
+      "pAtk": 37,
+      "mAtk": 14,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 15,
+      "acc": 80,
+      "eva": 10,
+      "crit": 28,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_05",
+      "ran_06",
+      "ran_08"
+    ]
+  },
+  {
+    "id": 30,
+    "name": "샤오바오",
+    "title": "마적 두목",
+    "description": "붉은 스카프, 굴곡진 언월도, 말을 탄 도적 인상",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 11,
+      "pAtk": 38,
+      "mAtk": 24,
+      "pDef": 17,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 11,
+      "crit": 28,
+      "aggression": 15
+    },
+    "skills": [
+      "war_02",
+      "war_04",
+      "ass_07"
+    ]
+  },
+  {
+    "id": 31,
+    "name": "레예스",
+    "title": "SWAT 요원",
+    "description": "검은 방탄조끼, 돌격소총, 헬멧과 고글",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 11,
+      "pAtk": 32,
+      "mAtk": 15,
+      "pDef": 16,
+      "mDef": 9,
+      "spd": 13,
+      "acc": 80,
+      "eva": 11,
+      "crit": 27,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_02",
+      "ran_03",
+      "ran_07"
+    ]
+  },
+  {
+    "id": 32,
+    "name": "콜",
+    "title": "특수부대 병사",
+    "description": "위장복, 돌격소총, 야시경",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 11,
+      "pAtk": 33,
+      "mAtk": 16,
+      "pDef": 17,
+      "mDef": 10,
+      "spd": 11,
+      "acc": 80,
+      "eva": 11,
+      "crit": 28,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_01",
+      "ran_06",
+      "ran_07"
+    ]
+  },
+  {
+    "id": 33,
+    "name": "세븐",
+    "title": "사이보그",
+    "description": "붉은 광학센서 오른눈, 기계 팔, 금속 외골격",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 55,
+      "maxMana": 17,
+      "pAtk": 36,
+      "mAtk": 14,
+      "pDef": 35,
+      "mDef": 21,
+      "spd": 12,
+      "acc": 80,
+      "eva": 0,
+      "crit": 22,
+      "aggression": 10
+    },
+    "skills": [
+      "tnk_02",
+      "tnk_03",
+      "tnk_06"
+    ]
+  },
+  {
+    "id": 34,
+    "name": "님",
+    "title": "해커",
+    "description": "후드티, 노트북, 빠른 타이핑을 하는 손",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 46,
+      "pAtk": 7,
+      "mAtk": 34,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 20,
+      "aggression": 15
+    },
+    "skills": [
+      "sup_06",
+      "mag_06",
+      "sup_07"
+    ]
+  },
+  {
+    "id": 35,
+    "name": "단테",
+    "title": "프로 복서",
+    "description": "권투 글러브, 근육질 상체, 트레이닝복",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 11,
+      "pAtk": 38,
+      "mAtk": 24,
+      "pDef": 17,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 6,
+      "crit": 28,
+      "aggression": 10
+    },
+    "skills": [
+      "war_01",
+      "war_05",
+      "ber_02"
+    ]
+  },
+  {
+    "id": 36,
+    "name": "맥스",
+    "title": "카레이서",
+    "description": "레이싱 슈트, 헬멧, 렌치를 들고 엔진을 만지는 자세",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 11,
+      "pAtk": 37,
+      "mAtk": 21,
+      "pDef": 11,
+      "mDef": 6,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 27,
+      "aggression": 15
+    },
+    "skills": [
+      "ran_03",
+      "war_04",
+      "ass_02"
+    ]
+  },
+  {
+    "id": 37,
+    "name": "제이스",
+    "title": "소방관",
+    "description": "방화복과 산소통, 긴 파이크 액스",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 55,
+      "maxMana": 23,
+      "pAtk": 34,
+      "mAtk": 13,
+      "pDef": 33,
+      "mDef": 19,
+      "spd": 12,
+      "acc": 80,
+      "eva": 0,
+      "crit": 20,
+      "aggression": 15
+    },
+    "skills": [
+      "tnk_01",
+      "tnk_04",
+      "tnk_06"
+    ]
+  },
+  {
+    "id": 38,
+    "name": "노아",
+    "title": "응급 의사",
+    "description": "흰 가운 위 작전복, 주사기, 휴대 제세동기",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 41,
+      "pAtk": 7,
+      "mAtk": 34,
+      "pDef": 9,
+      "mDef": 15,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 20,
+      "aggression": 10
+    },
+    "skills": [
+      "sup_01",
+      "sup_03",
+      "sup_08"
+    ]
+  },
+  {
+    "id": 39,
+    "name": "빅토르",
+    "title": "누아르 탐정",
+    "description": "트렌치 코트, 중절모, 리볼버, 담배",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 11,
+      "pAtk": 32,
+      "mAtk": 12,
+      "pDef": 11,
+      "mDef": 6,
+      "spd": 15,
+      "acc": 80,
+      "eva": 11,
+      "crit": 28,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_01",
+      "ran_05",
+      "ass_07"
+    ]
+  },
+  {
+    "id": 40,
+    "name": "사일러스",
+    "title": "바텐더",
+    "description": "조끼와 나비 넥타이, 금속 셰이커, 날렵한 손놀림",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 28,
+      "pAtk": 7,
+      "mAtk": 33,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 14,
+      "acc": 80,
+      "eva": 21,
+      "crit": 26,
+      "aggression": 10
+    },
+    "skills": [
+      "sup_02",
+      "sup_06",
+      "ass_02"
+    ]
+  },
+  {
+    "id": 41,
+    "name": "코그",
+    "title": "기계공학자",
+    "description": "가죽 앞치마, 고글, 큰 렌치, 그을음 묻은 얼굴",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 41,
+      "pAtk": 7,
+      "mAtk": 34,
+      "pDef": 9,
+      "mDef": 15,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 20,
+      "aggression": 10
+    },
+    "skills": [
+      "sup_05",
+      "sup_06",
+      "tnk_03"
+    ]
+  },
+  {
+    "id": 42,
+    "name": "기디언",
+    "title": "스팀 나이트",
+    "description": "증기를 분출하는 강철 갑옷, 거대한 스팀 해머",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 60,
+      "maxMana": 15,
+      "pAtk": 29,
+      "mAtk": 11,
+      "pDef": 35,
+      "mDef": 21,
+      "spd": 12,
+      "acc": 80,
+      "eva": 0,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "tnk_02",
+      "tnk_05",
+      "tnk_07"
+    ]
+  },
+  {
+    "id": 43,
+    "name": "알도스",
+    "title": "연금술사",
+    "description": "붉은 로브, 여러 플라스크, 화약과 불꽃",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 43,
+      "pAtk": 6,
+      "mAtk": 37,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 26,
+      "aggression": 10
+    },
+    "skills": [
+      "mag_04",
+      "mag_05",
+      "ass_03"
+    ]
+  },
+  {
+    "id": 44,
+    "name": "니콜라스",
+    "title": "발명가",
+    "description": "기이한 렌즈 고글, 이상한 에너지 소총",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 20,
+      "pAtk": 38,
+      "mAtk": 15,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 10,
+      "acc": 80,
+      "eva": 10,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_02",
+      "ran_06",
+      "mag_06"
+    ]
+  },
+  {
+    "id": 45,
+    "name": "애쉬",
+    "title": "비행사",
+    "description": "비행 모자와 고글, 스카프, 소형 석궁",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 16,
+      "pAtk": 30,
+      "mAtk": 12,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 15,
+      "acc": 80,
+      "eva": 16,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_03",
+      "ran_05",
+      "ran_07"
+    ]
+  },
+  {
+    "id": 46,
+    "name": "에드먼드",
+    "title": "시계장인",
+    "description": "회중시계가 매달린 조끼 차림의 노인, 시간을 만지는 듯한 손동작",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 42,
+      "maxMana": 48,
+      "pAtk": 9,
+      "mAtk": 38,
+      "pDef": 6,
+      "mDef": 12,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 14,
+      "aggression": 10
+    },
+    "skills": [
+      "sup_02",
+      "sup_05",
+      "mag_03"
+    ]
+  },
+  {
+    "id": 47,
+    "name": "롤랜드",
+    "title": "모험 탐험가",
+    "description": "사파리 의상, 채찍, 권총, 중절모",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 15,
+      "pAtk": 38,
+      "mAtk": 21,
+      "pDef": 16,
+      "mDef": 9,
+      "spd": 13,
+      "acc": 80,
+      "eva": 11,
+      "crit": 27,
+      "aggression": 10
+    },
+    "skills": [
+      "war_03",
+      "ran_04",
+      "war_05"
+    ]
+  },
+  {
+    "id": 48,
+    "name": "알리스테어",
+    "title": "고고학자",
+    "description": "낡은 배낭과 유물, 긴 채찍, 먼지투성이 복장",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 20,
+      "pAtk": 29,
+      "mAtk": 11,
+      "pDef": 11,
+      "mDef": 6,
+      "spd": 15,
+      "acc": 80,
+      "eva": 16,
+      "crit": 27,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_01",
+      "ran_04",
+      "war_03"
+    ]
+  },
+  {
+    "id": 49,
+    "name": "리라",
+    "title": "에테르 메이지",
+    "description": "푸르스름한 아우라, 크리스탈 지팡이",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 54,
+      "pAtk": 5,
+      "mAtk": 40,
+      "pDef": 5,
+      "mDef": 9,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 19,
+      "aggression": 15
+    },
+    "skills": [
+      "mag_03",
+      "mag_07",
+      "mag_09"
+    ]
+  },
+  {
+    "id": 50,
+    "name": "캐스피언",
+    "title": "톱니바퀴 기사",
+    "description": "노출된 기어와 증기관이 달린 갑옷, 거대한 한손검",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 55,
+      "maxMana": 15,
+      "pAtk": 36,
+      "mAtk": 14,
+      "pDef": 35,
+      "mDef": 21,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 24,
+      "aggression": 15
+    },
+    "skills": [
+      "tnk_01",
+      "tnk_03",
+      "tnk_07"
+    ]
+  },
+  {
+    "id": 51,
+    "name": "젠",
+    "title": "포스 유저",
+    "description": "흰 로브, 빛나는 검, 차분한 눈빛",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 35,
+      "pAtk": 6,
+      "mAtk": 36,
+      "pDef": 9,
+      "mDef": 16,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 27,
+      "aggression": 10
+    },
+    "skills": [
+      "pal_01",
+      "mag_07",
+      "war_07"
+    ]
+  },
+  {
+    "id": 52,
+    "name": "렉스",
+    "title": "우주 해병",
+    "description": "거대 강화 외골격, 레일건",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 55,
+      "maxMana": 17,
+      "pAtk": 37,
+      "mAtk": 14,
+      "pDef": 31,
+      "mDef": 18,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 25,
+      "aggression": 10
+    },
+    "skills": [
+      "tnk_02",
+      "tnk_05",
+      "ran_06"
+    ]
+  },
+  {
+    "id": 53,
+    "name": "대쉬",
+    "title": "스타파일럿",
+    "description": "우주복, 헬멧, 레이저 권총",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 16,
+      "pAtk": 30,
+      "mAtk": 12,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 15,
+      "acc": 80,
+      "eva": 16,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_03",
+      "ran_05",
+      "ran_08"
+    ]
+  },
+  {
+    "id": 54,
+    "name": "뮤타",
+    "title": "변이체",
+    "description": "변형된 피부와 촉수, 일그러진 신체",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 50,
+      "maxMana": 12,
+      "pAtk": 38,
+      "mAtk": 28,
+      "pDef": 18,
+      "mDef": 10,
+      "spd": 11,
+      "acc": 80,
+      "eva": 6,
+      "crit": 24,
+      "aggression": 10
+    },
+    "skills": [
+      "ber_02",
+      "war_06",
+      "ber_05"
+    ]
+  },
+  {
+    "id": 55,
+    "name": "바이트",
+    "title": "드론 엔지니어",
+    "description": "작업복, 제어기, 주변을 맴도는 호버 드론",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 44,
+      "pAtk": 8,
+      "mAtk": 36,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 19,
+      "aggression": 10
+    },
+    "skills": [
+      "sup_05",
+      "ran_07",
+      "sup_07"
+    ]
+  },
+  {
+    "id": 56,
+    "name": "고스트",
+    "title": "스나이퍼",
+    "description": "위장 길리슈트, 저격소총, 스코프",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 12,
+      "pAtk": 36,
+      "mAtk": 16,
+      "pDef": 5,
+      "mDef": 3,
+      "spd": 12,
+      "acc": 80,
+      "eva": 10,
+      "crit": 30,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_05",
+      "ran_06",
+      "ran_08"
+    ]
+  },
+  {
+    "id": 57,
+    "name": "리드",
+    "title": "강습병",
+    "description": "단단한 전술 갑옷, 샷건, 군화",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 11,
+      "pAtk": 38,
+      "mAtk": 24,
+      "pDef": 23,
+      "mDef": 13,
+      "spd": 12,
+      "acc": 80,
+      "eva": 6,
+      "crit": 28,
+      "aggression": 10
+    },
+    "skills": [
+      "war_02",
+      "war_05",
+      "ber_02"
+    ]
+  },
+  {
+    "id": 58,
+    "name": "미라",
+    "title": "의료병",
+    "description": "붉은 십자 완장, 붕대와 치료 키트, 군복",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 41,
+      "pAtk": 9,
+      "mAtk": 33,
+      "pDef": 9,
+      "mDef": 15,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 15,
+      "aggression": 10
+    },
+    "skills": [
+      "sup_01",
+      "sup_04",
+      "sup_08"
+    ]
+  },
+  {
+    "id": 59,
+    "name": "벡스",
+    "title": "정찰병",
+    "description": "위장 망토, 쿠크리 단검, 쌍안경",
+    "archetype": "assassin",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 10,
+      "pAtk": 31,
+      "mAtk": 12,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 14,
+      "acc": 80,
+      "eva": 21,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "ass_02",
+      "ass_04",
+      "ran_03"
+    ]
+  },
+  {
+    "id": 60,
+    "name": "브루노",
+    "title": "중화기병",
+    "description": "거대한 미니건을 든 체격 큰 병사, 탄띠를 두른 몸",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 55,
+      "maxMana": 15,
+      "pAtk": 36,
+      "mAtk": 17,
+      "pDef": 26,
+      "mDef": 15,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 26,
+      "aggression": 15
+    },
+    "skills": [
+      "tnk_01",
+      "tnk_05",
+      "ran_07"
+    ]
+  },
+  {
+    "id": 61,
+    "name": "루시안",
+    "title": "뱀파이어 로드",
+    "description": "검은 망토, 창백한 피부, 붉은 눈, 날카로운 송곳니",
+    "archetype": "assassin",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 10,
+      "pAtk": 32,
+      "mAtk": 14,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 14,
+      "acc": 80,
+      "eva": 10,
+      "crit": 28,
+      "aggression": 5
+    },
+    "skills": [
+      "ass_04",
+      "ass_07",
+      "ass_08"
+    ]
+  },
+  {
+    "id": 62,
+    "name": "펜리스",
+    "title": "늑대인간",
+    "description": "털북숭이 인간-늑대 혼종, 찢어진 옷, 긴 발톱",
+    "archetype": "berserker",
+    "baseCombat": {
+      "maxHp": 50,
+      "maxMana": 15,
+      "pAtk": 32,
+      "mAtk": 25,
+      "pDef": 18,
+      "mDef": 12,
+      "spd": 12,
+      "acc": 80,
+      "eva": 0,
+      "crit": 30,
+      "aggression": 10
+    },
+    "skills": [
+      "ber_02",
+      "ber_04",
+      "ber_08"
+    ]
+  },
+  {
+    "id": 63,
+    "name": "세이블",
+    "title": "마녀",
+    "description": "뾰족 모자, 검은 드레스, 빗자루, 검은 고양이",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 42,
+      "maxMana": 44,
+      "pAtk": 8,
+      "mAtk": 43,
+      "pDef": 6,
+      "mDef": 12,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 19,
+      "aggression": 10
+    },
+    "skills": [
+      "mag_02",
+      "mag_05",
+      "ass_03"
+    ]
+  },
+  {
+    "id": 64,
+    "name": "브라이스",
+    "title": "좀비 사냥꾼",
+    "description": "긴 가죽 코트, 소드오프 샷건, 마체테",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 11,
+      "pAtk": 38,
+      "mAtk": 15,
+      "pDef": 16,
+      "mDef": 9,
+      "spd": 11,
+      "acc": 80,
+      "eva": 11,
+      "crit": 32,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_02",
+      "ran_04",
+      "war_07"
+    ]
+  },
+  {
+    "id": 65,
+    "name": "그레이브스",
+    "title": "구울",
+    "description": "부패한 피부, 누더기 옷, 길쭉한 발톱",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 42,
+      "maxMana": 12,
+      "pAtk": 38,
+      "mAtk": 26,
+      "pDef": 12,
+      "mDef": 7,
+      "spd": 13,
+      "acc": 80,
+      "eva": 6,
+      "crit": 30,
+      "aggression": 10
+    },
+    "skills": [
+      "ber_02",
+      "war_02",
+      "ber_05"
+    ]
+  },
+  {
+    "id": 66,
+    "name": "모이라",
+    "title": "밴시",
+    "description": "반투명한 흰 드레스의 유령 여인, 긴 흰머리, 비명 자세",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 30,
+      "maxMana": 41,
+      "pAtk": 9,
+      "mAtk": 44,
+      "pDef": 3,
+      "mDef": 5,
+      "spd": 12,
+      "acc": 80,
+      "eva": 18,
+      "crit": 23,
+      "aggression": 10
+    },
+    "skills": [
+      "mag_02",
+      "mag_08",
+      "ass_07"
+    ]
+  },
+  {
+    "id": 67,
+    "name": "소렌",
+    "title": "유령 자객",
+    "description": "반투명한 갑옷, 잔상처럼 사라지는 실루엣",
+    "archetype": "assassin",
+    "baseCombat": {
+      "maxHp": 30,
+      "maxMana": 10,
+      "pAtk": 34,
+      "mAtk": 13,
+      "pDef": 5,
+      "mDef": 3,
+      "spd": 14,
+      "acc": 80,
+      "eva": 20,
+      "crit": 35,
+      "aggression": 10
+    },
+    "skills": [
+      "ass_02",
+      "ass_05",
+      "ass_08"
+    ]
+  },
+  {
+    "id": 68,
+    "name": "말라코르",
+    "title": "데몬 로드",
+    "description": "붉은 피부, 뿔, 거대한 지옥검, 박쥐 날개",
+    "archetype": "berserker",
+    "baseCombat": {
+      "maxHp": 50,
+      "maxMana": 15,
+      "pAtk": 40,
+      "mAtk": 28,
+      "pDef": 18,
+      "mDef": 12,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 30,
+      "aggression": 10
+    },
+    "skills": [
+      "ber_01",
+      "ber_06",
+      "ber_08"
+    ]
+  },
+  {
+    "id": 69,
+    "name": "시엘",
+    "title": "퇴마 신관",
+    "description": "성수병과 퇴마 지팡이, 금욕적인 인상",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 41,
+      "pAtk": 7,
+      "mAtk": 34,
+      "pDef": 9,
+      "mDef": 15,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 20,
+      "aggression": 10
+    },
+    "skills": [
+      "sup_04",
+      "pal_04",
+      "sup_07"
+    ]
+  },
+  {
+    "id": 70,
+    "name": "에즈라",
+    "title": "오컬티스트",
+    "description": "검은 정장, 타로 카드, 기이한 문신이 비치는 팔",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 44,
+      "pAtk": 6,
+      "mAtk": 38,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 24,
+      "aggression": 10
+    },
+    "skills": [
+      "mag_06",
+      "mag_08",
+      "ass_03"
+    ]
+  },
+  {
+    "id": 71,
+    "name": "라이덴",
+    "title": "번개의 후예",
+    "description": "치솟은 금발, 번개가 감긴 창, 푸른 눈",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 35,
+      "pAtk": 9,
+      "mAtk": 45,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 25,
+      "aggression": 5
+    },
+    "skills": [
+      "mag_04",
+      "mag_08",
+      "war_03"
+    ]
+  },
+  {
+    "id": 72,
+    "name": "마린",
+    "title": "바다의 후예",
+    "description": "푸른 머리, 은빛 삼지창, 해조 장식",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 39,
+      "pAtk": 7,
+      "mAtk": 39,
+      "pDef": 9,
+      "mDef": 16,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 22,
+      "aggression": 10
+    },
+    "skills": [
+      "mag_05",
+      "tnk_05",
+      "sup_05"
+    ]
+  },
+  {
+    "id": 73,
+    "name": "아리오스",
+    "title": "전쟁의 후예",
+    "description": "청동 갑옷, 붉은 망토, 장검과 원형 방패",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 50,
+      "maxMana": 12,
+      "pAtk": 38,
+      "mAtk": 25,
+      "pDef": 24,
+      "mDef": 14,
+      "spd": 11,
+      "acc": 80,
+      "eva": 6,
+      "crit": 24,
+      "aggression": 10
+    },
+    "skills": [
+      "war_03",
+      "war_06",
+      "tnk_05"
+    ]
+  },
+  {
+    "id": 74,
+    "name": "팔라스",
+    "title": "지혜의 후예",
+    "description": "헬멧과 긴 창, 어깨 위 올빼미",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 12,
+      "pAtk": 36,
+      "mAtk": 22,
+      "pDef": 28,
+      "mDef": 16,
+      "spd": 11,
+      "acc": 80,
+      "eva": 11,
+      "crit": 23,
+      "aggression": 10
+    },
+    "skills": [
+      "war_04",
+      "tnk_02",
+      "sup_02"
+    ]
+  },
+  {
+    "id": 75,
+    "name": "솔라라",
+    "title": "태양의 후예",
+    "description": "금발, 황금 활, 빛나는 아우라",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 10,
+      "pAtk": 37,
+      "mAtk": 14,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 15,
+      "acc": 80,
+      "eva": 10,
+      "crit": 28,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_05",
+      "ran_07",
+      "ran_08"
+    ]
+  },
+  {
+    "id": 76,
+    "name": "알덴",
+    "title": "전령의 후예",
+    "description": "날개 달린 샌들, 전령봉, 날렵한 체격",
+    "archetype": "assassin",
+    "baseCombat": {
+      "maxHp": 30,
+      "maxMana": 10,
+      "pAtk": 31,
+      "mAtk": 11,
+      "pDef": 5,
+      "mDef": 3,
+      "spd": 14,
+      "acc": 80,
+      "eva": 20,
+      "crit": 30,
+      "aggression": 10
+    },
+    "skills": [
+      "ass_02",
+      "ass_04",
+      "ran_03"
+    ]
+  },
+  {
+    "id": 77,
+    "name": "리릭",
+    "title": "노래하는 기사",
+    "description": "은빛 검과 류트를 함께 든 전사, 깃털 망토",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 36,
+      "pAtk": 8,
+      "mAtk": 37,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 26,
+      "aggression": 10
+    },
+    "skills": [
+      "sup_02",
+      "war_04",
+      "sup_07"
+    ]
+  },
+  {
+    "id": 78,
+    "name": "엠브리스",
+    "title": "피닉스의 후예",
+    "description": "붉은 머리, 불의 날개, 재로 뒤덮인 창",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 43,
+      "pAtk": 6,
+      "mAtk": 37,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 26,
+      "aggression": 10
+    },
+    "skills": [
+      "mag_08",
+      "sup_01",
+      "mag_07"
+    ]
+  },
+  {
+    "id": 79,
+    "name": "토락",
+    "title": "드래곤 슬레이어",
+    "description": "용 비늘 갑옷, 거대한 창, 용 두개골 투구",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 8,
+      "pAtk": 38,
+      "mAtk": 26,
+      "pDef": 23,
+      "mDef": 13,
+      "spd": 11,
+      "acc": 80,
+      "eva": 6,
+      "crit": 28,
+      "aggression": 10
+    },
+    "skills": [
+      "war_07",
+      "war_08",
+      "ber_06"
+    ]
+  },
+  {
+    "id": 80,
+    "name": "드라보스",
+    "title": "용의 자손",
+    "description": "인간에 용 비늘과 작은 날개, 입에서 새어 나오는 불꽃",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 35,
+      "pAtk": 8,
+      "mAtk": 41,
+      "pDef": 10,
+      "mDef": 17,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 23,
+      "aggression": 10
+    },
+    "skills": [
+      "mag_04",
+      "mag_08",
+      "ber_02"
+    ]
+  },
+  {
+    "id": 81,
+    "name": "할렌",
+    "title": "광대 살인마",
+    "description": "공포스러운 광대 분장, 칼과 풍선, 기괴한 웃음",
+    "archetype": "assassin",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 10,
+      "pAtk": 31,
+      "mAtk": 12,
+      "pDef": 5,
+      "mDef": 3,
+      "spd": 14,
+      "acc": 80,
+      "eva": 16,
+      "crit": 30,
+      "aggression": 10
+    },
+    "skills": [
+      "ass_01",
+      "ass_06",
+      "ass_08"
+    ]
+  },
+  {
+    "id": 82,
+    "name": "카엘",
+    "title": "쌍둥이 · 형",
+    "description": "붉은 의상, 한손검, 공격적 자세",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 15,
+      "pAtk": 38,
+      "mAtk": 23,
+      "pDef": 16,
+      "mDef": 9,
+      "spd": 12,
+      "acc": 80,
+      "eva": 11,
+      "crit": 27,
+      "aggression": 10
+    },
+    "skills": [
+      "war_01",
+      "war_03",
+      "ber_02"
+    ]
+  },
+  {
+    "id": 83,
+    "name": "라엘",
+    "title": "쌍둥이 · 동생",
+    "description": "푸른 의상, 석궁, 침착한 눈빛",
+    "archetype": "ranger",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 11,
+      "pAtk": 33,
+      "mAtk": 13,
+      "pDef": 11,
+      "mDef": 6,
+      "spd": 15,
+      "acc": 80,
+      "eva": 16,
+      "crit": 32,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_02",
+      "ran_04",
+      "ran_06"
+    ]
+  },
+  {
+    "id": 84,
+    "name": "도리안",
+    "title": "가면 검객",
+    "description": "은빛 가면, 긴 레이피어, 검은 망토",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 10,
+      "pAtk": 37,
+      "mAtk": 22,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 22,
+      "aggression": 10
+    },
+    "skills": [
+      "war_01",
+      "ass_02",
+      "war_07"
+    ]
+  },
+  {
+    "id": 85,
+    "name": "버스",
+    "title": "전투 시인",
+    "description": "화려한 깃털 모자, 쌍검과 류트, 반짝이는 의상",
+    "archetype": "support",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 28,
+      "pAtk": 8,
+      "mAtk": 37,
+      "pDef": 9,
+      "mDef": 16,
+      "spd": 13,
+      "acc": 80,
+      "eva": 15,
+      "crit": 27,
+      "aggression": 10
+    },
+    "skills": [
+      "sup_02",
+      "ass_06",
+      "sup_07"
+    ]
+  },
+  {
+    "id": 86,
+    "name": "소희",
+    "title": "무당",
+    "description": "한복 위 방울을 단 띠, 부채와 신칼",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 42,
+      "maxMana": 48,
+      "pAtk": 7,
+      "mAtk": 39,
+      "pDef": 6,
+      "mDef": 12,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 19,
+      "aggression": 10
+    },
+    "skills": [
+      "mag_02",
+      "sup_04",
+      "mag_09"
+    ]
+  },
+  {
+    "id": 87,
+    "name": "주리",
+    "title": "부족 주술사",
+    "description": "뼈 장식과 부족 문신, 원시적인 창, 화려한 깃털",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 39,
+      "pAtk": 7,
+      "mAtk": 39,
+      "pDef": 9,
+      "mDef": 16,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 22,
+      "aggression": 10
+    },
+    "skills": [
+      "mag_05",
+      "ass_03",
+      "mag_07"
+    ]
+  },
+  {
+    "id": 88,
+    "name": "모두스",
+    "title": "오토마타",
+    "description": "표정 없는 기계 인형, 등에 감긴 태엽",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 55,
+      "maxMana": 17,
+      "pAtk": 37,
+      "mAtk": 14,
+      "pDef": 35,
+      "mDef": 21,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 21,
+      "aggression": 10
+    },
+    "skills": [
+      "tnk_02",
+      "tnk_03",
+      "tnk_07"
+    ]
+  },
+  {
+    "id": 89,
+    "name": "엘레이아스",
+    "title": "정령사",
+    "description": "네 정령에 둘러싸인 로브 차림",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 49,
+      "pAtk": 6,
+      "mAtk": 38,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 19,
+      "aggression": 10
+    },
+    "skills": [
+      "mag_05",
+      "mag_07",
+      "sup_05"
+    ]
+  },
+  {
+    "id": 90,
+    "name": "키란",
+    "title": "환술사",
+    "description": "여러 잔상이 겹쳐 보이는 실루엣, 금색 가면",
+    "archetype": "assassin",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 15,
+      "pAtk": 32,
+      "mAtk": 12,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 14,
+      "acc": 80,
+      "eva": 21,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "ass_02",
+      "ass_05",
+      "mag_06"
+    ]
+  },
+  {
+    "id": 91,
+    "name": "개릿",
+    "title": "용병단장",
+    "description": "중갑, 지휘관 풍채, 긴 한손검과 지휘봉",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 50,
+      "maxMana": 12,
+      "pAtk": 38,
+      "mAtk": 25,
+      "pDef": 30,
+      "mDef": 18,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 24,
+      "aggression": 10
+    },
+    "skills": [
+      "war_04",
+      "war_06",
+      "tnk_05"
+    ]
+  },
+  {
+    "id": 92,
+    "name": "알라릭",
+    "title": "왕궁 근위대장",
+    "description": "빛나는 금색 갑옷, 긴 장창, 엄숙한 표정",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 60,
+      "maxMana": 18,
+      "pAtk": 33,
+      "mAtk": 13,
+      "pDef": 35,
+      "mDef": 21,
+      "spd": 12,
+      "acc": 80,
+      "eva": 0,
+      "crit": 24,
+      "aggression": 10
+    },
+    "skills": [
+      "tnk_01",
+      "tnk_06",
+      "pal_06"
+    ]
+  },
+  {
+    "id": 93,
+    "name": "말라카르",
+    "title": "암흑 기사",
+    "description": "검은 풀플레이트, 붉게 빛나는 눈, 저주받은 검",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 50,
+      "maxMana": 12,
+      "pAtk": 38,
+      "mAtk": 28,
+      "pDef": 24,
+      "mDef": 14,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 24,
+      "aggression": 10
+    },
+    "skills": [
+      "war_05",
+      "ber_04",
+      "war_08"
+    ]
+  },
+  {
+    "id": 94,
+    "name": "솔리스",
+    "title": "성전사",
+    "description": "눈부신 백금 갑옷, 거대한 양손검, 성스러운 빛",
+    "archetype": "paladin",
+    "baseCombat": {
+      "maxHp": 55,
+      "maxMana": 28,
+      "pAtk": 37,
+      "mAtk": 22,
+      "pDef": 31,
+      "mDef": 18,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 24,
+      "aggression": 10
+    },
+    "skills": [
+      "pal_03",
+      "pal_06",
+      "pal_08"
+    ]
+  },
+  {
+    "id": 95,
+    "name": "사미르",
+    "title": "사막의 검객",
+    "description": "사막풍 복장, 굴곡진 시미터, 얼굴을 가린 머리천",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 40,
+      "maxMana": 11,
+      "pAtk": 38,
+      "mAtk": 23,
+      "pDef": 11,
+      "mDef": 6,
+      "spd": 12,
+      "acc": 80,
+      "eva": 11,
+      "crit": 22,
+      "aggression": 10
+    },
+    "skills": [
+      "war_01",
+      "ass_04",
+      "war_07"
+    ]
+  },
+  {
+    "id": 96,
+    "name": "이졸데",
+    "title": "얼음 여왕",
+    "description": "푸른 드레스, 얼음 왕관, 서리 지팡이, 차가운 눈빛",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 52,
+      "pAtk": 5,
+      "mAtk": 35,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 19,
+      "aggression": 15
+    },
+    "skills": [
+      "mag_02",
+      "mag_05",
+      "mag_09"
+    ]
+  },
+  {
+    "id": 97,
+    "name": "이그니스",
+    "title": "불의 주술사",
+    "description": "붉은 문신, 불꽃을 두른 지팡이, 맨발",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 49,
+      "pAtk": 6,
+      "mAtk": 38,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 15,
+      "crit": 19,
+      "aggression": 10
+    },
+    "skills": [
+      "mag_04",
+      "mag_08",
+      "ber_01"
+    ]
+  },
+  {
+    "id": 98,
+    "name": "제피르",
+    "title": "바람의 검사",
+    "description": "흘러내리는 녹색 천 의상, 가느다란 장검",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 10,
+      "pAtk": 36,
+      "mAtk": 20,
+      "pDef": 10,
+      "mDef": 6,
+      "spd": 14,
+      "acc": 80,
+      "eva": 10,
+      "crit": 31,
+      "aggression": 10
+    },
+    "skills": [
+      "ran_03",
+      "war_03",
+      "ass_05"
+    ]
+  },
+  {
+    "id": 99,
+    "name": "고람",
+    "title": "대지의 파수꾼",
+    "description": "거대한 돌 망치, 갈색 가죽과 바위 조각으로 된 갑옷",
+    "archetype": "tank",
+    "baseCombat": {
+      "maxHp": 65,
+      "maxMana": 15,
+      "pAtk": 33,
+      "mAtk": 13,
+      "pDef": 35,
+      "mDef": 21,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 27,
+      "aggression": 10
+    },
+    "skills": [
+      "tnk_01",
+      "tnk_04",
+      "tnk_07"
+    ]
+  },
+  {
+    "id": 100,
+    "name": "알드렌",
+    "title": "빛의 용사",
+    "description": "백발, 빛나는 플레이트 메일, 성검",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 15,
+      "pAtk": 36,
+      "mAtk": 22,
+      "pDef": 23,
+      "mDef": 13,
+      "spd": 12,
+      "acc": 80,
+      "eva": 6,
+      "crit": 28,
+      "aggression": 10
+    },
+    "skills": [
+      "pal_01",
+      "war_06",
+      "war_08"
+    ]
+  },
+  {
+    "id": 1100,
+    "name": "몽키 D. 루피",
+    "title": "해적왕 후보",
+    "description": "밀짚모자, 빨간 조끼, 늘어나는 고무 신체, 왼쪽 눈 아래 흉터",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 50,
+      "maxMana": 10,
+      "pAtk": 35,
+      "mAtk": 14,
+      "pDef": 15,
+      "mDef": 9,
+      "spd": 11,
+      "acc": 80,
+      "eva": 10,
+      "crit": 20,
+      "aggression": 10
+    },
+    "ipId": 100,
+    "skills": [
+      "war_05",
+      "war_06",
+      "ber_04"
+    ]
+  },
+  {
+    "id": 1101,
+    "name": "롤로노아 조로",
+    "title": "세계 최강 검사",
+    "description": "녹색 머리띠, 왼쪽 눈 흉터, 허리에 세 자루 검(삼도류)",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 10,
+      "pAtk": 38,
+      "mAtk": 16,
+      "pDef": 15,
+      "mDef": 9,
+      "spd": 11,
+      "acc": 80,
+      "eva": 0,
+      "crit": 25,
+      "aggression": 15
+    },
+    "ipId": 100,
+    "skills": [
+      "war_01",
+      "war_07",
+      "war_08"
+    ]
+  },
+  {
+    "id": 1200,
+    "name": "쿠로사키 이치고",
+    "title": "대리 사신",
+    "description": "주황색 머리, 검은 시니가미 복장, 거대한 참백도",
+    "archetype": "warrior",
+    "baseCombat": {
+      "maxHp": 45,
+      "maxMana": 20,
+      "pAtk": 35,
+      "mAtk": 14,
+      "pDef": 15,
+      "mDef": 9,
+      "spd": 11,
+      "acc": 80,
+      "eva": 5,
+      "crit": 20,
+      "aggression": 10
+    },
+    "ipId": 200,
+    "skills": [
+      "war_03",
+      "ber_07",
+      "war_08"
+    ]
+  },
+  {
+    "id": 1201,
+    "name": "쿠치키 루키아",
+    "title": "귀족 사신",
+    "description": "흑발 단발, 시니가미 복장, 새하얀 소데노시라유키",
+    "archetype": "mage",
+    "baseCombat": {
+      "maxHp": 35,
+      "maxMana": 40,
+      "pAtk": 10,
+      "mAtk": 25,
+      "pDef": 6,
+      "mDef": 10,
+      "spd": 12,
+      "acc": 80,
+      "eva": 10,
+      "crit": 20,
+      "aggression": 10
+    },
+    "ipId": 200,
+    "skills": [
+      "mag_05",
+      "mag_02",
+      "sup_04"
+    ]
+  }
 ]

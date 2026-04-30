@@ -28,7 +28,7 @@ function RecordDetail({ rec }: { rec: RunRecord }) {
       <div style={dt.row}>
         <span style={dt.label}>성장 스탯</span>
         <span style={dt.val}>
-          HP {rec.growthStats.hp} · STR {rec.growthStats.str} · AGI {rec.growthStats.agi} · INT {rec.growthStats.int} · LUK {rec.growthStats.luk}
+          VIT {rec.growthStats.vit} · STR {rec.growthStats.str} · AGI {rec.growthStats.agi} · INT {rec.growthStats.int} · LUK {rec.growthStats.luk}
         </span>
       </div>
       <div style={dt.skillRow}>

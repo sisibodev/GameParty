@@ -2,7 +2,7 @@ import { useGameStore } from '../store/useGameStore'
 import type { GrowthStatKey, TournamentResult } from '../types'
 
 const STAT_LABELS: Record<GrowthStatKey, string> = {
-  hp: 'HP', str: 'STR', agi: 'AGI', int: 'INT', luk: 'LUK',
+  vit: 'VIT', str: 'STR', agi: 'AGI', int: 'INT', luk: 'LUK',
 }
 
 const BRACKET_LABELS: Record<number, string> = {
@@ -53,7 +53,7 @@ export default function RewardPage() {
           </span>
         </div>
         <div style={s.rewardRow}>
-          <span style={s.label}>획득 골드</span>
+          <span style={s.label}>토너먼트 결과 보상</span>
           <span style={s.val}>+{pendingReward.goldEarned} G</span>
         </div>
       </div>

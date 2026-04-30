@@ -1,13 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
 import type { GachaResult, GrowthStatKey } from '../types'
+import HeaderBar from '../components/ui/HeaderBar'
+import '../styles/arena.css'
 
 const GRADE_COLOR: Record<string, string> = {
-  C: '#888', B: '#44aaff', A: '#44ffaa', S: '#ffd700', SS: '#ff9900', SSS: '#ff44aa',
+  C: '#9aa3b2', B: '#5ef0a8', A: '#67e8f9', S: '#c78bff', SS: '#ff7ab6', SSS: '#ffd66b',
 }
 
 const STAT_LABEL: Record<GrowthStatKey, string> = {
-  hp: '체력', str: '힘', agi: '민첩', int: '지력', luk: '행운',
+  vit: 'VIT', str: 'STR', agi: 'AGILITY', int: 'INT', luk: 'LUCK',
+}
+
+const GRADE_FLAVOR: Record<string, string> = {
+  SSS: '이번 라운드 먹진 기회',
+  SS:  '대박 성장!',
+  S:   '좋은 성장',
 }
 
 export default function GachaPage() {
@@ -29,61 +37,159 @@ export default function GachaPage() {
     await startTournamentAndBattle(Date.now())
   }
 
-  const playerTotal = result?.playerGains.reduce((s, c) => s + c.statGain, 0) ?? 0
+  const topGain    = result?.playerGains.length
+    ? result.playerGains.reduce((a, b) => a.statGain >= b.statGain ? a : b)
+    : null
+  const gradeColor = topGain ? (GRADE_COLOR[topGain.grade] ?? '#888') : '#888'
+  const flavorText = topGain ? (GRADE_FLAVOR[topGain.grade] ?? null) : null
+  const history    = activeSlot.gachaHistory ?? []
 
   return (
-    <div style={s.root}>
-      <h2 style={s.title}>라운드 강화</h2>
-      <p style={s.sub}>Round {activeSlot.currentRound} — 캐릭터 스탯 자동 적용</p>
+    <div className="arena-bg-arena" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <HeaderBar
+        subtitle="ROUND GACHA"
+        round={activeSlot.currentRound}
+        phase="라운드 시작 · 스탯 뽑기"
+        onExit={() => { if (confirm('메인 화면으로 나가시겠습니까?\n현재까지의 진행은 저장되어 있습니다.')) useGameStore.setState({ phase: 'slot_select' }) }}
+      />
 
-      {!result ? (
-        <div style={s.loading}>강화 적용 중…</div>
-      ) : (
-        <>
-          <div style={s.playerBox}>
-            <h3 style={s.boxTitle}>내 캐릭터 강화 결과</h3>
-            {result.playerGains.length === 0 ? (
-              <p style={s.noGain}>이번 라운드에서 내 캐릭터 강화 없음</p>
-            ) : (
-              <>
-                <p style={s.totalGain}>총 +{playerTotal} 스탯 획득</p>
-                <div style={s.gainList}>
-                  {result.playerGains.map((card, i) => (
-                    <div key={i} style={s.gainRow}>
-                      <span style={{ ...s.gradeTag, color: GRADE_COLOR[card.grade], borderColor: GRADE_COLOR[card.grade] }}>
-                        {card.grade}
-                      </span>
-                      <span style={s.gainStatKey}>{STAT_LABEL[card.statKey]}</span>
-                      <span style={s.gainVal}>+{card.statGain}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', gap: 28 }}>
+        {/* 제목 */}
+        <div style={{ textAlign: 'center' }}>
+          <div className="arena-kr" style={{ fontSize: 32, fontWeight: 900, color: 'var(--ink)' }}>
+            라운드 스탯 뽑기
           </div>
+          <div style={{ fontSize: 13, color: 'var(--ink-mute)', marginTop: 6 }}>
+            매 라운드 한 장의 랜덤 스탯 카드 · 이번 라운드의 내 성장
+          </div>
+        </div>
 
-          <button style={s.btnNext} disabled={starting} onClick={handleStart}>
-            {starting ? '대회 준비 중…' : '⚔️ 대회 시작 →'}
-          </button>
-        </>
-      )}
+        {!result ? (
+          <div className="arena-pulse" style={{ color: 'var(--ink-mute)', fontSize: 14 }}>강화 적용 중…</div>
+        ) : (
+          <>
+            {/* 메인 가챠 카드 */}
+            <div
+              className={`arena-gacha-card arena-gacha-card-${topGain?.grade ?? 'C'}`}
+              style={{
+                width: 320,
+                padding: '28px 24px 24px',
+                background: 'linear-gradient(180deg,rgba(36,26,66,.97),rgba(18,12,36,.97))',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+              }}
+            >
+              {/* 카드 상단 뱃지 행 */}
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{
+                  fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 999,
+                  background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.12)',
+                  color: 'var(--ink-mute)', letterSpacing: '.1em',
+                }}>
+                  MY CARD
+                </div>
+                {topGain && (
+                  <div style={{
+                    fontSize: 13, fontWeight: 900, padding: '3px 12px', borderRadius: 999,
+                    background: `${gradeColor}22`, border: `1px solid ${gradeColor}66`,
+                    color: gradeColor, letterSpacing: '.05em',
+                  }}>
+                    {topGain.grade}
+                  </div>
+                )}
+              </div>
+
+              {topGain ? (
+                <>
+                  <div className="arena-mono" style={{ fontSize: 12, color: 'var(--ink-mute)', letterSpacing: '.18em' }}>
+                    {STAT_LABEL[topGain.statKey]}
+                  </div>
+                  <div style={{ fontSize: 80, fontWeight: 900, lineHeight: 1, color: gradeColor, textShadow: `0 0 40px ${gradeColor}` }}>
+                    +{topGain.statGain}
+                  </div>
+                  {flavorText && (
+                    <div style={{ fontSize: 13, color: gradeColor, fontWeight: 700 }}>
+                      {flavorText}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontSize: 16, color: 'var(--ink-mute)', padding: '24px 0' }}>
+                  이번 라운드 강화 없음
+                </div>
+              )}
+            </div>
+
+            {/* 히스토리 스트립 */}
+            {history.length > 0 && (
+              <div style={{ width: '100%', maxWidth: 560 }}>
+                <div className="arena-mono" style={{ fontSize: 11, color: 'var(--ink-mute)', textAlign: 'center', marginBottom: 12, letterSpacing: '.15em' }}>
+                  — MY GACHA HISTORY —
+                </div>
+
+                {/* 과거 기록 (소형 로그) */}
+                {history.length > 5 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 8px', marginBottom: 12, padding: '6px 10px', background: 'rgba(255,255,255,.02)', borderRadius: 8 }}>
+                    {history.slice(0, history.length - 5).map((h, i) => {
+                      const c = GRADE_COLOR[h.grade] ?? '#888'
+                      return (
+                        <span key={i} style={{ fontSize: 10, color: 'var(--ink-mute)' }}>
+                          <span style={{ color: 'var(--ink-dim)' }}>R{h.round}</span>
+                          {' '}
+                          <span style={{ color: c, fontWeight: 700 }}>{h.grade}</span>
+                          {' '}
+                          <span>{STAT_LABEL[h.statKey]} +{h.statGain}</span>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* 최근 5라운드 (대형 카드) */}
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  {history.slice(-5).map((h, i) => {
+                    const c         = GRADE_COLOR[h.grade] ?? '#888'
+                    const isCurrent = h.round === activeSlot.currentRound
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex', flexDirection: 'column', gap: 5,
+                          padding: '14px 18px', borderRadius: 14, minWidth: 88, alignItems: 'center',
+                          background: isCurrent ? `${c}18` : 'rgba(255,255,255,.04)',
+                          border: `1px solid ${isCurrent ? c : 'var(--line)'}`,
+                          position: 'relative',
+                        }}
+                      >
+                        {isCurrent && (
+                          <div style={{
+                            position: 'absolute', top: -8, right: -6,
+                            fontSize: 9, fontWeight: 700, background: '#ff5c6e',
+                            color: '#fff', padding: '1px 5px', borderRadius: 4,
+                          }}>NEW</div>
+                        )}
+                        <div className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>R{h.round}</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: c }}>{h.grade}</div>
+                        <div style={{ fontSize: 11, color: 'var(--ink-mute)' }}>{STAT_LABEL[h.statKey]}</div>
+                        <div className="arena-mono" style={{ fontSize: 18, fontWeight: 900, color: c }}>+{h.statGain}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 대회 시작 버튼 */}
+            <button
+              className="arena-btn arena-btn-gold"
+              style={{ padding: '14px 56px', fontSize: 15, borderRadius: 14 }}
+              disabled={starting}
+              onClick={handleStart}
+            >
+              {starting ? '대회 준비 중…' : '⚔️ 대회 시작'}
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
-}
-
-const s: Record<string, React.CSSProperties> = {
-  root:        { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '2rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff', gap: '1.25rem' },
-  title:       { fontSize: '1.5rem', fontWeight: 700, color: '#c0aaff', margin: 0 },
-  sub:         { color: '#888', margin: 0, fontSize: '0.9rem' },
-  loading:     { color: '#888', fontSize: '1rem', marginTop: '2rem' },
-  playerBox:   { background: '#1a1a2e', border: '1px solid #333', borderRadius: '12px', padding: '1.25rem', width: '100%', maxWidth: '400px' },
-  boxTitle:    { fontSize: '0.95rem', fontWeight: 700, color: '#c0aaff', margin: '0 0 0.75rem' },
-  noGain:      { color: '#666', margin: 0, fontSize: '0.9rem', textAlign: 'center' as const },
-  totalGain:   { color: '#44ffaa', fontWeight: 700, margin: '0 0 0.5rem', fontSize: '0.9rem' },
-  gainList:    { display: 'flex', flexDirection: 'column', gap: '0.4rem' },
-  gainRow:     { display: 'flex', alignItems: 'center', gap: '0.75rem' },
-  gradeTag:    { border: '1px solid', borderRadius: '4px', padding: '1px 6px', fontSize: '0.75rem', fontWeight: 700, minWidth: '32px', textAlign: 'center' as const },
-  gainStatKey: { color: '#ccc', fontSize: '0.85rem', flex: 1 },
-  gainVal:     { color: '#44ffaa', fontWeight: 700, fontSize: '0.9rem' },
-  btnNext:     { background: 'linear-gradient(135deg,#fc5c5c,#fc9c3c)', border: 'none', borderRadius: '12px', color: '#fff', padding: '1rem 3rem', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700 },
 }

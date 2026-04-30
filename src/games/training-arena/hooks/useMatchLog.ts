@@ -2,7 +2,6 @@ import type { MatchResult } from '../types'
 import { getDb } from './db'
 
 const STORE_NAME = 'match-logs'
-const DB_VERSION = 3
 
 export interface MatchLogRecord {
   tournamentId: string

@@ -10,7 +10,7 @@ const RANK_LABELS = ['🥇', '🥈', '🥉']
 
 function totalStats(slot: SaveSlot): number {
   const g = slot.growthStats
-  return g.hp + g.str + g.agi + g.int + g.luk
+  return g.vit + g.str + g.agi + g.int + g.luk
 }
 
 function totalSkills(slot: SaveSlot): number {
@@ -51,7 +51,7 @@ function SlotCard({ slot, rank, isActive }: SlotCardProps) {
         </div>
 
         <div style={s.growthRow}>
-          {(['hp', 'str', 'agi', 'int', 'luk'] as const).map(k => (
+          {(['vit', 'str', 'agi', 'int', 'luk'] as const).map(k => (
             <div key={k} style={s.growthItem}>
               <span style={s.growthLabel}>{k.toUpperCase()}</span>
               <span style={s.growthVal}>+{g[k]}</span>

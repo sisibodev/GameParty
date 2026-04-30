@@ -1,4 +1,4 @@
-import type { GrowthStats, RunRecord, SaveSlot, SkillDef, SkillTier, TournamentResult } from '../types'
+import type { GrowthStats, PlayerMatchInfo, RunRecord, SaveSlot, SkillDef, SkillTier, TournamentResult } from '../types'
 import skillsRaw from '../data/skills.json'
 
 const SKILL_SCORE: Record<SkillTier, number> = {
@@ -15,7 +15,7 @@ const SKILLS_BY_ID: Record<string, SkillDef> = Object.fromEntries(
 export const MAX_RUN_RECORDS = 20
 
 function growthTotal(g: GrowthStats): number {
-  return g.hp + g.str + g.agi + g.int + g.luk
+  return g.vit + g.str + g.agi + g.int + g.luk
 }
 
 function skillTierScore(skillIds: string[]): number {
@@ -28,17 +28,18 @@ function skillTierScore(skillIds: string[]): number {
 export function calcScore(
   slot: SaveSlot,
   tournament: TournamentResult,
+  overrides?: { wins: number; losses: number; rivalsDefeated: number },
 ): number {
   const pid   = slot.characterId
   const round = slot.currentRound
 
-  const wins = tournament.allMatches.filter(
+  const wins = overrides?.wins ?? tournament.allMatches.filter(
     m => (m.char1Id === pid || m.char2Id === pid) && m.winnerId === pid,
   ).length
-  const losses = tournament.allMatches.filter(
+  const losses = overrides?.losses ?? tournament.allMatches.filter(
     m => (m.char1Id === pid || m.char2Id === pid) && m.loserId === pid,
   ).length
-  const rivalsDefeated = tournament.allMatches.filter(
+  const rivalsDefeated = overrides?.rivalsDefeated ?? tournament.allMatches.filter(
     m => (m.char1Id === pid || m.char2Id === pid) &&
          m.winnerId === pid &&
          (slot.rivalIds ?? []).includes(m.loserId),
@@ -58,23 +59,33 @@ export function calcScore(
 export function buildRunRecord(
   slot: SaveSlot,
   tournament: TournamentResult,
+  actualMatches?: PlayerMatchInfo[],
 ): RunRecord {
   const pid = slot.characterId
 
-  const wins = tournament.allMatches.filter(
-    m => (m.char1Id === pid || m.char2Id === pid) && m.winnerId === pid,
-  ).length
-  const losses = tournament.allMatches.filter(
-    m => (m.char1Id === pid || m.char2Id === pid) && m.loserId === pid,
-  ).length
-  const rivalsDefeated = tournament.allMatches.filter(
-    m => (m.char1Id === pid || m.char2Id === pid) &&
-         m.winnerId === pid &&
-         (slot.rivalIds ?? []).includes(m.loserId),
-  ).length
+  let wins: number, losses: number, rivalsDefeated: number
+  if (actualMatches && actualMatches.length > 0) {
+    wins = actualMatches.filter(m => m.playerWon).length
+    losses = actualMatches.filter(m => !m.playerWon).length
+    rivalsDefeated = actualMatches.filter(
+      m => m.playerWon && (slot.rivalIds ?? []).includes(m.opponentId),
+    ).length
+  } else {
+    wins = tournament.allMatches.filter(
+      m => (m.char1Id === pid || m.char2Id === pid) && m.winnerId === pid,
+    ).length
+    losses = tournament.allMatches.filter(
+      m => (m.char1Id === pid || m.char2Id === pid) && m.loserId === pid,
+    ).length
+    rivalsDefeated = tournament.allMatches.filter(
+      m => (m.char1Id === pid || m.char2Id === pid) &&
+           m.winnerId === pid &&
+           (slot.rivalIds ?? []).includes(m.loserId),
+    ).length
+  }
 
   return {
-    score:         calcScore(slot, tournament),
+    score:         calcScore(slot, tournament, { wins, losses, rivalsDefeated }),
     endRound:      slot.currentRound,
     finishedAt:    Date.now(),
     characterId:   pid,

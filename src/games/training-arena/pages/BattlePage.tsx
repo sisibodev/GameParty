@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../store/useGameStore'
-import type { CharacterDef, CombatStats, GrowthStats, MatchLogEntry, SkillDef } from '../types'
+import type { Archetype, CharacterDef, CombatStats, GrowthStats, MatchLogEntry, SkillDef } from '../types'
 import { deriveStats } from '../engine/statDeriver'
-import { NPC_BASE_GROWTH } from '../constants'
+import { NPC_BASE_GROWTH, RIVAL_STAT_PER_ROUND } from '../constants'
+import Portrait from '../components/ui/Portrait'
+import { TACTIC_CARDS } from '../data/tacticCards'
 import charactersRaw from '../data/characters.json'
 import skillsRaw    from '../data/skills.json'
+import '../styles/arena.css'
 
 const CHARACTERS = charactersRaw as CharacterDef[]
 const SKILLS     = skillsRaw    as SkillDef[]
@@ -14,18 +17,54 @@ const skillName = (id: string) => SKILLS.find(s => s.id === id)?.name ?? id
 
 const SPEED_MS: Record<string, number> = { '1x': 500, '2x': 220, '4x': 70 }
 
+const ARCHETYPE_LABEL: Record<Archetype, string> = {
+  warrior: '전사', mage: '마법사', assassin: '암살자', tank: '탱커',
+  support: '지원', ranger: '레인저', berserker: '광전사', paladin: '팔라딘',
+}
+
+const SKILL_TIER_COLOR: Record<string, string> = {
+  common: '#aaa', rare: '#44aaff', hero: '#c05cfc', legend: '#ffd700',
+}
+
 function loadSpeed(): '1x' | '2x' | '4x' {
   const v = localStorage.getItem('bgp_battle_speed')
   return v === '1x' || v === '2x' || v === '4x' ? v : '1x'
 }
 
-function npcGrowth(round: number): GrowthStats {
-  const b = NPC_BASE_GROWTH + (round - 1)
-  return { hp: b, str: b, agi: b, int: b, luk: b }
+function npcGrowth(round: number, isRival = false): GrowthStats {
+  const b = NPC_BASE_GROWTH + (round - 1) + (isRival ? RIVAL_STAT_PER_ROUND * round : 0)
+  return { vit: b, str: b, agi: b, int: b, luk: b }
 }
 
+function computeAtbGauges(
+  log: MatchLogEntry[],
+  cursor: number,
+  pid: number,
+  oppId: number,
+  playerSpd: number,
+  oppSpd: number,
+): { pidGauge: number; oppGauge: number } {
+  let lastPidAct = -1
+  let lastOppAct = -1
+  for (let i = 0; i < cursor; i++) {
+    if (log[i].actorId === pid)   lastPidAct = i
+    if (log[i].actorId === oppId) lastOppAct = i
+  }
+  const totalSpd = (playerSpd + oppSpd) || 1
+  const pidSteps = cursor - (lastPidAct + 1)
+  const oppSteps = cursor - (lastOppAct + 1)
+  return {
+    pidGauge: Math.min(100, Math.round((pidSteps / (totalSpd / playerSpd)) * 100)),
+    oppGauge: Math.min(100, Math.round((oppSteps / (totalSpd / oppSpd))    * 100)),
+  }
+}
+
+const MAGIC_ARCHETYPES = new Set<Archetype>(['mage', 'support', 'paladin'])
+
 export default function BattlePage() {
-  const { playerMatches, playerMatchIndex, activeSlot } = useGameStore()
+  const {
+    playerMatches, playerMatchIndex, activeSlot, lastTournament, selectedTacticCardId,
+  } = useGameStore()
 
   const matchInfo = playerMatches[playerMatchIndex]
   const match     = matchInfo?.matchResult
@@ -55,38 +94,61 @@ export default function BattlePage() {
   }, [done, speed, logCursor >= (match?.log.length ?? 0)])
 
   useEffect(() => {
-    if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight
-    }
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
   }, [logCursor])
 
   if (!match || !activeSlot || !matchInfo) return null
 
-  const pid        = activeSlot.characterId
-  const oppId      = match.char1Id === pid ? match.char2Id : match.char1Id
+  const pid          = activeSlot.characterId
+  const oppId        = match.char1Id === pid ? match.char2Id : match.char1Id
   const playerSkills = match.char1Id === pid ? (match.char1Skills ?? []) : (match.char2Skills ?? [])
   const oppSkills    = match.char1Id === pid ? (match.char2Skills ?? []) : (match.char1Skills ?? [])
 
   const playerChar = CHARACTERS.find(c => c.id === pid)
   const oppChar    = CHARACTERS.find(c => c.id === oppId)
-  const growth     = npcGrowth(activeSlot.currentRound)
+
+  const round     = activeSlot.currentRound
+  const isRival           = (activeSlot.rivalIds ?? []).includes(oppId)
+  const oppGrowth = npcGrowth(round, isRival)
   const playerStats: CombatStats | null = playerChar
     ? deriveStats(playerChar.baseCombat, activeSlot.growthStats, playerChar.archetype) : null
   const oppStats: CombatStats | null = oppChar
-    ? deriveStats(oppChar.baseCombat, growth, oppChar.archetype) : null
+    ? deriveStats(oppChar.baseCombat, oppGrowth, oppChar.archetype) : null
+
+  // 공통 스킬 = 전체 전투 스킬 중 고유 스킬(CharacterDef.skills) 제외
+  const playerUniqueSet = new Set<string>(playerChar?.skills ?? [])
+  const playerCommonSkills = playerSkills.filter(id => !playerUniqueSet.has(id))
+  const oppUniqueSet    = new Set<string>(oppChar?.skills ?? [])
+  const oppCommonSkills = oppSkills.filter(id => !oppUniqueSet.has(id))
+
+  const tacticCard = selectedTacticCardId
+    ? TACTIC_CARDS.find(c => c.id === selectedTacticCardId)
+    : null
+
+  const isWinnerCandidate = lastTournament?.winner === oppId
+  const isDarkhorse       = (lastTournament?.darkhorses ?? []).includes(oppId)
+
+  const entry       = logCursor > 0 ? match.log[logCursor - 1] : null
+  const currentTurn = entry?.turn ?? 0
+
+  const pidHp   = Math.max(0, entry ? (entry.hpAfter[pid]    ?? match.initialHp[pid])    : match.initialHp[pid])
+  const oppHp   = Math.max(0, entry ? (entry.hpAfter[oppId]  ?? match.initialHp[oppId])  : match.initialHp[oppId])
+  const pidMana = Math.max(0, entry ? (entry.manaAfter[pid]   ?? match.initialMana[pid])  : match.initialMana[pid])
+  const oppMana = Math.max(0, entry ? (entry.manaAfter[oppId] ?? match.initialMana[oppId]): match.initialMana[oppId])
+
+  const { pidGauge, oppGauge } = computeAtbGauges(
+    match.log, logCursor, pid, oppId,
+    playerStats?.spd ?? 1, oppStats?.spd ?? 1,
+  )
+
+  const allLog    = match.log.slice(0, logCursor)
+  const isWin     = match.winnerId === pid
+  const gold      = activeSlot.gold ?? null
 
   function handleSetSpeed(sp: '1x' | '2x' | '4x') {
     setSpeed(sp)
     localStorage.setItem('bgp_battle_speed', sp)
   }
-
-  const entry   = logCursor > 0 ? match.log[logCursor - 1] : null
-  const pidHp   = Math.max(0, entry ? (entry.hpAfter[pid]   ?? match.initialHp[pid])   : match.initialHp[pid])
-  const oppHp   = Math.max(0, entry ? (entry.hpAfter[oppId]  ?? match.initialHp[oppId]) : match.initialHp[oppId])
-  const pidMana = Math.max(0, entry ? (entry.manaAfter[pid]  ?? match.initialMana[pid])  : match.initialMana[pid])
-  const oppMana = Math.max(0, entry ? (entry.manaAfter[oppId] ?? match.initialMana[oppId]) : match.initialMana[oppId])
-
-  const recentLog = match.log.slice(Math.max(0, logCursor - 10), logCursor)
 
   function handleSkip() {
     setLogCursor(match.log.length)
@@ -94,197 +156,395 @@ export default function BattlePage() {
   }
 
   return (
-    <div style={s.root}>
-      <div style={s.stageBar}>{matchInfo.stageLabel}</div>
-
-      <div style={s.arena}>
-        <CharPanel
-          charId={pid}
-          isPlayer
-          hp={pidHp}
-          maxHp={match.initialHp[pid]}
-          mana={pidMana}
-          maxMana={match.initialMana[pid]}
-          isActing={entry?.actorId === pid}
-          stats={playerStats}
-          skills={playerSkills}
-        />
-        <div style={s.vsDivider}>VS</div>
-        <CharPanel
-          charId={oppId}
-          hp={oppHp}
-          maxHp={match.initialHp[oppId]}
-          mana={oppMana}
-          maxMana={match.initialMana[oppId]}
-          isActing={entry?.actorId === oppId}
-          stats={oppStats}
-          skills={oppSkills}
-        />
-      </div>
-
-      <div style={s.controlBar}>
-        {(['1x', '2x', '4x'] as const).map(sp => (
-          <button
-            key={sp}
-            style={{ ...s.speedBtn, ...(speed === sp ? s.speedActive : {}) }}
-            onClick={() => handleSetSpeed(sp)}
-          >{sp}</button>
-        ))}
-        <button style={s.skipBtn} onClick={handleSkip} disabled={done}>스킵</button>
-        <span style={s.turnCounter}>{logCursor} / {match.log.length} 턴</span>
-      </div>
-
-      <div style={s.logBox} ref={logRef}>
-        {recentLog.map((e, i) => (
-          <LogRow key={i} entry={e} pid={pid} />
-        ))}
-        {done && (
-          <div style={s.logDone}>
-            <span style={{ color: match.winnerId === pid ? '#44ff88' : '#ff4444', fontWeight: 900, fontSize: '1rem' }}>
-              {match.winnerId === pid ? '🏆 승리!' : '💀 패배'}
-            </span>
-            <span style={{ color: '#aaa', marginLeft: '0.5rem' }}>
-              {'(승자: '}{charName(match.winnerId)}{match.winnerId === pid ? ' · 나)' : ')'}
-            </span>
+    <div className="arena-bg-arena" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      {/* Top bar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 20px', borderBottom: '1px solid var(--line)',
+        background: 'rgba(10,6,20,.7)', backdropFilter: 'blur(8px)',
+      }}>
+        <div>
+          <div className="arena-kr" style={{ fontSize: 16 }}>배틀 그랑프리</div>
+          <div className="arena-mono" style={{ fontSize: 11, color: 'var(--ink-mute)', marginTop: 2 }}>
+            BATTLE · TURN {currentTurn}
           </div>
-        )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 13, color: 'var(--ink-dim)' }}>
+              {matchInfo.stageLabel} ·{' '}
+              <span style={{ color: 'var(--violet-glow)', fontWeight: 700 }}>{charName(pid)}</span>
+              {' vs '}
+              <span style={{ color: 'var(--red)', fontWeight: 700 }}>{charName(oppId)}</span>
+            </span>
+            {tacticCard && (
+              <span style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 700 }}>
+                ⚔ 전술: {tacticCard.name}
+              </span>
+            )}
+          </div>
+          <div className="arena-mono" style={{ padding: '6px 12px', borderRadius: 999, background: 'rgba(124,80,240,.15)', border: '1px solid rgba(124,80,240,.4)', fontSize: 11, fontWeight: 700, color: 'var(--violet-glow)' }}>
+            ROUND {round}
+          </div>
+          {gold != null && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, background: 'rgba(255,214,107,.1)', border: '1px solid rgba(255,214,107,.4)' }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'radial-gradient(circle at 30% 30%,#fff3b0,#c98a1a)' }} />
+              <span className="arena-mono" style={{ fontWeight: 700, color: 'var(--gold)', fontSize: 12 }}>{gold.toLocaleString()}</span>
+            </div>
+          )}
+          <button className="arena-btn arena-btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => { if (confirm('메인 화면으로 나가시겠습니까?\n현재까지의 진행은 저장되어 있습니다.')) useGameStore.setState({ phase: 'slot_select' }) }}>✕ 나가기</button>
+        </div>
       </div>
 
-      {done && (
-        <button
-          style={s.btnResult}
-          onClick={() => useGameStore.setState({ phase: 'match_result' })}
-        >
-          결과 확인 →
-        </button>
-      )}
+      {/* Main — 2열×2행 Grid: 선이 픽셀 단위로 맞춤 */}
+      <div style={{
+        flex: 1, overflow: 'hidden',
+        display: 'grid',
+        gridTemplateColumns: '7fr 3fr',
+        gridTemplateRows: '1fr auto',
+      }}>
+
+        {/* [1,1] 캐릭터 패널 */}
+        <div style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', padding: '20px 16px', gap: 12 }}>
+          <CharPanel
+            char={playerChar} tone={pid % 6} isPlayer
+            hp={pidHp} maxHp={match.initialHp[pid]}
+            mana={pidMana} maxMana={match.initialMana[pid]}
+            isActing={entry?.actorId === pid}
+            stats={playerStats}
+            oppArch={oppChar?.archetype}
+            uniqueSkills={playerChar?.skills ?? []}
+            commonSkills={playerCommonSkills}
+            enhancementMap={activeSlot.skillEnhancements ?? {}}
+          />
+          <div style={{ flexShrink: 0, width: 72, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <div className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-mute)', letterSpacing: '.15em' }}>TURN</div>
+            <div style={{ fontSize: 56, fontWeight: 900, color: 'var(--gold)', lineHeight: 1, textShadow: '0 0 28px rgba(255,214,107,.55)' }}>
+              {currentTurn}
+            </div>
+            {tacticCard && (
+              <div style={{ fontSize: 9, color: 'var(--violet-glow)', letterSpacing: '.05em', textAlign: 'center', marginTop: 2 }}>
+                {tacticCard.name}
+              </div>
+            )}
+          </div>
+          <CharPanel
+            char={oppChar} tone={oppId % 6}
+            isRival={isRival} isWinnerCandidate={isWinnerCandidate} isDarkhorse={isDarkhorse}
+            hp={oppHp} maxHp={match.initialHp[oppId]}
+            mana={oppMana} maxMana={match.initialMana[oppId]}
+            isActing={entry?.actorId === oppId}
+            stats={oppStats}
+            oppArch={playerChar?.archetype}
+            uniqueSkills={oppChar?.skills ?? []}
+            commonSkills={oppCommonSkills}
+          />
+        </div>
+
+        {/* [1,2] 전투 로그 */}
+        <div style={{ borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', background: 'rgba(6,4,14,.6)', overflow: 'hidden' }}>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+            <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)', letterSpacing: '.1em', fontWeight: 700 }}>COMBAT LOG</span>
+            <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>{logCursor} / {match.log.length}</span>
+          </div>
+          <div ref={logRef} style={{ flex: 1, overflowY: 'auto' as const, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {allLog.map((e, i) => (
+              <LogRow key={i} entry={e} pid={pid} />
+            ))}
+          </div>
+        </div>
+
+        {/* [2,1] ATB + 속도 버튼 */}
+        <div style={{ borderTop: '1px solid var(--line)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '12px 20px', background: 'rgba(0,0,0,.2)' }}>
+            <div className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)', letterSpacing: '.15em', marginBottom: 10 }}>
+              ACTIVE TIME BATTLE
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {([
+                { name: charName(pid),   gauge: pidGauge, isPlayer: true  },
+                { name: charName(oppId), gauge: oppGauge, isPlayer: false },
+              ] as const).map(({ name, gauge, isPlayer }) => (
+                <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 80, fontSize: 12, fontWeight: 700, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, color: isPlayer ? 'var(--violet-glow)' : 'var(--red)' }}>
+                    {name}
+                  </span>
+                  <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'rgba(255,255,255,.06)', overflow: 'hidden', border: '1px solid rgba(255,255,255,.06)' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 4, transition: 'width .2s ease',
+                      width: `${gauge}%`,
+                      background: isPlayer
+                        ? 'linear-gradient(90deg,#a478ff,#67e8f9)'
+                        : 'linear-gradient(90deg,#ff7ab6,#ff5c6e)',
+                    }} />
+                  </div>
+                  <span className="arena-mono" style={{ width: 36, fontSize: 11, fontWeight: 700, flexShrink: 0, textAlign: 'right' as const, color: isPlayer ? 'var(--violet-glow)' : 'var(--red)' }}>
+                    {gauge}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ padding: '10px 20px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,.15)' }}>
+            {(['1x', '2x', '4x'] as const).map(sp => (
+              <button
+                key={sp}
+                className={`arena-btn${speed === sp ? ' arena-btn-primary' : ''}`}
+                style={{ padding: '5px 14px', fontSize: 12, borderRadius: 6 }}
+                onClick={() => handleSetSpeed(sp)}
+              >{sp}</button>
+            ))}
+            <button
+              className="arena-btn"
+              style={{ padding: '5px 14px', fontSize: 12, borderRadius: 6 }}
+              onClick={handleSkip}
+              disabled={done}
+            >{'>>'}</button>
+          </div>
+        </div>
+
+        {/* [2,2] 결과 + 버튼 */}
+        <div style={{ borderTop: '1px solid var(--line)', borderLeft: '1px solid var(--line)', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: 'rgba(6,4,14,.6)' }}>
+          {done ? (
+            <>
+              <div style={{ textAlign: 'center' as const, padding: '14px 10px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: isWin ? 'var(--green)' : 'var(--red)' }}>
+                  {isWin ? '🏆 승리!' : '💀 패배'}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--ink-mute)' }}>승자: {charName(match.winnerId)}</div>
+              </div>
+              <div style={{ padding: '8px 14px 14px' }}>
+                <button
+                  className="arena-btn arena-btn-primary"
+                  style={{ width: '100%', justifyContent: 'center', borderRadius: 12, padding: '12px 0', fontSize: 14 }}
+                  onClick={() => useGameStore.setState({ phase: 'match_result' })}
+                >
+                  결과 확인 →
+                </button>
+              </div>
+            </>
+          ) : null}
+        </div>
+
+      </div>
     </div>
   )
 }
 
 function CharPanel({
-  charId, isPlayer, hp, maxHp, mana, maxMana, isActing, stats, skills,
+  char, tone, isPlayer, isRival, isWinnerCandidate, isDarkhorse,
+  hp, maxHp, mana, maxMana, isActing, stats, oppArch, uniqueSkills, commonSkills, enhancementMap,
 }: {
-  charId: number
+  char: CharacterDef | undefined
+  tone: number
   isPlayer?: boolean
+  isRival?: boolean
+  isWinnerCandidate?: boolean
+  isDarkhorse?: boolean
   hp: number
   maxHp: number
   mana: number
   maxMana: number
   isActing: boolean
   stats: CombatStats | null
-  skills: string[]
+  oppArch?: Archetype
+  uniqueSkills: string[]
+  commonSkills: string[]
+  enhancementMap?: Record<string, number>
 }) {
-  const hpPct   = maxHp   > 0 ? (hp   / maxHp)   * 100 : 0
-  const manaPct = maxMana > 0 ? (mana / maxMana) * 100 : 0
-  const hpColor = hpPct > 60 ? '#44ff88' : hpPct > 30 ? '#ffaa44' : '#ff4444'
+  const arch        = char?.archetype ?? 'warrior'
+  const hpPct       = maxHp   > 0 ? (hp   / maxHp)   * 100 : 0
+  const manaPct     = maxMana > 0 ? (mana / maxMana) * 100 : 0
+  const hpFillClass = hpPct > 60 ? 'arena-hp-fill' : hpPct > 30 ? 'arena-hp-fill arena-hp-warn' : 'arena-hp-fill arena-hp-danger'
+
+  const isMagic     = MAGIC_ARCHETYPES.has(arch)
+  const oppIsMagic  = oppArch ? MAGIC_ARCHETYPES.has(oppArch) : false
+  const atkLabel    = isMagic    ? '마법 공격' : '물리 공격'
+  const defLabel    = oppIsMagic ? '마법 방어' : '물리 방어'
+  const atkVal      = stats ? (isMagic    ? stats.mAtk : stats.pAtk)  : null
+  const defVal      = stats ? (oppIsMagic ? stats.mDef : stats.pDef)  : null
 
   return (
-    <div style={{ ...s.charPanel, boxShadow: isActing ? '0 0 12px #ffd70066' : 'none' }}>
-      {isPlayer && <div style={s.playerTag}>나</div>}
-      <div style={s.charIcon}>
-        <span style={{ fontSize: '2.5rem' }}>🃏</span>
+    <div
+      className="arena-panel arena-crt"
+      style={{
+        flex: 1, minWidth: 0, padding: 14,
+        display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden',
+        boxShadow: isActing ? '0 0 20px -4px rgba(255,214,107,.6)' : undefined,
+        border: isActing ? '1px solid rgba(255,214,107,.5)' : undefined,
+      }}
+    >
+      {/* Portrait + name + badges */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <div style={{ flexShrink: 0, width: 80 }}>
+          <Portrait height={80} tone={tone} label={ARCHETYPE_LABEL[arch] ?? arch} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{char?.name ?? '???'}</span>
+            {isPlayer && (
+              <span style={{ fontSize: 9, fontWeight: 700, background: 'var(--violet)', borderRadius: 3, padding: '1px 5px', color: '#fff' }}>나</span>
+            )}
+            {isRival && (
+              <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(255,92,110,.2)', border: '1px solid rgba(255,92,110,.5)', borderRadius: 3, padding: '1px 5px', color: '#ff5c6e' }}>라이벌</span>
+            )}
+            {isWinnerCandidate && (
+              <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(255,214,107,.15)', border: '1px solid rgba(255,214,107,.5)', borderRadius: 3, padding: '1px 5px', color: 'var(--gold)' }}>우승후보</span>
+            )}
+            {isDarkhorse && (
+              <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(103,232,249,.15)', border: '1px solid rgba(103,232,249,.5)', borderRadius: 3, padding: '1px 5px', color: 'var(--cyan)' }}>다크호스</span>
+            )}
+          </div>
+          {stats && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(255,122,182,.1)', border: '1px solid rgba(255,122,182,.3)', color: '#ff7ab6' }}>
+                  {atkLabel} {atkVal !== null ? Math.round(atkVal) : '-'}
+                </span>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(74,158,255,.1)', border: '1px solid rgba(74,158,255,.3)', color: '#4a9eff' }}>
+                  {defLabel} {defVal !== null ? Math.round(defVal) : '-'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const }}>
+                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--ink-dim)' }}>
+                  명중 {Math.round(stats.acc)}%
+                </span>
+                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--gold)' }}>
+                  치명 {Math.round(stats.crit)}%
+                </span>
+                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--ink-dim)' }}>
+                  회피 {Math.round(stats.eva)}%
+                </span>
+                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--gold)' }}>
+                  크리 ×{stats.critDmg.toFixed(1)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-      <div style={s.charNameText}>{charName(charId)}</div>
-      <div style={s.barGroup}>
-        <div style={s.barLabelRow}>
-          <span style={s.barLbl}>HP</span>
-          <span style={s.barVal}>{Math.ceil(hp)}/{maxHp}</span>
-        </div>
-        <div style={s.barBg}>
-          <div style={{ ...s.bar, width: `${hpPct}%`, background: hpColor, transition: 'width 0.25s ease' }} />
-        </div>
-        <div style={s.barLabelRow}>
-          <span style={s.barLbl}>MP</span>
-          <span style={s.barVal}>{Math.ceil(mana)}/{maxMana}</span>
-        </div>
-        <div style={s.barBg}>
-          <div style={{ ...s.bar, width: `${manaPct}%`, background: '#44aaff', transition: 'width 0.25s ease' }} />
-        </div>
-      </div>
-      {stats && (
-        <div style={s.statGrid}>
-          <StatChip label="공격" val={Math.round(stats.atk)} />
-          <StatChip label="방어" val={Math.round(stats.def)} />
-          <StatChip label="속도" val={Math.round(stats.spd)} />
-          <StatChip label="치명" val={`${stats.crit.toFixed(1)}%`} />
-          <StatChip label="회피" val={`${stats.eva.toFixed(1)}%`} />
-        </div>
-      )}
-      {skills.length > 0 && (
-        <div style={s.skillList}>
-          {skills.map(id => (
-            <div key={id} style={s.skillTag}>{skillName(id)}</div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
-function StatChip({ label, val }: { label: string; val: string | number }) {
-  return (
-    <div style={s.statChip}>
-      <span style={s.statChipLabel}>{label}</span>
-      <span style={s.statChipVal}>{val}</span>
+      {/* HP / MP */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>체력</span>
+          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-dim)' }}>{Math.ceil(hp)}/{maxHp}</span>
+        </div>
+        <div className="arena-hpbar"><div className={hpFillClass} style={{ width: `${hpPct}%` }} /></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>MP</span>
+          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-dim)' }}>{Math.ceil(mana)}/{maxMana}</span>
+        </div>
+        <div className="arena-hpbar"><div className="arena-mp-fill" style={{ width: `${manaPct}%` }} /></div>
+      </div>
+
+      {/* Skills — 고유 3 + 공통 3 */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ fontSize: 8, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 1 }}>고유 스킬</div>
+        {Array.from({ length: 3 }).map((_, i) => {
+          const id    = uniqueSkills[i]
+          const def   = id ? SKILLS.find(s => s.id === id) : undefined
+          const name  = def?.name ?? id ?? ''
+          const color = def ? (SKILL_TIER_COLOR[def.tier] ?? '#aaa') : '#aaa'
+          const enh   = id && enhancementMap ? (enhancementMap[id] ?? 0) : 0
+          const tip   = def ? `${def.description}${def.cooldown > 0 ? `\n쿨다운: ${def.cooldown}턴` : ''}${enh > 0 ? `\n강화: +Lv.${enh}` : ''}` : undefined
+          return id ? (
+            <div key={id} title={tip} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 6px', borderRadius: 4, background: `${color}0a`, height: 22, cursor: 'default' }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flex: 1 }}>{name}</span>
+              {enh > 0 && (
+                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--gold)', flexShrink: 0, letterSpacing: '.02em' }}>+{enh}</span>
+              )}
+            </div>
+          ) : (
+            <div key={`empty-u${i}`} style={{ height: 22, borderRadius: 4, background: 'rgba(255,255,255,.02)', border: '1px dashed rgba(255,255,255,.06)' }} />
+          )
+        })}
+        <div style={{ height: 1, background: 'rgba(255,255,255,.06)', margin: '2px 0' }} />
+        <div style={{ fontSize: 8, color: 'var(--ink-mute)', letterSpacing: '.1em', marginBottom: 1 }}>공통 스킬</div>
+        {Array.from({ length: 3 }).map((_, i) => {
+          const id    = commonSkills[i]
+          const def   = id ? SKILLS.find(s => s.id === id) : undefined
+          const name  = def?.name ?? id ?? ''
+          const color = def ? (SKILL_TIER_COLOR[def.tier] ?? '#aaa') : '#aaa'
+          const tip   = def ? `${def.description}${def.cooldown > 0 ? `\n쿨다운: ${def.cooldown}턴` : ''}` : undefined
+          return id ? (
+            <div key={id} title={tip} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 6px', borderRadius: 4, background: `${color}0a`, height: 22, cursor: 'default' }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{name}</span>
+            </div>
+          ) : (
+            <div key={`empty-c${i}`} style={{ height: 22, borderRadius: 4, background: 'rgba(255,255,255,.02)', border: '1px dashed rgba(255,255,255,.06)' }} />
+          )
+        })}
+      </div>
     </div>
   )
 }
 
 function LogRow({ entry, pid }: { entry: MatchLogEntry; pid: number }) {
   const isMyAction = entry.actorId === pid
-  const actionStr  = entry.evaded
-    ? '회피!'
-    : entry.action === 'skill'
-      ? `${skillName(entry.skillId ?? '')} ${entry.damage}dmg${entry.critical ? ' 💥' : ''}`
-      : `${entry.damage}dmg${entry.critical ? ' 💥' : ''}`
+  const isKill = !entry.evaded && entry.damage > 0 && (entry.hpAfter[entry.targetId] ?? 1) <= 0
+  const actionDesc = entry.action === 'skill'
+    ? `${skillName(entry.skillId ?? '')} → ${charName(entry.targetId)}`
+    : `일반 공격 → ${charName(entry.targetId)}`
+
+  let bg = isMyAction ? 'rgba(124,80,240,.08)' : 'rgba(255,255,255,.02)'
+  if (isKill && isMyAction) bg = 'rgba(220,38,38,.12)'
+  else if (isKill) bg = 'rgba(220,38,38,.08)'
+  else if (entry.critical && isMyAction) bg = 'rgba(255,214,107,.06)'
+
+  let border = 'none'
+  if (isKill) border = '1px solid rgba(220,38,38,.35)'
+  else if (entry.critical && isMyAction) border = '1px solid rgba(255,214,107,.2)'
 
   return (
-    <div style={{ ...s.logRow, background: isMyAction ? '#1a1a3e' : '#111' }}>
-      <span style={s.logTurn}>T{entry.turn}</span>
-      <span style={{ ...s.logActor, color: isMyAction ? '#c0aaff' : '#ff9966' }}>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 5,
+      padding: '4px 8px', borderRadius: 4, fontSize: 11,
+      background: bg, border,
+    }}>
+      <span className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-mute)', minWidth: 20, flexShrink: 0 }}>T{entry.turn}</span>
+      <span style={{
+        fontWeight: 700, minWidth: 48, overflow: 'hidden', textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap' as const, flexShrink: 0,
+        color: isMyAction ? 'var(--violet-glow)' : 'var(--red)',
+      }}>
         {charName(entry.actorId)}
       </span>
-      <span style={s.logArrow}>→</span>
-      <span style={s.logTarget}>{charName(entry.targetId)}</span>
-      <span style={s.logAction}>{actionStr}</span>
+      {entry.critical && (
+        <span style={{
+          fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+          background: 'rgba(255,214,107,.25)', border: '1px solid rgba(255,214,107,.7)',
+          color: 'var(--gold)', letterSpacing: '.05em',
+          textShadow: '0 0 6px rgba(255,214,107,.6)',
+        }}>
+          CRIT
+        </span>
+      )}
+      {isKill && (
+        <span style={{ fontSize: 10, flexShrink: 0 }} title="KO">💀</span>
+      )}
+      <span style={{
+        flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+        color: entry.evaded ? 'var(--ink-mute)' : 'var(--ink-dim)',
+        fontStyle: entry.evaded ? 'italic' as const : 'normal' as const,
+      }}>
+        {actionDesc}
+      </span>
+      <span className="arena-mono" style={{
+        fontSize: 11, fontWeight: 700, flexShrink: 0,
+        textAlign: 'right' as const, minWidth: 48,
+        color: entry.evaded
+          ? 'var(--ink-mute)'
+          : isKill
+            ? '#ef4444'
+            : entry.critical
+              ? 'var(--gold)'
+              : 'var(--red)',
+      }}>
+        {entry.evaded ? '— DODGE' : isKill ? `💥${entry.damage}` : `-${entry.damage}`}
+      </span>
     </div>
   )
-}
-
-const s: Record<string, React.CSSProperties> = {
-  root:        { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1rem', minHeight: '100vh', background: '#0d0d1a', color: '#e8e8ff', gap: '0.75rem' },
-  stageBar:    { fontSize: '1rem', fontWeight: 700, color: '#ffd700', letterSpacing: '0.1em' },
-  arena:       { display: 'flex', gap: '1rem', alignItems: 'flex-start', width: '100%', maxWidth: '560px' },
-  vsDivider:   { fontSize: '1.2rem', fontWeight: 900, color: '#c0aaff', alignSelf: 'center', minWidth: '30px', textAlign: 'center' as const },
-  charPanel:   { flex: 1, background: '#1a1a2e', border: '1px solid #333', borderRadius: '10px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', position: 'relative' as const, transition: 'box-shadow 0.2s' },
-  playerTag:   { position: 'absolute' as const, top: '4px', left: '6px', fontSize: '0.6rem', fontWeight: 700, background: '#7c5cfc', borderRadius: '3px', padding: '1px 5px' },
-  charIcon:    { width: '52px', height: '52px', background: '#111', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
-  charNameText:{ fontSize: '0.8rem', fontWeight: 700, textAlign: 'center' as const },
-  barGroup:    { display: 'flex', flexDirection: 'column', gap: '3px' },
-  barLabelRow: { display: 'flex', justifyContent: 'space-between' },
-  barLbl:      { fontSize: '0.6rem', color: '#666' },
-  barVal:      { fontSize: '0.6rem', color: '#888' },
-  barBg:       { height: '6px', background: '#111', borderRadius: '3px', overflow: 'hidden' },
-  bar:         { height: '100%', borderRadius: '3px' },
-  controlBar:  { display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' },
-  speedBtn:    { background: '#1a1a2e', border: '1px solid #444', borderRadius: '6px', color: '#aaa', padding: '4px 14px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 700 },
-  speedActive: { background: '#7c5cfc', border: '1px solid #7c5cfc', color: '#fff' },
-  skipBtn:     { background: 'transparent', border: '1px solid #666', borderRadius: '6px', color: '#aaa', padding: '4px 14px', cursor: 'pointer', fontSize: '0.85rem' },
-  turnCounter: { color: '#555', fontSize: '0.75rem' },
-  logBox:      { width: '100%', maxWidth: '560px', background: '#080810', border: '1px solid #1a1a2e', borderRadius: '8px', padding: '0.5rem', height: '200px', overflowY: 'auto' as const, display: 'flex', flexDirection: 'column', gap: '2px' },
-  logRow:      { display: 'flex', gap: '0.4rem', alignItems: 'center', padding: '2px 6px', borderRadius: '3px', fontSize: '0.72rem' },
-  logTurn:     { color: '#444', minWidth: '28px', fontSize: '0.65rem' },
-  logActor:    { fontWeight: 700, minWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  logArrow:    { color: '#444' },
-  logTarget:   { color: '#aaa', minWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  logAction:   { color: '#ddd', flex: 1 },
-  logDone:      { textAlign: 'center' as const, color: '#ffd700', fontSize: '0.8rem', padding: '6px', marginTop: '2px', letterSpacing: '0.05em' },
-  btnResult:    { background: '#7c5cfc', border: 'none', borderRadius: '10px', color: '#fff', padding: '0.85rem 2.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 700 },
-  statGrid:     { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px', marginTop: '4px', width: '100%' },
-  statChip:     { background: '#0d0d1a', borderRadius: '4px', padding: '2px 5px', display: 'flex', justifyContent: 'space-between', gap: '4px' },
-  statChipLabel:{ fontSize: '0.58rem', color: '#555' },
-  statChipVal:  { fontSize: '0.58rem', color: '#aaa', fontWeight: 700 },
-  skillList:    { display: 'flex', flexDirection: 'column' as const, gap: '2px', marginTop: '4px', width: '100%' },
-  skillTag:     { fontSize: '0.58rem', background: '#0d1a2e', border: '1px solid #2a3a5e', borderRadius: '3px', padding: '2px 5px', color: '#88aaff', textAlign: 'center' as const, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
 }

@@ -11,38 +11,13 @@ import EncyclopediaPage  from './pages/EncyclopediaPage'
 import RankingPage       from './pages/RankingPage'
 import RewardPage        from './pages/RewardPage'
 import SkillLearnPage    from './pages/SkillLearnPage'
-import SkillSelectPage   from './pages/SkillSelectPage'
 import ShopPage          from './pages/ShopPage'
+import StageOverviewPage from './pages/StageOverviewPage'
 import ReplayPage        from './pages/ReplayPage'
 import SimulationPage    from './pages/SimulationPage'
 import MyRecordsPage     from './pages/MyRecordsPage'
-
-const GAMEPLAY_PHASES = new Set([
-  'char_select', 'gacha', 'match_preview',
-  'battle', 'match_result', 'skill_learn', 'tournament', 'bracket',
-  'reward', 'skill_select', 'shop', 'replay', 'my_records',
-])
-
-function ExitButton() {
-  function handleExit() {
-    if (confirm('메인 화면으로 나가시겠습니까?\n현재까지의 진행은 저장되어 있습니다.')) {
-      useGameStore.setState({ phase: 'slot_select' })
-    }
-  }
-  return (
-    <button
-      onClick={handleExit}
-      style={{
-        position: 'fixed', top: '10px', right: '12px', zIndex: 9999,
-        background: 'rgba(20,20,40,0.85)', border: '1px solid #444',
-        borderRadius: '6px', color: '#888', padding: '4px 10px',
-        cursor: 'pointer', fontSize: '0.75rem', backdropFilter: 'blur(4px)',
-      }}
-    >
-      ✕ 나가기
-    </button>
-  )
-}
+import PassiveRewardPage from './pages/PassiveRewardPage'
+import SkillEnhancePage  from './pages/SkillEnhancePage'
 
 export default function TrainingArenaGame() {
   const phase = useGameStore(s => s.phase)
@@ -54,9 +29,9 @@ export default function TrainingArenaGame() {
     case 'simulation':    return <SimulationPage />
     default: return (
       <>
-        {GAMEPLAY_PHASES.has(phase) && <ExitButton />}
         {phase === 'char_select'   && <CharSelectPage />}
         {phase === 'gacha'         && <GachaPage />}
+        {phase === 'stage_overview' && <StageOverviewPage />}
         {phase === 'match_preview' && <MatchPreviewPage />}
         {phase === 'battle'        && <BattlePage />}
         {phase === 'match_result'  && <MatchResultPage />}
@@ -64,10 +39,11 @@ export default function TrainingArenaGame() {
         {phase === 'tournament'    && <TournamentPage />}
         {phase === 'bracket'       && <BracketPage />}
         {phase === 'reward'        && <RewardPage />}
-        {phase === 'skill_select'  && <SkillSelectPage />}
         {phase === 'shop'          && <ShopPage />}
-        {phase === 'replay'        && <ReplayPage />}
-        {phase === 'my_records'    && <MyRecordsPage />}
+        {phase === 'replay'         && <ReplayPage />}
+        {phase === 'my_records'     && <MyRecordsPage />}
+        {phase === 'passive_reward' && <PassiveRewardPage />}
+        {phase === 'skill_enhance'  && <SkillEnhancePage />}
       </>
     )
   }

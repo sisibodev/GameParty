@@ -53,11 +53,15 @@ export function rollShopItems(seed: number): ItemDef[] {
   }
 
   const result: ItemDef[] = []
+  const used = new Set<string>()
   for (let i = 0; i < SHOP_SIZE; i++) {
     const tier = rollTier(rng)
     const pool = byTier[tier]
     if (pool.length === 0) continue
-    result.push(rng.pick(pool))
+    const available = pool.filter(it => !used.has(it.id))
+    const item = rng.pick(available.length > 0 ? available : pool)
+    used.add(item.id)
+    result.push(item)
   }
   return result
 }
