@@ -100,7 +100,7 @@ raw  = base × DAMAGE_DEF_K / (DAMAGE_DEF_K + effectiveDef × (1 - pen))
 ### 핵심 변화
 1. ✓ **초기 스탯 고정** — 플레이어 1/1/1/1/1, NPC **1/1/1/1/1** (v0.5.0에서 10→1 통일). StatAllocPage 삭제 완료.
 2. ✓ **라운드 시작 가챠** — 모든 캐릭터가 매 라운드 1장씩 C~SSS 등급의 랜덤 스탯 범위 카드 획득 (기존 100연 가챠 대체).
-3. ✓ **전술 카드 시스템** — 8장 고정 풀, 전투 전 0~1장 선택, 쿨다운/소모 없음.
+3. ✓ **전술 카드 시스템** — 8직군 × 8장 = 64장 풀, 전투 전 내 직군 카드 8장 중 0~1장 선택, 쿨다운/소모 없음.
 4. ⚠ **골드·상점·아이템** — 구현됨 (스탯 아이템 + 일부 전투 아이템). ⏳ 상점 리롤 UI 숨김 (버튼 구현은 됨).
 5. ✓ **라이벌 시스템** — 3명 지정, 매 라운드 +5 누적 보너스, 라이벌전 골드 ×2.
 6. ✓ **대전 전 상대 정보 공개** — MatchPreviewPage에서 스탯/스킬/아이템 표시.
@@ -139,22 +139,24 @@ v0.7.0 변경: 성장 스탯 키 `hp` → `vit` 마이그레이션 완료.
 코드: `GACHA_PROBABILITIES`, `GACHA_STAT_RANGES` (constants.ts)
 플레이어는 연출 확인, NPC 결과는 MatchPreviewPage에서 공개.
 
-#### 3. 전술 카드 — 고정 8종 상시 선택지 ✓
-플레이어는 매 전투마다 8종 중 1장을 고르거나 "사용 안 함" 선택. 쿨다운/소모 없음.
+#### 3. 전술 카드 — 직군별 8종 상시 선택지 ✓
+플레이어는 매 전투마다 현재 캐릭터 직군에 맞는 8종 중 1장을 고르거나 "사용 안 함" 선택. 쿨다운/소모 없음.
 
-| # | ID | 카드명 | 효과 | 발동 시점 | 변수 포인트 |
-|---|----|--------|------|-----------|-------------|
-| 1 | `first_strike` | 선제 공격 | ATB +60으로 시작 | 전투 시작 | 스피드 열세 극복 |
-| 2 | `barrier` | 방벽 전개 | 첫 피격 데미지 -70% | 첫 피격 | 버스트 딜러 카운터 |
-| 3 | `ambush` | 기습 | 첫 공격 크리 확정 + ×1.3 | 내 첫 공격 | 한 방 역전 |
-| 4 | `mana_burst` | 마나 폭주 | 마나 +100%, 리젠 +50% (5턴) | 전투 시작 | 스킬 난사형 |
-| 5 | `curse` | 저주 | 상대 ATK -30%, DEF -20% (4턴) | 전투 시작 | 강캐 약화 |
-| 6 | `potion` | 회복 물약 | HP 30% 이하 시 50% 회복 (1회) | 자동 트리거 | 장기전 생존 |
-| 7 | `insight` | 간파 | 상대 회피율 0, 내 크리 +30% (5턴) | 전투 시작 | 회피 캐릭 카운터 |
-| 8 | `last_stand` | 최후의 일격 | HP 20% 이하: ATK +100%, SPD +30% | 자동 활성 | 빈사 역전 |
+전체 풀은 8직군 × 8장 = 64장이다. 각 카드는 추천 상대 직군 2개(`goodAgainst`)와 카드별 수치(`effect`)를 가진다.
+
+| 효과 축 | 전투 적용 | 예시 수치 |
+|---|---|---|
+| 선점 | 시작 ATB 증가 | ATB +50~65 |
+| 방벽 | 첫 피격 피해 감소 | -65~80% |
+| 기습 | 첫 공격 확정 치명 및 피해 증가 | 1.20~1.50배 |
+| 마나 폭주 | 초기 마나 및 마나 회복 증가 | 초기 +60~110%, 회복 +35~60% |
+| 저주 | 상대 ATK/DEF 감소 | ATK -20~-30%, DEF -15~-30% |
+| 회복 | HP 30% 이하 시 1회 회복 | HP 40~55% |
+| 간파 | 상대 회피 0, 내 치명 증가 | 치명 +18~35% |
+| 최후 | HP 20% 이하에서 ATK/SPD 강화 | ATK +100%, SPD +30% |
 
 코드: `tacticCards.ts`, `BattleCharState.tactic`, `applyTactic()` (battleEngine.ts)
-사용 규칙: MatchPreviewPage에서 선택, 상대 스탯·스킬·아이템을 보고 카운터 조합 고르기.
+사용 규칙: MatchPreviewPage에서 내 직군 8장만 표시하고, 상대 스탯·스킬·아이템·추천 상대 직군 칩을 보고 카운터 조합 고르기.
 
 #### 4. 골드·상점·아이템 ⚠
 **골드 획득 시스템 ✓**
@@ -309,8 +311,9 @@ score = max(0,
 ### 핵심 타입 (정의됨) ✓
 ```ts
 // tacticCards.ts
-export type TacticCardId = 'first_strike' | 'barrier' | 'ambush' | 'mana_burst' | 'curse' | 'potion' | 'insight' | 'last_stand'
-export interface TacticCard { id; name; description; hint }
+export type TacticCardId = string
+export type TacticEffectKind = 'initiative' | 'barrier' | 'ambush' | 'mana_burst' | 'curse' | 'potion' | 'insight' | 'last_stand'
+export interface TacticCard { id; archetype; name; description; hint; goodAgainst; effect }
 
 // items.ts
 export interface ItemDef { 
@@ -332,7 +335,7 @@ export interface PendingSkill { skillId; turnsRemaining }
 | Core | 초기 스탯 플레이어 1/NPC 1 통일, StatAllocPage 제거 | ✓ |
 | Phase 1 | 라운드 가챠 (1장 C~SSS 범위) | ✓ |
 | Phase 2 | 골드·아이템 시스템 (스탯+일부 전투) | ✓ |
-| Phase 2.5 | 전술 카드 8종 (선택/소모 없음) | ✓ |
+| Phase 2.5 | 직군별 전술 카드 64장 (내 직군 8장 선택/소모 없음) | ✓ |
 | Phase 3 | 라이벌 (+5 누적) + 상대 정보 공개 | ✓ |
 | Phase 4 | 스킬 학습 (턴 기반 + 복제) | ✓ |
 | Phase 5 | 점수·기록 시스템 (공식 구현 + RankingPage) | ✓ |
@@ -406,15 +409,15 @@ export interface PendingSkill { skillId; turnsRemaining }
 - 경기 간 HP 회복: maxHp × 10% (INTER_MATCH_HP_REGEN_RATIO = 0.10)
 
 #### 전술 카드 효과 (battleEngine.ts 구현) ✓
-| 카드ID | 코드 구간 |
+| effect.kind | 코드 구간 |
 |--------|----------|
-| `first_strike` | gauge 초기값 60 설정 |
-| `barrier` | 첫 피격 데미지 -70% (×0.3 유지) |
-| `ambush` | 첫 공격 크리 확정 + ×1.3 데미지 |
-| `mana_burst` | 마나 +100% 및 리젠 +50% (5턴) |
-| `curse` | 상대 ATK -30%, DEF -20% (4턴) |
-| `potion` | HP ≤30% 시 자동 50% 회복 (1회) |
-| `insight` | 상대 회피율 0, 내 크리 +30% (5턴) |
+| `initiative` | 카드별 gauge 초기값 적용 |
+| `barrier` | 카드별 첫 피격 데미지 감소율 적용 |
+| `ambush` | 첫 공격 크리 확정 + 카드별 데미지 배율 |
+| `mana_burst` | 카드별 초기 마나 및 마나 리젠 증가 |
+| `curse` | 카드별 상대 ATK/DEF 감소 |
+| `potion` | HP ≤30% 시 카드별 자동 회복 (1회) |
+| `insight` | 상대 회피율 0, 카드별 내 크리 증가 |
 | `last_stand` | HP ≤20% 시 ATK +100%, SPD +30% |
 
 ---

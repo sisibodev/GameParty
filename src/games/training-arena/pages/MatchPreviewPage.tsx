@@ -4,7 +4,7 @@ import type { Archetype, CharacterDef, CombatStats, GrowthStats, ItemDef, ItemKi
 import { deriveStats } from '../engine/statDeriver'
 import { NPC_BASE_GROWTH, MAX_PASSIVE_SLOTS, RIVAL_STAT_PER_ROUND } from '../constants'
 import { getItemById } from '../data/items'
-import { TACTIC_CARDS } from '../data/tacticCards'
+import { getTacticCardsForArchetype } from '../data/tacticCards'
 import { SeededRng } from '../utils/rng'
 import { pickN } from '../utils/fisherYates'
 import Portrait from '../components/ui/Portrait'
@@ -350,6 +350,7 @@ export default function MatchPreviewPage() {
 
   const playerChar    = findChar(pid)
   const opponentChar  = findChar(opponentId)
+  const tacticCards    = playerChar ? getTacticCardsForArchetype(playerChar.archetype) : []
 
   const round         = activeSlot.currentRound
   const oppGrowth     = npcGrowth(round, (activeSlot.rivalIds ?? []).includes(opponentId))
@@ -535,7 +536,7 @@ export default function MatchPreviewPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flex: 1 }}>
-            {TACTIC_CARDS.map(card => {
+            {tacticCards.map(card => {
               const active = selectedTacticCardId === card.id
               return (
                 <button
@@ -545,6 +546,22 @@ export default function MatchPreviewPage() {
                 >
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--violet-glow)', marginBottom: 4 }}>{card.name}</div>
                   <div style={{ fontSize: 10, color: 'var(--ink-mute)', lineHeight: 1.3 }}>{card.description}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7 }}>
+                    {card.goodAgainst.map(a => (
+                      <span key={a} style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        color: ARCHETYPE_COLOR[a],
+                        border: `1px solid ${ARCHETYPE_COLOR[a]}55`,
+                        borderRadius: 999,
+                        padding: '1px 6px',
+                        background: `${ARCHETYPE_COLOR[a]}18`,
+                      }}>
+                        {ARCHETYPE_LABEL[a]}
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 9, color: 'var(--ink-dim)', lineHeight: 1.35, marginTop: 6 }}>{card.hint}</div>
                 </button>
               )
             })}

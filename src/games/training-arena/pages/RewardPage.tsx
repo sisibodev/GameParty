@@ -1,5 +1,5 @@
 import { useGameStore } from '../store/useGameStore'
-import type { GrowthStatKey, TournamentResult } from '../types'
+import type { GrowthStatKey, PlayerMatchInfo, TournamentResult } from '../types'
 
 const STAT_LABELS: Record<GrowthStatKey, string> = {
   vit: 'VIT', str: 'STR', agi: 'AGI', int: 'INT', luk: 'LUK',
@@ -9,7 +9,20 @@ const BRACKET_LABELS: Record<number, string> = {
   1: '16강 탈락', 2: '8강 탈락', 3: '4강 탈락', 4: '준우승',
 }
 
-function getResultLabel(result: TournamentResult, charId: number): { label: string; color: string } {
+function getResultLabel(result: TournamentResult, charId: number, playerMatches: PlayerMatchInfo[] = []): { label: string; color: string } {
+  const played = playerMatches.filter(m => m.wasPlayed)
+  const last = played[played.length - 1]
+  if (last?.playerWon) {
+    const { stage, bracketRound } = last.matchResult
+    if (stage === 'bracket' && (bracketRound ?? 0) >= 4)
+      return { label: '우승!', color: '#ffd700' }
+    if (stage === 'bracket')
+      return { label: '토너먼트 승리', color: '#44cc88' }
+    if (stage === 'group')
+      return { label: '본선 승리', color: '#44cc88' }
+    return { label: '예선 통과', color: '#44cc88' }
+  }
+
   if (result.winner === charId)
     return { label: '🏆 우승!', color: '#ffd700' }
   if (result.finalists.includes(charId)) {
@@ -24,12 +37,12 @@ function getResultLabel(result: TournamentResult, charId: number): { label: stri
 }
 
 export default function RewardPage() {
-  const { pendingReward, activeSlot, lastRandomStatKey, lastTournament, claimReward } = useGameStore()
+  const { pendingReward, activeSlot, lastRandomStatKey, lastTournament, playerMatches, claimReward } = useGameStore()
 
   if (!pendingReward || !activeSlot) return null
 
   const resultInfo  = lastTournament
-    ? getResultLabel(lastTournament, activeSlot.characterId)
+    ? getResultLabel(lastTournament, activeSlot.characterId, playerMatches)
     : null
 
   return (

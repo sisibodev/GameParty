@@ -4,7 +4,7 @@ import type { Archetype, CharacterDef, CombatStats, GrowthStats, MatchLogEntry, 
 import { deriveStats } from '../engine/statDeriver'
 import { NPC_BASE_GROWTH, RIVAL_STAT_PER_ROUND } from '../constants'
 import Portrait from '../components/ui/Portrait'
-import { TACTIC_CARDS } from '../data/tacticCards'
+import { getTacticCard } from '../data/tacticCards'
 import charactersRaw from '../data/characters.json'
 import skillsRaw    from '../data/skills.json'
 import '../styles/arena.css'
@@ -122,7 +122,7 @@ export default function BattlePage() {
   const oppCommonSkills = oppSkills.filter(id => !oppUniqueSet.has(id))
 
   const tacticCard = selectedTacticCardId
-    ? TACTIC_CARDS.find(c => c.id === selectedTacticCardId)
+    ? getTacticCard(selectedTacticCardId)
     : null
 
   const isWinnerCandidate = lastTournament?.winner === oppId

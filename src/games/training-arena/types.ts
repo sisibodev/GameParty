@@ -1,4 +1,4 @@
-// ─── Growth Stats ────────────────────────────────────────────────────────────
+﻿// ─── Growth Stats ────────────────────────────────────────────────────────────
 
 export interface GrowthStats {
   vit: number  // 활력 (체력·물리방어)
@@ -178,21 +178,31 @@ export interface BattleCharState {
 
 // ─── Tactic Card (v0.4.2 Phase 3) ────────────────────────────────────────────
 
-export type TacticCardId =
-  | 'first_strike'   // 1. 선제 공격
-  | 'barrier'        // 2. 방벽 전개
-  | 'ambush'         // 3. 기습
-  | 'mana_burst'     // 4. 마나 폭주
-  | 'curse'          // 5. 저주
-  | 'potion'         // 6. 회복 물약
-  | 'insight'        // 7. 간파
-  | 'last_stand'     // 8. 최후의 일격
+export type TacticCardId = string
+
+export type TacticEffectKind =
+  | 'initiative'
+  | 'barrier'
+  | 'ambush'
+  | 'mana_burst'
+  | 'curse'
+  | 'potion'
+  | 'insight'
+  | 'last_stand'
+
+export interface TacticEffect {
+  kind: TacticEffectKind
+  [key: string]: number | string
+}
 
 export interface TacticCard {
   id: TacticCardId
+  archetype: Archetype
   name: string
   description: string
-  hint: string       // 변수 포인트
+  hint: string
+  goodAgainst: Archetype[]
+  effect: TacticEffect
 }
 
 // 전투 중 1회성 카드의 발동 여부를 기록
@@ -388,3 +398,4 @@ export interface RewardPackage {
   goldEarned: number          // v0.4.2+: 결과별 골드 보상
   passiveChoices: string[]    // v0.5.0: 라운드 종료 패시브 선택지 3개
 }
+
