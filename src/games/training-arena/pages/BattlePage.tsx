@@ -4,7 +4,7 @@ import type { Archetype, CharacterDef, CombatStats, GrowthStats, MatchLogEntry, 
 import { deriveStats } from '../engine/statDeriver'
 import { NPC_BASE_GROWTH, RIVAL_STAT_PER_ROUND } from '../constants'
 import Portrait from '../components/ui/Portrait'
-import { TACTIC_CARDS } from '../data/tacticCards'
+import { TACTIC_CARDS, getTacticCard } from '../data/tacticCards'
 import charactersRaw from '../data/characters.json'
 import skillsRaw    from '../data/skills.json'
 import '../styles/arena.css'
@@ -205,7 +205,8 @@ export default function BattlePage() {
       }}>
 
         {/* [1,1] 캐릭터 패널 */}
-        <div style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', padding: '20px 16px', gap: 12 }}>
+        <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '20px 16px 8px', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <CharPanel
             char={playerChar} tone={pid % 6} isPlayer
             hp={pidHp} maxHp={match.initialHp[pid]}
@@ -239,6 +240,15 @@ export default function BattlePage() {
             uniqueSkills={oppChar?.skills ?? []}
             commonSkills={oppCommonSkills}
           />
+        </div>
+        {selectedTacticCardId && getTacticCard(selectedTacticCardId) && (
+          <div style={{ textAlign: 'center', padding: '4px 0', fontSize: 12, color: 'var(--ink-mute)' }}>
+            <span style={{ color: 'var(--gold)', fontWeight: 700 }}>
+              {getTacticCard(selectedTacticCardId)!.name}
+            </span>
+            {' — '}{getTacticCard(selectedTacticCardId)!.description}
+          </div>
+        )}
         </div>
 
         {/* [1,2] 전투 로그 */}
@@ -398,24 +408,24 @@ function CharPanel({
           {stats && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const }}>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(255,122,182,.1)', border: '1px solid rgba(255,122,182,.3)', color: '#ff7ab6' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(255,122,182,.1)', border: '1px solid rgba(255,122,182,.3)', color: '#ff7ab6' }}>
                   {atkLabel} {atkVal !== null ? Math.round(atkVal) : '-'}
                 </span>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(74,158,255,.1)', border: '1px solid rgba(74,158,255,.3)', color: '#4a9eff' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 6px', borderRadius: 4, background: 'rgba(74,158,255,.1)', border: '1px solid rgba(74,158,255,.3)', color: '#4a9eff' }}>
                   {defLabel} {defVal !== null ? Math.round(defVal) : '-'}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const }}>
-                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--ink-dim)' }}>
+                <span style={{ fontSize: 12, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--ink-dim)' }}>
                   명중 {Math.round(stats.acc)}%
                 </span>
-                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--gold)' }}>
+                <span style={{ fontSize: 12, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--gold)' }}>
                   치명 {Math.round(stats.crit)}%
                 </span>
-                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--ink-dim)' }}>
+                <span style={{ fontSize: 12, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--ink-dim)' }}>
                   회피 {Math.round(stats.eva)}%
                 </span>
-                <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--gold)' }}>
+                <span style={{ fontSize: 12, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,.04)', color: 'var(--gold)' }}>
                   크리 ×{stats.critDmg.toFixed(1)}
                 </span>
               </div>
@@ -427,15 +437,15 @@ function CharPanel({
       {/* HP / MP */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>체력</span>
-          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-dim)' }}>{Math.ceil(hp)}/{maxHp}</span>
+          <span className="arena-mono" style={{ fontSize: 12, color: 'var(--ink-mute)' }}>체력</span>
+          <span className="arena-mono" style={{ fontSize: 12, color: 'var(--ink-dim)' }}>{Math.ceil(hp)}/{maxHp}</span>
         </div>
         <div className="arena-hpbar"><div className={hpFillClass} style={{ width: `${hpPct}%` }} /></div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-mute)' }}>MP</span>
-          <span className="arena-mono" style={{ fontSize: 10, color: 'var(--ink-dim)' }}>{Math.ceil(mana)}/{maxMana}</span>
+          <span className="arena-mono" style={{ fontSize: 12, color: 'var(--ink-mute)' }}>MP</span>
+          <span className="arena-mono" style={{ fontSize: 12, color: 'var(--ink-dim)' }}>{Math.min(Math.ceil(mana), maxMana)}/{maxMana}</span>
         </div>
-        <div className="arena-hpbar"><div className="arena-mp-fill" style={{ width: `${manaPct}%` }} /></div>
+        <div className="arena-hpbar"><div className="arena-mp-fill" style={{ width: `${Math.min(manaPct, 100)}%` }} /></div>
       </div>
 
       {/* Skills — 고유 3 + 공통 3 */}
@@ -504,7 +514,7 @@ function LogRow({ entry, pid }: { entry: MatchLogEntry; pid: number }) {
       padding: '4px 8px', borderRadius: 4, fontSize: 11,
       background: bg, border,
     }}>
-      <span className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-mute)', minWidth: 20, flexShrink: 0 }}>T{entry.turn}</span>
+      <span className="arena-mono" style={{ fontSize: 11, color: 'var(--ink-mute)', minWidth: 20, flexShrink: 0 }}>T{entry.turn}</span>
       <span style={{
         fontWeight: 700, minWidth: 48, overflow: 'hidden', textOverflow: 'ellipsis',
         whiteSpace: 'nowrap' as const, flexShrink: 0,
@@ -519,7 +529,7 @@ function LogRow({ entry, pid }: { entry: MatchLogEntry; pid: number }) {
           color: 'var(--gold)', letterSpacing: '.05em',
           textShadow: '0 0 6px rgba(255,214,107,.6)',
         }}>
-          CRIT
+          크리
         </span>
       )}
       {isKill && (
@@ -533,7 +543,7 @@ function LogRow({ entry, pid }: { entry: MatchLogEntry; pid: number }) {
         {actionDesc}
       </span>
       <span className="arena-mono" style={{
-        fontSize: 11, fontWeight: 700, flexShrink: 0,
+        fontSize: 13, fontWeight: 700, flexShrink: 0,
         textAlign: 'right' as const, minWidth: 48,
         color: entry.evaded
           ? 'var(--ink-mute)'
@@ -543,7 +553,7 @@ function LogRow({ entry, pid }: { entry: MatchLogEntry; pid: number }) {
               ? 'var(--gold)'
               : 'var(--red)',
       }}>
-        {entry.evaded ? '— DODGE' : isKill ? `💥${entry.damage}` : `-${entry.damage}`}
+        {entry.evaded ? '— 회피' : isKill ? `💥${entry.damage}` : `-${entry.damage}`}
       </span>
     </div>
   )

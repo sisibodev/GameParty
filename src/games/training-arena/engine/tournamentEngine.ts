@@ -213,12 +213,6 @@ function runQualifier(
       result.stage = 'qualifier'
       allMatches.push(result)
 
-      const winnerLastHp = result.log.at(-1)?.hpAfter[result.winnerId] ?? hpMap[result.winnerId]
-      hpMap[result.winnerId] = regenHpBetweenMatches(
-        winnerLastHp,
-        deriveStats(charById[result.winnerId].baseCombat, growthMap[result.winnerId], charById[result.winnerId].archetype).maxHp,
-        INTER_MATCH_HP_REGEN_RATIO,
-      )
       updateNpcStateAfterMatch(result, npcStates, skillMap, rng, playerCharId, playerPassives)
       losers.push(result.loserId)
     }

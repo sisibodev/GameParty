@@ -189,7 +189,7 @@ function PassiveList({ passiveIds, onHover }: { passiveIds: string[]; onHover: (
 }
 
 function CharCard({
-  char, tone, maxHp, stats, isPlayer,
+  char, tone, stats, growthStats, isPlayer,
   isRival, isWinnerCandidate, isDarkhorse,
   skillIds, uniqueSkillIds, pendingSkills, passives, records, onHover,
 }: {
@@ -197,6 +197,7 @@ function CharCard({
   tone: number
   maxHp: number
   stats: CombatStats | null
+  growthStats: { vit: number; str: number; agi: number; int: number; luk: number } | null
   isPlayer?: boolean
   isRival?: boolean
   isWinnerCandidate?: boolean
@@ -251,17 +252,16 @@ function CharCard({
             </span>
           </div>
 
-          {/* Stats 2-col grid */}
-          {stats && (
+          {/* Growth stats 2-col grid */}
+          {growthStats && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
               {([
-                ['HP',   maxHp.toLocaleString()],
-                ['ATK',  Math.round(stats.pAtk)],
-                ['DEF',  Math.round(stats.pDef)],
-                ['SPD',  Math.round(stats.spd)],
-                ['CRT%', `${stats.crit.toFixed(1)}%`],
-                ['EVA%', `${stats.eva.toFixed(1)}%`],
-              ] as [string, string | number][]).map(([label, val]) => (
+                ['바이탈', growthStats.vit],
+                ['힘',     growthStats.str],
+                ['민첩',   growthStats.agi],
+                ['지력',   growthStats.int],
+                ['행운',   growthStats.luk],
+              ] as [string, number][]).map(([label, val]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 4, padding: '2px 5px', borderRadius: 4, background: 'rgba(255,255,255,.03)' }}>
                   <span style={{ fontSize: 10, color: 'var(--ink-mute)' }}>{label}</span>
                   <span className="arena-mono" style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-dim)' }}>{val}</span>
@@ -271,6 +271,50 @@ function CharCard({
           )}
         </div>
       </div>
+
+      {/* HP/MP bars + combat stats */}
+      {stats && (
+        <>
+          <div className="arena-divider" style={{ margin: '0 12px' }} />
+          <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {/* HP bar */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                <span style={{ fontSize: 9, color: 'var(--ink-mute)', fontWeight: 700 }}>HP</span>
+                <span className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-dim)' }}>{stats.maxHp.toLocaleString()}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,.08)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: '100%', borderRadius: 3, background: 'linear-gradient(90deg,#3ecf6a,#5ef0a8)' }} />
+              </div>
+            </div>
+            {/* MP bar */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                <span style={{ fontSize: 9, color: 'var(--ink-mute)', fontWeight: 700 }}>MP</span>
+                <span className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-dim)' }}>{stats.maxMana.toLocaleString()}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,.08)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: '100%', borderRadius: 3, background: 'linear-gradient(90deg,#2255cc,#44aaff)' }} />
+              </div>
+            </div>
+            {/* Combat stats row */}
+            <div style={{ display: 'flex', gap: 4, marginTop: 2, flexWrap: 'wrap' }}>
+              {([
+                ['공격', Math.round(arch === 'mage' || arch === 'support' ? stats.mAtk : stats.pAtk)],
+                ['방어', Math.round(stats.pDef)],
+                ['속도', Math.round(stats.spd)],
+                ['크리', `${stats.crit.toFixed(0)}%`],
+                ['회피', `${stats.eva.toFixed(0)}%`],
+              ] as [string, string | number][]).map(([lbl, val]) => (
+                <div key={lbl} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '3px 4px', borderRadius: 5, background: 'rgba(255,255,255,.04)' }}>
+                  <span style={{ fontSize: 8, color: 'var(--ink-mute)' }}>{lbl}</span>
+                  <span className="arena-mono" style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-dim)' }}>{val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Records */}
       {records.length > 0 && (
@@ -376,7 +420,7 @@ export default function MatchPreviewPage() {
 
   const playerRecords: Array<{ label: string; value: string }> = [
     { label: '통산전적', value: `${totalWins}승 ${totalLosses}패` },
-    { label: '최고기록', value: activeSlot.bestClearRound != null ? `R${activeSlot.bestClearRound}` : '첫 진출' },
+    { label: '최고기록', value: (activeSlot.bestClearRound != null && activeSlot.bestClearRound !== 0) ? `R${activeSlot.bestClearRound}` : '첫 진출' },
     { label: '상대전적', value: `${h2hWins}승 ${h2hLosses}패` },
   ]
 
@@ -488,6 +532,7 @@ export default function MatchPreviewPage() {
               tone={pid % 6}
               maxHp={playerMaxHp}
               stats={playerStats}
+              growthStats={activeSlot.growthStats}
               isPlayer
               uniqueSkillIds={activeSlot.initialSkills}
               skillIds={activeSlot.acquiredSkills}
@@ -502,6 +547,7 @@ export default function MatchPreviewPage() {
               tone={opponentId % 6}
               maxHp={opponentMaxHp}
               stats={opponentStats}
+              growthStats={oppGrowth}
               isRival={isRival}
               isWinnerCandidate={isWinnerCandidate}
               isDarkhorse={isDarkhorse}
@@ -535,7 +581,7 @@ export default function MatchPreviewPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flex: 1 }}>
-            {TACTIC_CARDS.map(card => {
+            {TACTIC_CARDS.filter(card => card.validFor.includes(playerChar?.archetype ?? '')).map(card => {
               const active = selectedTacticCardId === card.id
               return (
                 <button

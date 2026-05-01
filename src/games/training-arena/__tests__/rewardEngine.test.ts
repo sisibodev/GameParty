@@ -15,7 +15,7 @@ describe('calcReward', () => {
       expect(calcReward('finalist', false, ALL_SKILLS, [], SEED).randomStatGain).toBe(REWARD_FINALIST)
     })
 
-    it('tournament_out gets REWARD_TOURNAMENT_OUT (4)', () => {
+    it('tournament_out gets REWARD_TOURNAMENT_OUT (3)', () => {
       expect(calcReward('tournament_out', false, ALL_SKILLS, [], SEED).randomStatGain).toBe(REWARD_TOURNAMENT_OUT)
     })
 

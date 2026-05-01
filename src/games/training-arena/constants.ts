@@ -121,8 +121,8 @@ export const MAX_SAVE_SLOTS = 3
 
 export const REWARD_WINNER = 10
 export const REWARD_FINALIST = 7
-export const REWARD_TOURNAMENT_OUT = 4
-export const REWARD_DARKHORSE = 8
+export const REWARD_TOURNAMENT_OUT = 3
+export const REWARD_DARKHORSE = 10
 // v0.4.1: PLAYER_EXTRA_STAT_POINTS 제거 (스탯 배분 UI 삭제)
 
 // ─── Gold / Shop (v0.4.2) ────────────────────────────────────────────────────

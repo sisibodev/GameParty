@@ -1,4 +1,4 @@
-import type { PassiveSkillDef, PlayerTournamentResult, RewardPackage } from '../types'
+import type { GrowthStats, PassiveSkillDef, PlayerTournamentResult, RewardPackage, TournamentResult } from '../types'
 import {
   GOLD_BY_RESULT,
   REWARD_FINALIST,
@@ -64,4 +64,23 @@ export function calcReward(
     goldEarned,
     passiveChoices,
   }
+}
+
+// qualifier loser (non-darkhorse NPC): all stats +1
+const NPC_QUALIFIER_LOSER_BONUS: GrowthStats = { vit: 1, str: 1, agi: 1, int: 1, luk: 1 }
+
+export function calcNpcQualifierLoserBonus(
+  result: TournamentResult,
+  playerId: number,
+): Record<number, GrowthStats> {
+  const qualifierLoserIds = result.participants.filter(
+    id => id !== playerId &&
+    !result.qualifiers.includes(id) &&
+    !result.darkhorses.includes(id),
+  )
+  const bonusMap: Record<number, GrowthStats> = {}
+  for (const id of qualifierLoserIds) {
+    bonusMap[id] = NPC_QUALIFIER_LOSER_BONUS
+  }
+  return bonusMap
 }

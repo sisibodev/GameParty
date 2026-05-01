@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import * as React from 'react'
 import { useGameStore } from '../store/useGameStore'
 import type { CharacterDef, MatchResult, GroupResult } from '../types'
 import charactersRaw from '../data/characters.json'
 import skillsRaw    from '../data/skills.json'
+import { deriveStats } from '../engine/statDeriver'
 import HeaderBar from '../components/ui/HeaderBar'
 import '../styles/arena.css'
 
@@ -15,9 +17,11 @@ type TabKey = 'qualifier' | 'group' | 'bracket'
 
 // ─── MatchCard ────────────────────────────────────────────────────────────────
 
-interface MatchCardProps { match: MatchResult; pid: number; winRate: (id: number) => number; hideResult?: boolean; getTooltip: (id: number) => string }
+type TooltipHandlers = { onMouseEnter: (e: React.MouseEvent) => void; onMouseLeave: () => void }
 
-function MatchCard({ match, pid, winRate, hideResult, getTooltip }: MatchCardProps) {
+interface MatchCardProps { match: MatchResult; pid: number; winRate: (id: number) => number; hideResult?: boolean; getHandlers: (id: number) => TooltipHandlers }
+
+function MatchCard({ match, pid, winRate, hideResult, getHandlers }: MatchCardProps) {
   const isPlayerMatch = match.char1Id === pid || match.char2Id === pid
   const ids = [match.char1Id, match.char2Id]
   return (
@@ -44,7 +48,7 @@ function MatchCard({ match, pid, winRate, hideResult, getTooltip }: MatchCardPro
               background: isPlayer ? 'var(--violet-glow)' : 'var(--ink-dim)',
             }} />
             <span
-              title={getTooltip(id)}
+              {...getHandlers(id)}
               style={{
                 flex: 1, fontSize: 11, fontWeight: isWinner ? 700 : 400,
                 color: isPlayer ? 'var(--violet-glow)' : isWinner ? 'var(--ink)' : 'var(--ink-mute)',
@@ -67,9 +71,9 @@ function MatchCard({ match, pid, winRate, hideResult, getTooltip }: MatchCardPro
 
 // ─── GroupCard ────────────────────────────────────────────────────────────────
 
-interface GroupCardProps { group: GroupResult; pid: number; featured?: boolean; getTooltip: (id: number) => string }
+interface GroupCardProps { group: GroupResult; pid: number; featured?: boolean; getHandlers: (id: number) => TooltipHandlers }
 
-function GroupCard({ group, pid, featured, getTooltip }: GroupCardProps) {
+function GroupCard({ group, pid, featured, getHandlers }: GroupCardProps) {
   const rankBadge = (id: number) => {
     if (id === group.rank1) return { label: '1위', color: 'var(--green)', bg: 'rgba(94,240,168,.12)' }
     if (id === group.rank2) return { label: '2위', color: '#67e8f9', bg: 'rgba(103,232,249,.12)' }
@@ -112,7 +116,7 @@ function GroupCard({ group, pid, featured, getTooltip }: GroupCardProps) {
                 background: isPlayer ? 'var(--violet-glow)' : isElim ? 'var(--ink-dim)' : badge.color,
               }} />
               <span
-                title={getTooltip(id)}
+                {...getHandlers(id)}
                 style={{
                   flex: 1, fontSize: featured ? 13 : 11, fontWeight: isPlayer ? 700 : 400,
                   color: isPlayer ? 'var(--violet-glow)' : isElim ? 'var(--ink-mute)' : 'var(--ink)',
@@ -136,6 +140,7 @@ function GroupCard({ group, pid, featured, getTooltip }: GroupCardProps) {
 export default function BracketPage() {
   const { lastTournament, activeSlot, playerMatches, playerMatchIndex } = useGameStore()
   const [activeTab, setActiveTab] = useState<TabKey>('bracket')
+  const [tooltip, setTooltip] = React.useState<{ x: number; y: number; charId: number } | null>(null)
 
   if (!lastTournament || !activeSlot) return null
 
@@ -200,42 +205,86 @@ export default function BracketPage() {
     { key: 'bracket',   label: '● 토너먼트' },
   ]
 
-  function buildTooltip(id: number): string {
-    const name = charName(id)
-    const isPlayer = id === pid
+  function renderTooltip(charId: number) {
+    const charDef = characters.find(c => c.id === charId)
+    if (!charDef) return null
 
-    // 누적 전적
-    const stat = npcStats[id]
-    const cumRecord = stat
+    const isPlayer = charId === pid
+    const growth = isPlayer
+      ? activeSlot!.growthStats
+      : { vit: 1, str: 1, agi: 1, int: 1, luk: 1 }
+
+    const stats = deriveStats(charDef.baseCombat, growth, charDef.archetype)
+
+    // Record strings reuse buildTooltip logic inline
+    const stat = npcStats[charId]
+    const allRecord = stat
       ? `누적 ${stat.totalWins}승 ${stat.totalLosses}패 · 최고 ${stat.bestStage}`
       : isPlayer
         ? `누적 ${activeSlot!.totalWins ?? 0}승 ${activeSlot!.totalLosses ?? 0}패`
         : '전적 없음'
 
-    // 이번 토너먼트 전적
-    const tourMatches = allMatches.filter(m => m.char1Id === id || m.char2Id === id)
-    const tourWins    = tourMatches.filter(m => m.winnerId === id).length
-    const tourLosses  = tourMatches.filter(m => m.loserId  === id).length
+    const tourMatches = allMatches.filter(m => m.char1Id === charId || m.char2Id === charId)
+    const tourWins    = tourMatches.filter(m => m.winnerId === charId).length
+    const tourLosses  = tourMatches.filter(m => m.loserId  === charId).length
     const tourRecord  = tourMatches.length > 0 ? `이번 대회 ${tourWins}승 ${tourLosses}패` : ''
 
-    // 스킬 목록
     let skills: string[]
     if (isPlayer) {
       skills = [...activeSlot!.initialSkills, ...activeSlot!.acquiredSkills]
     } else {
       const ref = tourMatches[0]
-      if (ref) {
-        skills = ref.char1Id === id ? (ref.char1Skills ?? []) : (ref.char2Skills ?? [])
-      } else {
-        skills = []
-      }
+      skills = ref
+        ? (ref.char1Id === charId ? (ref.char1Skills ?? []) : (ref.char2Skills ?? []))
+        : []
     }
-    const skillLine = skills.length > 0
-      ? `스킬: ${skills.map(s => skillName(s)).join(', ')}`
-      : ''
 
-    return [name, cumRecord, tourRecord, skillLine].filter(Boolean).join('\n')
+    return (
+      <div style={{
+        background: 'rgba(12,8,24,.97)', border: '1px solid rgba(255,255,255,.15)',
+        borderRadius: 10, padding: '10px 13px', minWidth: 180, maxWidth: 240,
+        fontSize: 11, color: 'var(--ink-dim)', lineHeight: 1.6,
+        boxShadow: '0 4px 24px rgba(0,0,0,.65)',
+      }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink)', marginBottom: 6 }}>
+          {charDef.name}
+        </div>
+
+        {/* ① 베이스 스탯 */}
+        <div style={{ fontSize: 10, color: 'var(--ink-mute)', marginBottom: 2 }}>베이스 스탯</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 8px', marginBottom: 8 }}>
+          {([['바이탈', growth.vit], ['힘', growth.str], ['민첩', growth.agi], ['지력', growth.int], ['행운', growth.luk]] as [string, number][]).map(([label, val]) => (
+            <span key={label}>{label}: <b style={{ color: 'var(--ink)' }}>{val}</b></span>
+          ))}
+        </div>
+
+        {/* ② 전투 스탯 */}
+        <div style={{ fontSize: 10, color: 'var(--ink-mute)', marginBottom: 2 }}>전투 스탯</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 8px', marginBottom: 8 }}>
+          {([['HP', stats.maxHp], ['물리공격', stats.pAtk], ['마법공격', stats.mAtk], ['물리방어', stats.pDef], ['속도', stats.spd], ['크리율', `${stats.crit}%`], ['회피', `${stats.eva}%`]] as [string, string | number][]).map(([label, val]) => (
+            <span key={label}>{label}: <b style={{ color: 'var(--ink)' }}>{val}</b></span>
+          ))}
+        </div>
+
+        {/* ③ 전적 */}
+        <div style={{ fontSize: 10, color: 'var(--ink-mute)', marginBottom: 2 }}>전적</div>
+        <div>{allRecord}</div>
+        {tourRecord && <div>{tourRecord}</div>}
+
+        {/* 스킬 */}
+        {skills.length > 0 && (
+          <div style={{ marginTop: 6, fontSize: 10, color: 'var(--ink-mute)' }}>
+            스킬: {skills.map(s => skillName(s)).join(', ')}
+          </div>
+        )}
+      </div>
+    )
   }
+
+  const tooltipHandlers = (id: number) => ({
+    onMouseEnter: (e: React.MouseEvent) => setTooltip({ x: e.clientX + 12, y: e.clientY + 12, charId: id }),
+    onMouseLeave: () => setTooltip(null),
+  })
 
   return (
     <div className="arena-bg-arena" style={{ display: 'flex', flexDirection: 'column' as const, minHeight: '100vh' }}>
@@ -285,7 +334,7 @@ export default function BracketPage() {
                     opacity: qualified ? 1 : 0.55,
                   }}>
                     <span
-                      title={buildTooltip(id)}
+                      {...tooltipHandlers(id)}
                       style={{
                         fontSize: 12, fontWeight: isPlayer ? 700 : 400,
                         color: isPlayer ? 'var(--violet-glow)' : qualified ? 'var(--ink)' : 'var(--ink-mute)',
@@ -306,10 +355,10 @@ export default function BracketPage() {
         {/* ── 본선 탭 ── */}
         {activeTab === 'group' && (
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 16 }}>
-            {myGroup && <GroupCard group={myGroup} pid={pid} featured getTooltip={buildTooltip} />}
+            {myGroup && <GroupCard group={myGroup} pid={pid} featured getHandlers={tooltipHandlers} />}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
               {otherGroups.map(g => (
-                <GroupCard key={g.groupId} group={g} pid={pid} getTooltip={buildTooltip} />
+                <GroupCard key={g.groupId} group={g} pid={pid} getHandlers={tooltipHandlers} />
               ))}
             </div>
           </div>
@@ -343,7 +392,7 @@ export default function BracketPage() {
                           pid={pid}
                           winRate={winRate}
                           hideResult={isPlayerMatch && !doneMatchIds.has(m.matchId)}
-                          getTooltip={buildTooltip}
+                          getHandlers={tooltipHandlers}
                         />
                       )
                     })}
@@ -393,6 +442,16 @@ export default function BracketPage() {
           보상 받기 →
         </button>
       </div>
+
+      {/* Custom floating tooltip */}
+      {tooltip && (
+        <div style={{
+          position: 'fixed', left: tooltip.x, top: tooltip.y, zIndex: 9999,
+          pointerEvents: 'none',
+        }}>
+          {renderTooltip(tooltip.charId)}
+        </div>
+      )}
     </div>
   )
 }

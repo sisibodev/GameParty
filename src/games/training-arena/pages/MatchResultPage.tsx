@@ -189,7 +189,7 @@ export default function MatchResultPage() {
                 <span key={sid}
                   onMouseEnter={e => chipEnter(e, sid, 'skill')}
                   onMouseLeave={() => setHoveredChip(null)}
-                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,214,107,.15)', border: '1px solid rgba(255,214,107,.4)', color: 'var(--gold)', cursor: 'default' }}>
+                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: `${TIER_COLOR[sk.tier] ?? 'var(--gold)'}22`, border: `1px solid ${TIER_COLOR[sk.tier] ?? 'var(--gold)'}66`, color: TIER_COLOR[sk.tier] ?? 'var(--gold)', cursor: 'default' }}>
                   {sk.name}
                 </span>
               ) : null
@@ -203,7 +203,7 @@ export default function MatchResultPage() {
                 <span key={sid}
                   onMouseEnter={e => chipEnter(e, sid, 'skill')}
                   onMouseLeave={() => setHoveredChip(null)}
-                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(103,232,249,.1)', border: '1px solid rgba(103,232,249,.3)', color: 'var(--cyan)', cursor: 'default' }}>
+                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: `${TIER_COLOR[sk.tier] ?? 'var(--gold)'}22`, border: `1px solid ${TIER_COLOR[sk.tier] ?? 'var(--gold)'}66`, color: TIER_COLOR[sk.tier] ?? 'var(--gold)', cursor: 'default' }}>
                   {sk.name}
                 </span>
               ) : null
@@ -221,7 +221,7 @@ export default function MatchResultPage() {
                 <span key={pid2}
                   onMouseEnter={e => chipEnter(e, pid2, 'passive')}
                   onMouseLeave={() => setHoveredChip(null)}
-                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(161,99,255,.1)', border: '1px solid rgba(161,99,255,.3)', color: 'var(--violet-glow)', cursor: 'default' }}>
+                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: 'rgba(52,211,153,.12)', border: '1px solid rgba(52,211,153,.35)', color: '#34d399', cursor: 'default' }}>
                   {p.name}
                 </span>
               ) : null
@@ -231,7 +231,7 @@ export default function MatchResultPage() {
 
         {/* ── 액티브 스킬 선택지 (가로 3개) ── */}
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', letterSpacing: '.08em', marginBottom: 8 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--gold)', letterSpacing: '.08em', marginBottom: 8 }}>
             액티브 스킬 습득 {isSkillFull && <span style={{ color: 'var(--ink-mute)', fontWeight: 400 }}>(교체)</span>}
           </div>
           {pendingSkillOpts === null || pendingSkillOpts.length === 0 ? (
@@ -250,7 +250,7 @@ export default function MatchResultPage() {
                     <span style={{ fontSize: 10, fontWeight: 700, color: TIER_COLOR[sk.tier], border: `1px solid ${TIER_COLOR[sk.tier]}55`, borderRadius: 999, padding: '2px 7px', alignSelf: 'flex-start' as const }}>
                       {TIER_LABEL[sk.tier] ?? sk.tier}
                     </span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold)' }}>{sk.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: TIER_COLOR[sk.tier] ?? 'var(--gold)' }}>{sk.name}</span>
                     <span style={{ fontSize: 11, color: 'var(--ink-mute)', lineHeight: 1.5, flex: 1 }}>{sk.description}</span>
                     <button
                       className="arena-btn arena-btn-primary"
@@ -268,7 +268,7 @@ export default function MatchResultPage() {
 
         {/* ── 패시브 스킬 선택지 (2열 그리드) ── */}
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--violet-glow)', letterSpacing: '.08em', marginBottom: 8 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#34d399', letterSpacing: '.08em', marginBottom: 8 }}>
             패시브 스킬 습득 {isPassiveFull && <span style={{ color: 'var(--ink-mute)', fontWeight: 400 }}>(교체)</span>}
           </div>
           {pendingPassiveOpts === null || pendingPassiveOpts.length === 0 ? (
@@ -281,10 +281,10 @@ export default function MatchResultPage() {
                 return (
                   <div key={passiveId} style={{
                     display: 'flex', flexDirection: 'column' as const, gap: 6,
-                    background: 'rgba(161,99,255,.06)', border: '1px solid rgba(161,99,255,.22)',
+                    background: 'rgba(52,211,153,.07)', border: '1px solid rgba(52,211,153,.22)',
                     borderRadius: 10, padding: '11px 13px',
                   }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--violet-glow)' }}>{p.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#34d399' }}>{p.name}</span>
                     <span style={{ fontSize: 11, color: 'var(--ink-mute)', lineHeight: 1.5, flex: 1 }}>{p.description}</span>
                     <button
                       className="arena-btn arena-btn-primary"

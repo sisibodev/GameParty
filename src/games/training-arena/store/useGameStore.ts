@@ -42,7 +42,7 @@ import { runTournament } from '../engine/tournamentEngine'
 import { simulateMatch } from '../engine/battleEngine'
 import { deriveStats }   from '../engine/statDeriver'
 import { runGacha }      from '../engine/gachaEngine'
-import { calcReward }    from '../engine/rewardEngine'
+import { calcReward, calcNpcQualifierLoserBonus } from '../engine/rewardEngine'
 import { rollShopItems, rollNpcItems } from '../engine/shopEngine'
 import { buildRunRecord, addRunRecord } from '../engine/scoreEngine'
 import { getItemById } from '../data/items'
@@ -168,7 +168,7 @@ function initialPlayerGrowth(): GrowthStats {
 }
 
 function npcGrowth(round: number, isRival: boolean = false): GrowthStats {
-  const b = NPC_BASE_GROWTH + (round - 1) + (isRival ? RIVAL_STAT_PER_ROUND * round : 0)
+  const b = NPC_BASE_GROWTH + (round - 1) + (isRival ? RIVAL_STAT_PER_ROUND : 0)
   return { vit: b, str: b, agi: b, int: b, luk: b }
 }
 
@@ -686,6 +686,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     const round      = activeSlot.currentRound
     const gameSeed   = activeSlot.gameSeed ?? activeSlot.createdAt
+    const prevQualifierLosers = new Set(activeSlot.prevQualifierLosers ?? [])
     const growthMap: Record<number, GrowthStats> = {}
     const skillMap:  Record<number, string[]>    = {}
     const itemsMap:  Record<number, string[]>    = {}
@@ -700,7 +701,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         itemsMap[c.id]  = (activeSlot.inventory ?? []).map(it => it.itemId)
       } else {
         const isRival = (activeSlot.rivalIds ?? []).includes(c.id)
-        growthMap[c.id] = npcGrowth(round, isRival)
+        const base = npcGrowth(round, isRival)
+        const bonus = prevQualifierLosers.has(c.id) ? 1 : 0
+        growthMap[c.id] = bonus > 0
+          ? { vit: base.vit + bonus, str: base.str + bonus, agi: base.agi + bonus, int: base.int + bonus, luk: base.luk + bonus }
+          : base
         skillMap[c.id]  = npcRandomSkills(c.id, gameSeed)
         itemsMap[c.id]  = npcItems(c.id, round, seed)
       }
@@ -741,7 +746,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       buildTournamentState(activeSlot, seed, result, reward, unlockedCharIds, itemsMap)
 
     const npcStats = updateNpcStats(activeSlot.npcStats, result)
-    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats, savedReward: reward }
+    const nextQualifierLosers = Object.keys(calcNpcQualifierLoserBonus(result, activeSlot.characterId)).map(Number)
+    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats, savedReward: reward, prevQualifierLosers: nextQualifierLosers }
     await saveSlot(slotWithNpc)
 
     if (newlyUnlocked.length > 0) {
@@ -760,6 +766,7 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     const round      = activeSlot.currentRound
     const gameSeed   = activeSlot.gameSeed ?? activeSlot.createdAt
+    const prevQualifierLosers2 = new Set(activeSlot.prevQualifierLosers ?? [])
     const growthMap: Record<number, GrowthStats> = {}
     const skillMap:  Record<number, string[]>    = {}
     const itemsMap:  Record<number, string[]>    = {}
@@ -774,7 +781,11 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         itemsMap[c.id]  = (activeSlot.inventory ?? []).map(it => it.itemId)
       } else {
         const isRival = (activeSlot.rivalIds ?? []).includes(c.id)
-        growthMap[c.id] = npcGrowth(round, isRival)
+        const base = npcGrowth(round, isRival)
+        const bonus = prevQualifierLosers2.has(c.id) ? 1 : 0
+        growthMap[c.id] = bonus > 0
+          ? { vit: base.vit + bonus, str: base.str + bonus, agi: base.agi + bonus, int: base.int + bonus, luk: base.luk + bonus }
+          : base
         skillMap[c.id]  = npcRandomSkills(c.id, gameSeed)
         itemsMap[c.id]  = npcItems(c.id, round, seed)
       }
@@ -816,7 +827,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
       buildTournamentState(activeSlot, seed, result, reward, unlockedCharIds, itemsMap)
 
     const npcStats = updateNpcStats(activeSlot.npcStats, result)
-    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats, savedReward: reward }
+    const nextQualifierLosers2 = Object.keys(calcNpcQualifierLoserBonus(result, activeSlot.characterId)).map(Number)
+    const slotWithNpc: SaveSlot = { ...slotWithPhase, npcStats, savedReward: reward, prevQualifierLosers: nextQualifierLosers2 }
     await saveSlot(slotWithNpc)
 
     if (newlyUnlocked.length > 0) {
