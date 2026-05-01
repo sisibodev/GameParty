@@ -32,7 +32,7 @@ export default function LobbyPage() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>게임 목록</h2>
           <div className={styles.gameGrid}>
-            {GAMES.filter((g) => g.enabled).map((game) => (
+            {GAMES.filter((g) => g.enabled && (!g.devOnly || IS_DEV)).map((game) => (
               <GameCard key={game.id} game={game} />
             ))}
           </div>

@@ -5,8 +5,10 @@ import LoginPage from './pages/LoginPage'
 import LobbyPage from './pages/LobbyPage'
 import StockGame from './games/stock/StockGame'
 import BaseballUmpireGame from './games/baseball-umpire/BaseballUmpireGame'
-import CopsAndRobbersGame  from './games/cops-and-robbers/CopsAndRobbersGame'
-import TrainingArenaGame   from './games/training-arena/TrainingArenaGame'
+import CopsAndRobbersGame from './games/cops-and-robbers/CopsAndRobbersGame'
+import TrainingArenaGame from './games/training-arena/TrainingArenaGame'
+
+const IS_DEV = import.meta.env.DEV
 
 export default function App() {
   return (
@@ -38,14 +40,16 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/game/cops-and-robbers/*"
-            element={
-              <ProtectedRoute>
-                <CopsAndRobbersGame />
-              </ProtectedRoute>
-            }
-          />
+          {IS_DEV && (
+            <Route
+              path="/game/cops-and-robbers/*"
+              element={
+                <ProtectedRoute>
+                  <CopsAndRobbersGame />
+                </ProtectedRoute>
+              }
+            />
+          )}
           <Route
             path="/game/training-arena/*"
             element={
