@@ -14,6 +14,19 @@ const BRACKET_LABELS: Record<number, string> = {
   1: '16강 탈락', 2: '8강 탈락', 3: '4강 탈락', 4: '준우승',
 }
 
+const badgeStyle = (color: string, bg: string, border: string): React.CSSProperties => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '6px 14px',
+  borderRadius: 999,
+  background: bg,
+  border,
+  color,
+  fontWeight: 700,
+  fontSize: 14,
+})
+
 export default function TournamentPage() {
   const { activeSlot, lastTournament, playerMatches } = useGameStore()
 
@@ -37,6 +50,21 @@ export default function TournamentPage() {
     }
 
     const { stage, bracketRound } = last.matchResult
+
+    if (last.playerWon) {
+      if (stage === 'bracket' && (bracketRound ?? 0) >= 4) {
+        return <span style={badgeStyle('var(--gold)', 'rgba(255,214,107,.15)', '1px solid rgba(255,214,107,.6)')}>우승!</span>
+      }
+      if (stage === 'bracket') {
+        const r = bracketRound ?? 1
+        const nextLabel = BRACKET_LABELS[r + 1] ?? '다음 라운드'
+        return <span style={badgeStyle('var(--green)', 'rgba(94,240,168,.1)', '1px solid rgba(94,240,168,.45)')}>승리 · {nextLabel} 진출</span>
+      }
+      if (stage === 'group') {
+        return <span style={badgeStyle('var(--green)', 'rgba(94,240,168,.1)', '1px solid rgba(94,240,168,.45)')}>본선 승리</span>
+      }
+      return <span style={badgeStyle('var(--green)', 'rgba(94,240,168,.1)', '1px solid rgba(94,240,168,.45)')}>예선 통과</span>
+    }
 
     if (last.playerWon && stage === 'bracket' && (bracketRound ?? 0) >= 4) {
       return <span style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'6px 14px', borderRadius:999, background:'rgba(255,214,107,.15)', border:'1px solid rgba(255,214,107,.6)', color:'var(--gold)', fontWeight:700, fontSize:14 }}>🏆 우승!</span>

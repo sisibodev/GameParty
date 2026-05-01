@@ -4,7 +4,7 @@ import type { Archetype, CharacterDef, CombatStats, GrowthStats, ItemDef, ItemKi
 import { deriveStats } from '../engine/statDeriver'
 import { NPC_BASE_GROWTH, MAX_PASSIVE_SLOTS, RIVAL_STAT_PER_ROUND } from '../constants'
 import { getItemById } from '../data/items'
-import { TACTIC_CARDS } from '../data/tacticCards'
+import { getTacticCardsForArchetype } from '../data/tacticCards'
 import { SeededRng } from '../utils/rng'
 import { pickN } from '../utils/fisherYates'
 import Portrait from '../components/ui/Portrait'
@@ -189,7 +189,7 @@ function PassiveList({ passiveIds, onHover }: { passiveIds: string[]; onHover: (
 }
 
 function CharCard({
-  char, tone, stats, growthStats, isPlayer,
+  char, tone, maxHp, stats, isPlayer,
   isRival, isWinnerCandidate, isDarkhorse,
   skillIds, uniqueSkillIds, pendingSkills, passives, records, onHover,
 }: {
@@ -197,7 +197,6 @@ function CharCard({
   tone: number
   maxHp: number
   stats: CombatStats | null
-  growthStats: { vit: number; str: number; agi: number; int: number; luk: number } | null
   isPlayer?: boolean
   isRival?: boolean
   isWinnerCandidate?: boolean
@@ -252,16 +251,17 @@ function CharCard({
             </span>
           </div>
 
-          {/* Growth stats 2-col grid */}
-          {growthStats && (
+          {/* Stats 2-col grid */}
+          {stats && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
               {([
-                ['바이탈', growthStats.vit],
-                ['힘',     growthStats.str],
-                ['민첩',   growthStats.agi],
-                ['지력',   growthStats.int],
-                ['행운',   growthStats.luk],
-              ] as [string, number][]).map(([label, val]) => (
+                ['HP',   maxHp.toLocaleString()],
+                ['ATK',  Math.round(stats.pAtk)],
+                ['DEF',  Math.round(stats.pDef)],
+                ['SPD',  Math.round(stats.spd)],
+                ['CRT%', `${stats.crit.toFixed(1)}%`],
+                ['EVA%', `${stats.eva.toFixed(1)}%`],
+              ] as [string, string | number][]).map(([label, val]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 4, padding: '2px 5px', borderRadius: 4, background: 'rgba(255,255,255,.03)' }}>
                   <span style={{ fontSize: 10, color: 'var(--ink-mute)' }}>{label}</span>
                   <span className="arena-mono" style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-dim)' }}>{val}</span>
@@ -271,50 +271,6 @@ function CharCard({
           )}
         </div>
       </div>
-
-      {/* HP/MP bars + combat stats */}
-      {stats && (
-        <>
-          <div className="arena-divider" style={{ margin: '0 12px' }} />
-          <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
-            {/* HP bar */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                <span style={{ fontSize: 9, color: 'var(--ink-mute)', fontWeight: 700 }}>HP</span>
-                <span className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-dim)' }}>{stats.maxHp.toLocaleString()}</span>
-              </div>
-              <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,.08)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: '100%', borderRadius: 3, background: 'linear-gradient(90deg,#3ecf6a,#5ef0a8)' }} />
-              </div>
-            </div>
-            {/* MP bar */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                <span style={{ fontSize: 9, color: 'var(--ink-mute)', fontWeight: 700 }}>MP</span>
-                <span className="arena-mono" style={{ fontSize: 9, color: 'var(--ink-dim)' }}>{stats.maxMana.toLocaleString()}</span>
-              </div>
-              <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,.08)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: '100%', borderRadius: 3, background: 'linear-gradient(90deg,#2255cc,#44aaff)' }} />
-              </div>
-            </div>
-            {/* Combat stats row */}
-            <div style={{ display: 'flex', gap: 4, marginTop: 2, flexWrap: 'wrap' }}>
-              {([
-                ['공격', Math.round(arch === 'mage' || arch === 'support' ? stats.mAtk : stats.pAtk)],
-                ['방어', Math.round(stats.pDef)],
-                ['속도', Math.round(stats.spd)],
-                ['크리', `${stats.crit.toFixed(0)}%`],
-                ['회피', `${stats.eva.toFixed(0)}%`],
-              ] as [string, string | number][]).map(([lbl, val]) => (
-                <div key={lbl} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '3px 4px', borderRadius: 5, background: 'rgba(255,255,255,.04)' }}>
-                  <span style={{ fontSize: 8, color: 'var(--ink-mute)' }}>{lbl}</span>
-                  <span className="arena-mono" style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-dim)' }}>{val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Records */}
       {records.length > 0 && (
@@ -394,6 +350,7 @@ export default function MatchPreviewPage() {
 
   const playerChar    = findChar(pid)
   const opponentChar  = findChar(opponentId)
+  const tacticCards    = playerChar ? getTacticCardsForArchetype(playerChar.archetype) : []
 
   const round         = activeSlot.currentRound
   const oppGrowth     = npcGrowth(round, (activeSlot.rivalIds ?? []).includes(opponentId))
@@ -420,7 +377,7 @@ export default function MatchPreviewPage() {
 
   const playerRecords: Array<{ label: string; value: string }> = [
     { label: '통산전적', value: `${totalWins}승 ${totalLosses}패` },
-    { label: '최고기록', value: (activeSlot.bestClearRound != null && activeSlot.bestClearRound !== 0) ? `R${activeSlot.bestClearRound}` : '첫 진출' },
+    { label: '최고기록', value: activeSlot.bestClearRound != null ? `R${activeSlot.bestClearRound}` : '첫 진출' },
     { label: '상대전적', value: `${h2hWins}승 ${h2hLosses}패` },
   ]
 
@@ -532,7 +489,6 @@ export default function MatchPreviewPage() {
               tone={pid % 6}
               maxHp={playerMaxHp}
               stats={playerStats}
-              growthStats={activeSlot.growthStats}
               isPlayer
               uniqueSkillIds={activeSlot.initialSkills}
               skillIds={activeSlot.acquiredSkills}
@@ -547,7 +503,6 @@ export default function MatchPreviewPage() {
               tone={opponentId % 6}
               maxHp={opponentMaxHp}
               stats={opponentStats}
-              growthStats={oppGrowth}
               isRival={isRival}
               isWinnerCandidate={isWinnerCandidate}
               isDarkhorse={isDarkhorse}
@@ -581,7 +536,7 @@ export default function MatchPreviewPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flex: 1 }}>
-            {TACTIC_CARDS.filter(card => card.validFor.includes(playerChar?.archetype ?? '')).map(card => {
+            {tacticCards.map(card => {
               const active = selectedTacticCardId === card.id
               return (
                 <button
@@ -591,6 +546,22 @@ export default function MatchPreviewPage() {
                 >
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--violet-glow)', marginBottom: 4 }}>{card.name}</div>
                   <div style={{ fontSize: 10, color: 'var(--ink-mute)', lineHeight: 1.3 }}>{card.description}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7 }}>
+                    {card.goodAgainst.map(a => (
+                      <span key={a} style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        color: ARCHETYPE_COLOR[a],
+                        border: `1px solid ${ARCHETYPE_COLOR[a]}55`,
+                        borderRadius: 999,
+                        padding: '1px 6px',
+                        background: `${ARCHETYPE_COLOR[a]}18`,
+                      }}>
+                        {ARCHETYPE_LABEL[a]}
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 9, color: 'var(--ink-dim)', lineHeight: 1.35, marginTop: 6 }}>{card.hint}</div>
                 </button>
               )
             })}

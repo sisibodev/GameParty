@@ -38,7 +38,7 @@
    - HP = maxHp, 마나 = maxMana × 50% (INITIAL_MANA_RATIO)
    - 버프/디버프 초기화, 쿨타임 0, ATB 게이지 0
    - 패시브 전투 시작 효과 적용 (stat_boost, battle_focus 등)
-   - 전술 카드 효과 적용 (first_strike → gauge 60, 기타)
+   - 전술 카드 효과 적용 (`tacticCards.ts`의 `effect.kind`와 카드별 수치 사용)
   ↓
 2. ATB 루프
    - 매 tick: 각 캐릭터 gauge += spd (SPD 기반)
@@ -70,7 +70,7 @@
 ### 3.1 행동 게이지 방식 (ATB)
 ```
 - MAX_ATB_GAUGE = 100
-- 모든 캐릭터 gauge 0에서 시작 (first_strike 카드 시 60으로 시작)
+- 모든 캐릭터 gauge 0에서 시작 (`initiative` 계열 전술 카드 선택 시 카드별 ATB로 시작)
 - 매 tick: gauge += spd
 - gauge ≥ 100 도달 시 해당 캐릭터 행동
 - 행동 후 gauge = 0 리셋
@@ -300,7 +300,7 @@ priority 낮은 순 정렬
 - [x] 크리 대미지 확정 — `1.5 + LUK×0.001` (cap 3.0)
 - [x] 명중/회피 공식 — clamp(acc-eva, 10, 100), AGI EVA 역보정 적용
 - [x] 패시브 전투 적용 — thorns, lifesteal, iron_will 등 구현
-- [x] 전술 카드 8종 적용 (battleEngine.ts)
+- [x] 직군별 전술 카드 64장 적용 (battleEngine.ts + tacticCards.ts)
 - [x] ATB 속도 감쇠 — 1 + log₂(ratio)
 - [x] ReplayPage 구현 — 전투 로그 재생
 - [ ] 시뮬레이션 모드 배치 전투 속도 최적화

@@ -1,4 +1,4 @@
-// ─── Growth Stats ────────────────────────────────────────────────────────────
+﻿// ─── Growth Stats ────────────────────────────────────────────────────────────
 
 export interface GrowthStats {
   vit: number  // 활력 (체력·물리방어)
@@ -178,28 +178,31 @@ export interface BattleCharState {
 
 // ─── Tactic Card (v0.4.2 Phase 3) ────────────────────────────────────────────
 
-export type TacticCardId =
-  | 'first_strike'    // 1. 선제 공격
-  | 'barrier'         // 2. 방벽 전개
-  | 'ambush'          // 3. 기습
-  | 'mana_burst'      // 4. 마나 폭주
-  | 'curse'           // 5. 저주
-  | 'potion'          // 6. 회복 물약
-  | 'insight'         // 7. 간파
-  | 'last_stand'      // 8. 최후의 일격
-  | 'berserker_fury'  // 9. 광폭화
-  | 'arcane_amplify'  // 10. 마법 증폭
-  | 'shadow_walk'     // 11. 그림자 걸음
-  | 'fortress_stance' // 12. 요새 자세
-  | 'holy_aura'       // 13. 신성 기운
-  | 'rapid_shot'      // 14. 신속 사격
+export type TacticCardId = string
+
+export type TacticEffectKind =
+  | 'initiative'
+  | 'barrier'
+  | 'ambush'
+  | 'mana_burst'
+  | 'curse'
+  | 'potion'
+  | 'insight'
+  | 'last_stand'
+
+export interface TacticEffect {
+  kind: TacticEffectKind
+  [key: string]: number | string
+}
 
 export interface TacticCard {
   id: TacticCardId
+  archetype: Archetype
   name: string
   description: string
-  hint: string       // 변수 포인트
-  validFor: string[] // archetype IDs that can select this card
+  hint: string
+  goodAgainst: Archetype[]
+  effect: TacticEffect
 }
 
 // 전투 중 1회성 카드의 발동 여부를 기록
@@ -357,7 +360,7 @@ export interface SaveSlot {
   totalWins?: number    // v0.8.0: 누적 승수 (라운드 간 유지)
   totalLosses?: number  // v0.8.0: 누적 패수 (라운드 간 유지)
   savedReward?: RewardPackage  // v0.9.0: 미수령 보상 — 리로드 후 RewardPage 복원용, claimReward 후 삭제
-  prevQualifierLosers?: number[]  // 직전 라운드 예선 탈락 NPC IDs (다크호스 제외) — 다음 라운드 +1 성장 보너스용
+  prevQualifierLosers?: number[] // v0.10.0: 직전 라운드 예선 탈락 NPC 보정 대상
 }
 
 // 전투용 스킬 목록 (initialSkills + acquiredSkills, 최대 5개)
@@ -396,3 +399,4 @@ export interface RewardPackage {
   goldEarned: number          // v0.4.2+: 결과별 골드 보상
   passiveChoices: string[]    // v0.5.0: 라운드 종료 패시브 선택지 3개
 }
+

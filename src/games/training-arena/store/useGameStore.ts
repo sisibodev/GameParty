@@ -259,6 +259,57 @@ function derivePlayerResult(
   return 'qualifier_out'
 }
 
+function deriveActualPlayerResult(
+  slot: SaveSlot,
+  result: TournamentResult,
+  playerMatches: PlayerMatchInfo[] = [],
+): PlayerTournamentResult {
+  const playedMatches = playerMatches.filter(m => m.wasPlayed)
+  const last = playedMatches[playedMatches.length - 1]
+  if (!last) return derivePlayerResult(slot, result)
+
+  const stage = last.matchResult.stage
+  const round = last.matchResult.bracketRound ?? 0
+
+  if (last.playerWon) {
+    if (stage === 'bracket') return round >= FINALIST_BRACKET_ROUND ? 'winner' : 'tournament_out'
+    if (stage === 'group') return 'group_out'
+    if (stage === 'qualifier') return 'group_out'
+  }
+
+  if (stage === 'bracket') return round >= FINALIST_BRACKET_ROUND ? 'finalist' : 'tournament_out'
+  if (stage === 'group') return 'group_out'
+  return 'qualifier_out'
+}
+
+function calcPlayerReward(
+  slot: SaveSlot,
+  result: TournamentResult,
+  playerResult: PlayerTournamentResult,
+  playerMatches: PlayerMatchInfo[] = [],
+): RewardPackage {
+  const rewardSeed = result.seed ^ slot.characterId
+  const baseReward = calcReward(
+    playerResult,
+    result.darkhorses.includes(slot.characterId),
+    allSkillIds,
+    [...slot.initialSkills, ...slot.acquiredSkills],
+    rewardSeed,
+    (slot.inventory ?? []).map(it => it.itemId),
+    allPassiveIds,
+    slot.passiveSkills ?? [],
+  )
+
+  const defeatedRival = playerMatches.some(
+    m => m.wasPlayed &&
+         m.playerWon &&
+         (slot.rivalIds ?? []).includes(m.opponentId),
+  )
+  return defeatedRival
+    ? { ...baseReward, goldEarned: baseReward.goldEarned * RIVAL_GOLD_MULTIPLIER }
+    : applyRivalGoldBonus(baseReward, slot, result)
+}
+
 function extractPlayerMatches(
   result: TournamentResult,
   playerCharId: number,
@@ -727,19 +778,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     )
     await appendMatchLog(result.tournamentId, result.allMatches)
 
-    const plResult   = derivePlayerResult(activeSlot, result)
-    const rewardSeed = seed ^ activeSlot.characterId
-    const baseReward = calcReward(
-      plResult,
-      result.darkhorses.includes(activeSlot.characterId),
-      allSkillIds,
-      [...activeSlot.initialSkills, ...activeSlot.acquiredSkills],
-      rewardSeed,
-      (activeSlot.inventory ?? []).map(it => it.itemId),
-      allPassiveIds,
-      activeSlot.passiveSkills ?? [],
-    )
-    const reward     = applyRivalGoldBonus(baseReward, activeSlot, result)
+    const plResult = derivePlayerResult(activeSlot, result)
+    const reward   = calcPlayerReward(activeSlot, result, plResult)
 
     const { unlockedCharIds } = get()
     const { slotWithPhase, newUnlocked, newlyUnlocked } =
@@ -808,19 +848,8 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     )
     await appendMatchLog(result.tournamentId, result.allMatches)
 
-    const plResult   = derivePlayerResult(activeSlot, result)
-    const rewardSeed = seed ^ activeSlot.characterId
-    const baseReward = calcReward(
-      plResult,
-      result.darkhorses.includes(activeSlot.characterId),
-      allSkillIds,
-      [...activeSlot.initialSkills, ...activeSlot.acquiredSkills],
-      rewardSeed,
-      (activeSlot.inventory ?? []).map(it => it.itemId),
-      allPassiveIds,
-      activeSlot.passiveSkills ?? [],
-    )
-    const reward     = applyRivalGoldBonus(baseReward, activeSlot, result)
+    const plResult = derivePlayerResult(activeSlot, result)
+    const reward   = calcPlayerReward(activeSlot, result, plResult)
 
     const { unlockedCharIds } = get()
     const { slotWithPhase, playerMatches, newUnlocked, newlyUnlocked } =
@@ -988,8 +1017,20 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
 
     // 실제 승패에 따라 다음 경기 결정 (pre-run과 결과가 다를 수 있음)
     const { nextIndex, nextPhase } = determineNextMatch(playerMatches, playerMatchIndex, won)
+    let finalSlot = updated
+    let finalReward: RewardPackage | null = null
+    if (nextPhase === 'tournament') {
+      const { lastTournament } = get()
+      if (lastTournament) {
+        const actualResult = deriveActualPlayerResult(updated, lastTournament, playerMatches)
+        finalReward = calcPlayerReward(updated, lastTournament, actualResult, playerMatches)
+        finalSlot = { ...updated, savedReward: finalReward }
+        await saveSlot(finalSlot)
+      }
+    }
     set({
-      activeSlot:       updated,
+      activeSlot:       finalSlot,
+      ...(finalReward ? { pendingReward: finalReward } : {}),
       playerMatchIndex: nextPhase === 'tournament' ? playerMatchIndex : nextIndex,
       phase:            nextPhase,
     })
@@ -1002,7 +1043,10 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
     const randomIdx     = Math.floor(Math.random() * GROWTH_STAT_KEYS.length)
     const randomStatKey = GROWTH_STAT_KEYS[randomIdx]
 
-    const isWinner  = lastTournament?.winner === activeSlot.characterId
+    const actualResult = lastTournament
+      ? deriveActualPlayerResult(activeSlot, lastTournament, playerMatches)
+      : null
+    const isWinner  = actualResult === 'winner'
     const newGrowth = {
       ...activeSlot.growthStats,
       [randomStatKey]:
@@ -1239,7 +1283,21 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         }
       }
     }
+    let finalSlot = saved
+    let finalReward: RewardPackage | null = null
+    if (finalNextPhase === 'tournament') {
+      const { lastTournament } = get()
+      if (lastTournament) {
+        const actualResult = deriveActualPlayerResult(saved, lastTournament, finalMatches)
+        finalReward = calcPlayerReward(saved, lastTournament, actualResult, finalMatches)
+        finalSlot = { ...saved, savedReward: finalReward }
+        await saveSlot(finalSlot)
+      }
+    }
+
     set({
+      activeSlot:       finalSlot,
+      ...(finalReward ? { pendingReward: finalReward } : {}),
       playerMatches:    finalMatches,
       playerMatchIndex: finalNextPhase === 'tournament' ? playerMatchIndex : finalNextIndex,
       phase:            finalNextPhase,
@@ -1287,7 +1345,21 @@ export const useGameStore = create<GameState & GameActions>((set, get) => ({
         }
       }
     }
+    let finalSlot = saved
+    let finalReward: RewardPackage | null = null
+    if (finalNextPhase === 'tournament') {
+      const { lastTournament } = get()
+      if (lastTournament) {
+        const actualResult = deriveActualPlayerResult(saved, lastTournament, finalMatches)
+        finalReward = calcPlayerReward(saved, lastTournament, actualResult, finalMatches)
+        finalSlot = { ...saved, savedReward: finalReward }
+        await saveSlot(finalSlot)
+      }
+    }
+
     set({
+      activeSlot:       finalSlot,
+      ...(finalReward ? { pendingReward: finalReward } : {}),
       playerMatches:    finalMatches,
       playerMatchIndex: finalNextPhase === 'tournament' ? playerMatchIndex : finalNextIndex,
       phase:            finalNextPhase,

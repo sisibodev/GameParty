@@ -23,6 +23,7 @@ import {
 import { SeededRng } from '../utils/rng'
 import { deriveStats } from './statDeriver'
 import { sumCombatEffect } from '../data/items'
+import { getTacticCard } from '../data/tacticCards'
 import skillsData from '../data/skills.json'
 import passiveSkillsData from '../data/passiveSkills.json'
 
@@ -370,7 +371,8 @@ function calcHit(
   const firstStrikeMult = firstStrikeValue > 0 ? (1 + firstStrikeValue / 100) : 1
   const firstStrikeConsumed = firstStrikeValue > 0
 
-  const ambushDmgMult = ambushConsumed ? 1.3 : 1
+  const ambushBonusPct = sumEffect(actor.buffs, 'ambush_ready')
+  const ambushDmgMult = ambushConsumed ? 1 + ambushBonusPct / 100 : 1
   const raw    = base * defFactor
   const damage = Math.max(MIN_DAMAGE, Math.floor(raw * critMult * incomingMult * ambushDmgMult * executeMult * firstStrikeMult))
   return { damage, critical, evaded: false, ambushConsumed, firstStrikeConsumed }
@@ -379,18 +381,20 @@ function calcHit(
 // v0.4.2 Phase 3 — 전술 카드: 방벽(-70% 첫 피격) / 회복 물약(HP ≤30% 시 50% 회복)
 function applyBarrier(defender: BattleCharState, damage: number): { defender: BattleCharState; damage: number } {
   if (damage <= 0) return { defender, damage }
-  if (!defender.buffs.some(b => b.effectType === 'barrier_ready')) return { defender, damage }
-  const reduced = Math.max(MIN_DAMAGE, Math.floor(damage * 0.3))
+  const barrier = defender.buffs.find(b => b.effectType === 'barrier_ready')
+  if (!barrier) return { defender, damage }
+  const reduced = Math.max(MIN_DAMAGE, Math.floor(damage * (1 - barrier.value / 100)))
   return { defender: consumeBuff(defender, 'barrier_ready'), damage: reduced }
 }
 
 function applyPotion(defender: BattleCharState): BattleCharState {
-  if (!defender.buffs.some(b => b.effectType === 'potion_ready')) return defender
+  const potion = defender.buffs.find(b => b.effectType === 'potion_ready')
+  if (!potion) return defender
   const stats = deriveStats(defender.baseCombat, defender.growthStats, defender.archetype)
   if (stats.maxHp <= 0) return defender
   if (defender.currentHp > stats.maxHp * 0.3) return defender
   if (defender.currentHp <= 0) return defender
-  const healed = Math.min(stats.maxHp, defender.currentHp + Math.floor(stats.maxHp * 0.5))
+  const healed = Math.min(stats.maxHp, defender.currentHp + Math.floor(stats.maxHp * (potion.value / 100)))
   return consumeBuff({ ...defender, currentHp: healed }, 'potion_ready')
 }
 
@@ -522,30 +526,32 @@ function applyTactic(
 ): [BattleCharState, BattleCharState] {
   const card = self.tactic?.cardId
   if (!card) return [self, opp]
+  const effect = getTacticCard(card)?.effect
 
-  switch (card) {
+  switch (effect?.kind ?? card) {
+    case 'initiative':
     case 'first_strike':
-      return [{ ...self, gauge: Math.max(self.gauge, 60) }, opp]
+      return [{ ...self, gauge: Math.max(self.gauge, Number(effect?.gauge ?? 60)) }, opp]
 
     case 'barrier':
       return [{
         ...self,
-        buffs: [...self.buffs, { id: 'barrier', effectType: 'barrier_ready', value: 1, turnsLeft: 99 }],
+        buffs: [...self.buffs, { id: 'barrier', effectType: 'barrier_ready', value: Number(effect?.reduction_pct ?? 70), turnsLeft: 99 }],
       }, opp]
 
     case 'ambush':
       return [{
         ...self,
-        buffs: [...self.buffs, { id: 'ambush', effectType: 'ambush_ready', value: 1, turnsLeft: 99 }],
+        buffs: [...self.buffs, { id: 'ambush', effectType: 'ambush_ready', value: Number(effect?.damage_mult_pct ?? 30), turnsLeft: 99 }],
       }, opp]
 
     case 'mana_burst': {
       const stats = deriveStats(self.baseCombat, self.growthStats, self.archetype)
-      const bumped = Math.min(stats.maxMana, self.currentMana + Math.floor(stats.maxMana * 1.0))
+      const bumped = Math.min(stats.maxMana, self.currentMana + Math.floor(stats.maxMana * (Number(effect?.initial_mana_pct ?? 100) / 100)))
       return [{
         ...self,
         currentMana: bumped,
-        buffs: [...self.buffs, { id: 'mana_burst', effectType: 'mana_regen_pct', value: 50, turnsLeft: 5 }],
+        buffs: [...self.buffs, { id: 'mana_burst', effectType: 'mana_regen_pct', value: Number(effect?.regen_pct ?? 50), turnsLeft: Number(effect?.turns ?? 5) }],
       }, opp]
     }
 
@@ -554,20 +560,20 @@ function applyTactic(
         ...opp,
         debuffs: [
           ...opp.debuffs,
-          { id: 'curse_atk', effectType: 'atk_pct', value: -30, turnsLeft: 4 },
-          { id: 'curse_def', effectType: 'def_pct', value: -20, turnsLeft: 4 },
+          { id: 'curse_atk', effectType: 'atk_pct', value: Number(effect?.atk_pct ?? -30), turnsLeft: Number(effect?.turns ?? 4) },
+          { id: 'curse_def', effectType: 'def_pct', value: Number(effect?.def_pct ?? -20), turnsLeft: Number(effect?.turns ?? 4) },
         ],
       }]
 
     case 'potion':
       return [{
         ...self,
-        buffs: [...self.buffs, { id: 'potion', effectType: 'potion_ready', value: 1, turnsLeft: 99 }],
+        buffs: [...self.buffs, { id: 'potion', effectType: 'potion_ready', value: Number(effect?.heal_pct ?? 50), turnsLeft: 99 }],
       }, opp]
 
     case 'insight':
       return [
-        { ...self, buffs: [...self.buffs, { id: 'insight_crit', effectType: 'crit_flat', value: 30, turnsLeft: 99 }] },
+        { ...self, buffs: [...self.buffs, { id: 'insight_crit', effectType: 'crit_flat', value: Number(effect?.crit_flat ?? 30), turnsLeft: 99 }] },
         { ...opp, debuffs: [...opp.debuffs, { id: 'insight_eva', effectType: 'eva_force_zero', value: 1, turnsLeft: 99 }] },
       ]
 
