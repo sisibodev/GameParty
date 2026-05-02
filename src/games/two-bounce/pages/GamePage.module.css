@@ -1,0 +1,137 @@
+.wrap {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: #0f0f1a;
+  cursor: crosshair;
+}
+
+.hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: none;
+}
+
+.hudInner {
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 0.5rem 1.5rem;
+  color: #fff;
+  font-size: 1rem;
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.hudItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.hudLabel {
+  font-size: 0.65rem;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hudValue {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.hudDivider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.gauge {
+  position: absolute;
+  bottom: 3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.gaugeLabel {
+  color: #ff9944;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.gaugeTrack {
+  width: 16px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.gaugeFill {
+  width: 100%;
+  background: linear-gradient(to top, #ff4400, #ffcc00);
+  border-radius: 8px;
+  transition: height 0.05s linear;
+}
+
+.hint {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.75rem;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.flash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.flashText {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 30px currentColor;
+  animation: fadeOut 1.2s forwards;
+}
+
+.flashSuccess {
+  color: #44ff88;
+}
+
+.flashMiss {
+  color: #ff4444;
+}
+
+@keyframes fadeOut {
+  0% { opacity: 1; transform: scale(1.2); }
+  60% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.9); }
+}

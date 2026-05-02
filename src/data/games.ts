@@ -43,6 +43,17 @@ export const GAMES: GameMeta[] = [
     players: '4~10명',
   },
   {
+    id: 'two-bounce',
+    name: '2 Bounce',
+    description: '슛 실패 시 두 번째 바운스 위치에서 다음 샷을 시작하는 3D 농구 슈팅 게임',
+    thumbnail: '🏀',
+    path: '/game/two-bounce',
+    enabled: true,
+    devOnly: true,
+    tags: ['스포츠', '싱글', '3D'],
+    players: '1인',
+  },
+  {
     id: 'training-arena',
     name: '배틀 그랑프리',
     description: '캐릭터를 성장시키며 매 라운드 토너먼트에 도전하는 싱글플레이 육성 자동전투 시뮬레이션',
