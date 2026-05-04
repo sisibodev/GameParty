@@ -60,6 +60,7 @@ export async function createRoom(
     cardPlays: {},
     roundCard: {},
     roundResults: {},
+    createdAt: Date.now(),
   }
 
   await set(ref(db(), `rooms/${roomId}`), room)
@@ -577,6 +578,67 @@ export async function setRoundReady(roomId: string, uid: string, ready: boolean)
 /** 방 강제 해산 (방장만) — 방 데이터 전체 삭제 → 모든 구독자가 로비로 이동 */
 export async function dissolveRoom(roomId: string) {
   await remove(ref(db(), `rooms/${roomId}`))
+}
+
+/** 모든 방 구독 (관리자 기능) */
+export function subscribeAllRooms(
+  cb: (rooms: { roomId: string; status: string; createdAt?: number; roundStartAt?: number | null; playerCount: number }[]) => void
+): DatabaseReference {
+  const roomsRef = ref(db(), 'rooms')
+  onValue(roomsRef, snap => {
+    if (!snap.exists()) { cb([]); return }
+    const val = snap.val() as Record<string, Room>
+    const list = Object.entries(val).map(([roomId, room]) => ({
+      roomId,
+      status: room.status,
+      createdAt: room.createdAt,
+      roundStartAt: room.roundStartAt,
+      playerCount: Object.keys(room.players ?? {}).length,
+    }))
+    cb(list)
+  })
+  return roomsRef
+}
+
+/** 빈 방 / 오래된 방 즉시 정리 */
+export async function cleanupAbandonedRooms(): Promise<number> {
+  const snap = await get(ref(db(), 'rooms'))
+  if (!snap.exists()) return 0
+  const val = snap.val() as Record<string, Room>
+  const now = Date.now()
+  const STALE_MS = 3 * 60 * 60 * 1000 // 3시간
+  let count = 0
+  for (const [roomId, room] of Object.entries(val)) {
+    const playerCount = Object.keys(room.players ?? {}).length
+    const age = now - (room.createdAt ?? 0)
+    const isAbandoned = playerCount === 0
+    const isStale = age > STALE_MS && room.status === 'waiting'
+    const isEnded = room.status === 'ended'
+    if (isAbandoned || isStale || isEnded) {
+      await remove(ref(db(), `rooms/${roomId}`))
+      count++
+    }
+  }
+  return count
+}
+
+/** 장시간 비활성 방 자동 삭제 (앱 시작 시 호출) */
+export function autoCleanupStaleRooms(hoursThreshold = 3): void {
+  const roomsRef = ref(db(), 'rooms')
+  onValue(roomsRef, async snap => {
+    if (!snap.exists()) return
+    const val = snap.val() as Record<string, Room>
+    const now = Date.now()
+    const THRESHOLD_MS = hoursThreshold * 60 * 60 * 1000
+    for (const [roomId, room] of Object.entries(val)) {
+      const lastActivity = room.roundStartAt ?? room.createdAt ?? 0
+      const idle = now - lastActivity
+      const playerCount = Object.keys(room.players ?? {}).length
+      if (idle > THRESHOLD_MS || playerCount === 0 || room.status === 'ended') {
+        await remove(ref(db(), `rooms/${roomId}`))
+      }
+    }
+  }, { onlyOnce: true })
 }
 
 /** 라운드 카드 선택권 사용 — 10라운드 이벤트 카드를 직접 선택 */

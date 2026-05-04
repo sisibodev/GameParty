@@ -384,6 +384,7 @@
 .tradeBtns {
   display: flex;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .buyBtn, .sellBtn {
@@ -642,8 +643,8 @@
   border-radius: 16px;
   padding: 1.25rem 1.5rem;
   min-width: 320px;
-  max-width: 520px;
-  width: 90vw;
+  max-width: 960px;
+  width: 92vw;
   z-index: 100;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   display: flex;
@@ -929,4 +930,145 @@
   background: rgba(244, 67, 54, 0.28);
   border-color: #f44336;
   color: #ff8a80;
+}
+
+/* ── Rank Overlay 2-col redesign ─────────────────────── */
+
+.rankOverlayGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.rankOverlayPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rankOverlayPanelHeader {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #9098b7;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.companyTypeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.companyTypeCard {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+}
+
+.companyTypeHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 2px;
+}
+
+.companyTypeEmoji {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.companyTypeName {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f1f3ff;
+}
+
+.companyTypeRange {
+  font-size: 0.68rem;
+  color: #9098b7;
+  font-weight: 600;
+}
+
+.companyTypeDesc {
+  font-size: 0.68rem;
+  color: #5e6582;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.rankOverlayList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rankOverlayRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.03);
+}
+
+.rankOverlayRowMe {
+  background: rgba(157,122,255,0.1);
+  border: 1px solid rgba(157,122,255,0.25);
+}
+
+.rankOverlayNum {
+  min-width: 1.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #9098b7;
+  text-align: center;
+}
+
+.rankOverlayAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #0a0b12;
+  flex-shrink: 0;
+}
+
+.rankOverlayName {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #d8dcef;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rankOverlayAssets {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4ade80;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rankOverlayAssetsHidden {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #5e6582;
+  letter-spacing: 0.05em;
+}
+
+.rankOverlayFooter {
+  font-size: 0.78rem;
+  color: #9098b7;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255,255,255,0.07);
 }

@@ -372,20 +372,34 @@ export default function RoundResult() {
                 const rate = isDelisted ? -1 : (displayRates[c.id] ?? 0)
                 const prevPrice = c.priceHistory[room.currentRound - 1] ?? c.priceHistory[0]
                 const displayPrice = isDelisted ? 0 : Math.max(100, Math.round(prevPrice * (1 + rate)))
+                const companyCards = cardPlays.filter(p => p.companyId === c.id)
                 return (
                   <div key={c.id} className={`${styles.priceInfoRow} ${isDelisted ? styles.priceInfoRowDelisted : ''}`}>
-                    <span className={styles.priceInfoName}>{c.emoji} {c.name}</span>
-                    {isDelisted ? (
-                      <span className={styles.delistedBadge}>상장폐지</span>
-                    ) : (
-                      <span className={styles.priceInfoRate}
-                        style={{ color: rate >= 0 ? '#4caf50' : '#f44336' }}>
-                        {formatRate(rate)}
-                      </span>
+                    <div className={styles.priceInfoRowMain}>
+                      <span className={styles.priceInfoName}>{c.emoji} {c.name}</span>
+                      {isDelisted ? (
+                        <span className={styles.delistedBadge}>상장폐지</span>
+                      ) : (
+                        <>
+                          <span className={styles.priceInfoArrow}>
+                            {prevPrice.toLocaleString()} → <span className={styles.priceAfter}>{displayPrice.toLocaleString()}원</span>
+                          </span>
+                          <span className={`${styles.priceInfoRate} ${rate >= 0 ? styles.priceInfoRateBull : styles.priceInfoRateBear}`}>
+                            {formatRate(rate)}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {companyCards.length > 0 && (
+                      <div className={styles.priceInfoCardTags}>
+                        {companyCards.map(p => (
+                          <span key={p.playId} className={styles.cardTag}
+                            style={{ borderColor: `${CARD_COLOR[p.cardType] ?? '#fff'}33`, color: CARD_COLOR[p.cardType] ?? '#9098b7' }}>
+                            {CARD_LABEL[p.cardType] ?? p.cardType}
+                          </span>
+                        ))}
+                      </div>
                     )}
-                    <span className={styles.priceInfoPrice}>
-                      {isDelisted ? '전액 손실' : `${displayPrice.toLocaleString()}원`}
-                    </span>
                   </div>
                 )
               })}

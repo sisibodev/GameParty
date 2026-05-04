@@ -164,6 +164,7 @@ export interface Room {
   roundCard: { [round: number]: RoundCardType }
   roundResults: { [round: number]: RoundResult }
   roundReady?: { [uid: string]: boolean }
+  createdAt?: number
   // 공유 드래프트 (2라운드부터)
   draftPool?: Card[]                       // 이번 라운드 드래프트 카드 풀 (플레이어수 +1장)
   draftOrder?: string[]                    // 선택 순서 (꼴지부터)

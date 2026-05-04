@@ -8,6 +8,18 @@ import type { RoundCardType } from '../types'
 import type { Room, Company, Card } from '../types'
 import styles from './GamePlay.module.css'
 
+const COMPANY_TYPES_INFO = [
+  { id: 'stable',  emoji: '🛡️', name: '안정형',       color: '#5de3ff', range: '변동폭 ±5~15%',  desc: '완만하게 움직이며 큰 손실 적음',   points: '10,22 23,18 36,21 49,17 62,20 75,16 88,18' },
+  { id: 'growth',  emoji: '🚀', name: '성장형',       color: '#4ade80', range: '변동폭 +10~30%', desc: '지속 상승 추세, 후반에 강함',       points: '10,30 23,26 36,22 49,18 62,14 75,10 88,6'  },
+  { id: 'decline', emoji: '📉', name: '하락형',       color: '#ff4d5e', range: '변동폭 -10~30%', desc: '지속 하락 추세, 매도 타이밍 중요',  points: '10,6 23,10 36,14 49,18 62,22 75,26 88,30'  },
+  { id: 'roller',  emoji: '🎢', name: '롤러코스터형', color: '#ffc857', range: '변동폭 ±20~50%', desc: '급등락 반복, 고위험 고수익',         points: '10,18 23,6 36,28 49,8 62,30 75,12 88,26'   },
+]
+const AVATAR_GRADIENTS = [
+  'linear-gradient(135deg,#ff4d5e,#ff7788)', 'linear-gradient(135deg,#3b82f6,#60a5fa)',
+  'linear-gradient(135deg,#4ade80,#86efac)', 'linear-gradient(135deg,#ffc857,#ffd580)',
+  'linear-gradient(135deg,#9d7aff,#c4a8ff)', 'linear-gradient(135deg,#5de3ff,#93eeff)',
+]
+
 export default function GamePlay() {
   const { roomId } = useParams<{ roomId: string }>()
   const { user } = useAuth()
@@ -723,68 +735,62 @@ export default function GamePlay() {
       {/* 순위표 오버레이 (Tab 홀드) */}
       {showRank && (
         <div className={styles.rankOverlay}>
-          {/* 현재 순위 */}
-          <div className={styles.rankOverlaySection}>
-            <div className={styles.rankOverlayTitle}>📊 현재 순위</div>
-            {playersSorted.map((p, i) => (
-              <div key={p.uid} className={`${styles.rankRow} ${p.uid === user.uid ? styles.rankRowMe : ''}`}>
-                <span className={styles.rankNum}>{i + 1}위</span>
-                <span className={styles.rankName}>{p.name}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* 회사별 미니 차트 */}
-          <div className={styles.rankOverlaySection}>
-            <div className={styles.rankOverlayTitle}>📈 가격 추이</div>
-            <div className={styles.miniChartGrid}>
-              {companies.map(c => {
-                const history = c.priceHistory.slice(0, room.currentRound)
-                const min = Math.min(...history)
-                const max = Math.max(...history)
-                const range = max - min || 1
-                const w = 80, h = 30
-                const pts = history.map((p, i) => {
-                  const x = (i / Math.max(history.length - 1, 1)) * w
-                  const y = h - ((p - min) / range) * h
-                  return `${x},${y}`
-                }).join(' ')
-                const lastChange = history.length >= 2
-                  ? (history[history.length - 1] - history[history.length - 2]) / history[history.length - 2]
-                  : 0
-                const lineColor = lastChange >= 0 ? '#4caf50' : '#f44336'
-                return (
-                  <div key={c.id} className={styles.miniChartItem}>
-                    <div className={styles.miniChartLabel}>{c.emoji} {c.name}</div>
-                    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-                      <polyline points={pts} fill="none" stroke={lineColor} strokeWidth="1.5" strokeLinejoin="round" />
+          <div className={styles.rankOverlayGrid}>
+            {/* 왼쪽: 종목 유형 가이드 */}
+            <div className={styles.rankOverlayPanel}>
+              <div className={styles.rankOverlayPanelHeader}>📊 종목 유형 가이드</div>
+              <div className={styles.companyTypeGrid}>
+                {COMPANY_TYPES_INFO.map(t => (
+                  <div key={t.id} className={styles.companyTypeCard}>
+                    <div className={styles.companyTypeHeader}>
+                      <span className={styles.companyTypeEmoji}>{t.emoji}</span>
+                      <span className={styles.companyTypeName}>{t.name}</span>
+                    </div>
+                    <svg viewBox="0 0 98 36" width="100%" height={32} style={{ display: 'block', margin: '4px 0' }}>
+                      <polyline points={t.points} fill="none" stroke={t.color} strokeWidth="1.8"
+                        strokeLinejoin="round" strokeLinecap="round" />
                     </svg>
-                    <span className={styles.miniChartRate} style={{ color: lineColor }}>
-                      {lastChange >= 0 ? '+' : ''}{(lastChange * 100).toFixed(1)}%
-                    </span>
+                    <div className={styles.companyTypeRange}>{t.range}</div>
+                    <div className={styles.companyTypeDesc}>{t.desc}</div>
                   </div>
-                )
-              })}
+                ))}
+              </div>
+            </div>
+
+            {/* 오른쪽: 현재 순위 */}
+            <div className={styles.rankOverlayPanel}>
+              <div className={styles.rankOverlayPanelHeader}>🏆 현재 순위</div>
+              <div className={styles.rankOverlayList}>
+                {playersSorted.map((p, i) => {
+                  const pTotal = p.cash + companies.reduce((s, c) => {
+                    const price = c.priceHistory[room.currentRound - 1] ?? c.priceHistory[0]
+                    return s + (p.portfolio?.[c.id] ?? 0) * price
+                  }, 0)
+                  const isMe = p.uid === user.uid
+                  const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null
+                  return (
+                    <div key={p.uid} className={`${styles.rankOverlayRow} ${isMe ? styles.rankOverlayRowMe : ''}`}>
+                      <span className={styles.rankOverlayNum}>{medal ?? `${i + 1}`}</span>
+                      <div className={styles.rankOverlayAvatar} style={{ background: AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length] }}>
+                        {p.name.charAt(0)}
+                      </div>
+                      <span className={styles.rankOverlayName}>{p.name}</span>
+                      {isMe
+                        ? <span className={styles.rankOverlayAssets}>₩{pTotal.toLocaleString()}</span>
+                        : <span className={styles.rankOverlayAssetsHidden}>₩••••••</span>
+                      }
+                    </div>
+                  )
+                })}
+              </div>
+              <div className={styles.rankOverlayFooter}>
+                다음 라운드 현금 보유세:&nbsp;
+                <span style={{ color: '#ffc857', fontWeight: 700 }}>
+                  {(getTaxRate(room.currentRound + 1) * 100).toFixed(0)}%
+                </span>
+              </div>
             </div>
           </div>
-
-          {/* 세율 구간 */}
-          <div className={styles.rankOverlaySection}>
-            <div className={styles.rankOverlayTitle}>💰 현금 보유세</div>
-            <div className={styles.taxScheduleRow}>
-              {Array.from({ length: room.settings.rounds }, (_, i) => {
-                const r = i + 1
-                const rate = getTaxRate(r) * 100
-                const isCurrent = r === room.currentRound
-                return (
-                  <span key={r} className={`${styles.taxBadge} ${isCurrent ? styles.taxBadgeCurrent : ''}`}>
-                    {r}R {rate}%
-                  </span>
-                )
-              })}
-            </div>
-          </div>
-
           <p className={styles.rankHint}>Tab 키에서 손을 떼면 사라집니다</p>
         </div>
       )}

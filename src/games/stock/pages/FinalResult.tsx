@@ -266,6 +266,51 @@ export default function FinalResult() {
           )}
         </div>
 
+        {/* 시상대 */}
+        {results.length >= 2 && (
+          <div className={styles.podium}>
+            {results[1] && (
+              <div className={styles.podiumSlot}>
+                <div className={styles.podiumAvatar}>
+                  {results[1].player.photoURL
+                    ? <img src={results[1].player.photoURL} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} alt="" />
+                    : results[1].player.name[0]}
+                  <span className={styles.podiumMedalBadge}>🥈</span>
+                </div>
+                <div className={styles.podiumName}>{results[1].player.name}</div>
+                <div className={styles.podiumAssets}>{results[1].totalAssets.toLocaleString()}원</div>
+                <div className={styles.podiumPlatform} style={{ height: 120 }}><span className={styles.podiumRankNum}>2</span></div>
+              </div>
+            )}
+            {results[0] && (
+              <div className={styles.podiumSlot}>
+                <div className={`${styles.podiumAvatar} ${styles.podiumAvatarFirst}`}>
+                  {results[0].player.photoURL
+                    ? <img src={results[0].player.photoURL} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} alt="" />
+                    : results[0].player.name[0]}
+                  <span className={styles.podiumMedalBadge}>🥇</span>
+                </div>
+                <div className={styles.podiumName}>{results[0].player.name}</div>
+                <div className={styles.podiumAssets}>{results[0].totalAssets.toLocaleString()}원</div>
+                <div className={`${styles.podiumPlatform} ${styles.podiumFirst}`} style={{ height: 160 }}><span className={styles.podiumRankNum}>1</span></div>
+              </div>
+            )}
+            {results[2] && (
+              <div className={styles.podiumSlot}>
+                <div className={styles.podiumAvatar}>
+                  {results[2].player.photoURL
+                    ? <img src={results[2].player.photoURL} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} alt="" />
+                    : results[2].player.name[0]}
+                  <span className={styles.podiumMedalBadge}>🥉</span>
+                </div>
+                <div className={styles.podiumName}>{results[2].player.name}</div>
+                <div className={styles.podiumAssets}>{results[2].totalAssets.toLocaleString()}원</div>
+                <div className={styles.podiumPlatform} style={{ height: 90 }}><span className={styles.podiumRankNum}>3</span></div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 순위표 */}
         <div className={styles.card}>
           <h2 className={styles.sectionTitle}>최종 순위</h2>
