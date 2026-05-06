@@ -49,7 +49,6 @@ export const GAMES: GameMeta[] = [
     thumbnail: '🏀',
     path: '/game/two-bounce',
     enabled: true,
-    devOnly: true,
     tags: ['스포츠', '싱글', '3D'],
     players: '1인',
   },
