@@ -1,0 +1,279 @@
+.wrap {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: #0f0f1a;
+  cursor: default;
+}
+
+.hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: none;
+}
+
+.hudInner {
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 0.5rem 1.5rem;
+  color: #fff;
+  font-size: 1rem;
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.hudItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.hudLabel {
+  font-size: 0.65rem;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hudValue {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.hudDivider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.muteBtn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  z-index: 20;
+  pointer-events: all;
+}
+
+.muteBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.crosshair {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 10;
+  transition: border-color 0.15s ease;
+}
+
+.crosshairInRange {
+  border-color: rgba(80, 220, 120, 0.95);
+}
+
+.crosshair::before,
+.crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.75);
+  transition: background 0.15s ease;
+}
+
+.crosshairInRange::before,
+.crosshairInRange::after {
+  background: rgba(80, 220, 120, 0.95);
+}
+
+.crosshair::before {
+  width: 1px;
+  height: 8px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.crosshair::after {
+  width: 8px;
+  height: 1px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.gauge {
+  position: absolute;
+  bottom: 3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.gaugeReady {
+  opacity: 0.4;
+}
+
+.gaugeLabel {
+  color: #ff9944;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.gaugeTrack {
+  width: 16px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.gaugeNoRange {
+  border-color: rgba(255, 100, 80, 0.55);
+}
+
+.gaugeRecommended {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(80, 220, 120, 0.22);
+  border-top: 1px solid rgba(80, 220, 120, 0.55);
+  border-bottom: 1px solid rgba(80, 220, 120, 0.55);
+  pointer-events: none;
+}
+
+.gaugeOptimalLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(80, 220, 120, 0.85);
+  pointer-events: none;
+}
+
+.gaugeHoopMark {
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  height: 2px;
+  background: rgba(255, 220, 80, 0.9);
+  pointer-events: none;
+  box-shadow: 0 0 4px rgba(255, 220, 80, 0.6);
+}
+
+.gaugeDistance {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.04em;
+}
+
+.gaugeAimHint {
+  font-size: 0.65rem;
+  color: rgba(255, 110, 80, 0.85);
+  letter-spacing: 0.04em;
+}
+
+.gaugeFill {
+  width: 100%;
+  background: linear-gradient(to top, #ff4400, #ffcc00);
+}
+
+.hint {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.75rem;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.flash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.flashText {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 30px currentColor;
+  animation: fadeOut 1.2s forwards;
+}
+
+.flashSuccess {
+  color: #44ff88;
+}
+
+.flashMiss {
+  color: #ff4444;
+}
+
+@keyframes fadeOut {
+  0% { opacity: 1; transform: scale(1.2); }
+  60% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+
+@media (max-width: 480px) {
+  .hint {
+    font-size: 0.65rem;
+    white-space: normal;
+    text-align: center;
+    padding: 0 1rem;
+    width: 100%;
+    left: 0;
+    transform: none;
+  }
+
+  .hudInner {
+    gap: 0.75rem;
+    padding: 0.4rem 0.75rem;
+  }
+
+  .hudValue {
+    font-size: 0.9rem;
+  }
+
+  .hudLabel {
+    font-size: 0.55rem;
+  }
+}

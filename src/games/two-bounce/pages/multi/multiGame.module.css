@@ -1,0 +1,278 @@
+/* Full-screen wrapper for loading/error/result states */
+.fullscreen {
+  position: fixed; inset: 0;
+  background: #0f0f1a;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+}
+
+.center {
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+}
+
+.error { color: #ff6655; font-size: 1rem; }
+
+.backBtn {
+  background: none; border: 1px solid #444; color: #aaa;
+  padding: 0.5rem 1.5rem; border-radius: 8px; cursor: pointer;
+  font-size: 0.9rem;
+}
+.backBtn:hover { color: #fff; border-color: #aaa; }
+
+/* Game wrapper */
+.gameWrap {
+  position: relative; width: 100vw; height: 100vh; overflow: hidden;
+}
+
+/* Multi HUD — top bar */
+.multiHud {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  padding: 0.5rem 1rem;
+  display: flex; align-items: center; gap: 1.5rem;
+}
+
+.hudTurn { font-size: 1rem; font-weight: 700; min-width: 120px; flex: 1; display: flex; flex-direction: column; gap: 0.1rem; }
+.hudPosition { font-size: 0.7rem; font-weight: 500; color: #888; letter-spacing: 0.04em; }
+
+/* 나가기 버튼 — HUD 우측 끝 */
+.leaveBtn {
+  margin-left: auto;
+  background: none; border: 1px solid #555; color: #888;
+  padding: 0.25rem 0.9rem; border-radius: 6px; cursor: pointer;
+  font-size: 0.78rem; white-space: nowrap;
+}
+.leaveBtn:hover { color: #fff; border-color: #aaa; }
+
+.myTurnLabel { color: #ff6600; }
+.otherTurnLabel { color: #aaa; }
+
+.hudPlayers { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+.hudPlayer {
+  display: flex; gap: 0.4rem; align-items: center;
+  font-size: 0.8rem; color: #888;
+  padding: 0.2rem 0.5rem; border-radius: 6px;
+  border: 1px solid transparent;
+}
+.hudPlayerActive {
+  color: #fff; border-color: #ff6600; background: rgba(255,102,0,0.15);
+}
+.hudPlayerNearGoal {
+  border-color: rgba(255, 220, 50, 0.5);
+  background: rgba(255, 220, 50, 0.08);
+}
+.hudPlayerNearGoal.hudPlayerActive {
+  border-color: #ff6600;
+  background: rgba(255,102,0,0.15);
+}
+.hudPlayerName { font-weight: 600; }
+.hudPlayerGoals { color: #ff9944; }
+.hudPlayerShots { color: #555; font-size: 0.7rem; }
+
+/* Watching badge */
+.watchingBadge {
+  position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.6); color: #aaa;
+  padding: 0.3rem 1rem; border-radius: 20px; font-size: 0.8rem; z-index: 10;
+}
+
+/* Crosshair */
+.crosshair {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 20px; height: 20px; z-index: 5; pointer-events: none;
+}
+.crosshair::before, .crosshair::after {
+  content: ''; position: absolute; background: rgba(255,255,255,0.6);
+}
+.crosshair::before { width: 2px; height: 100%; left: 50%; transform: translateX(-50%); }
+.crosshair::after  { height: 2px; width: 100%; top: 50%; transform: translateY(-50%); }
+.crosshairInRange::before, .crosshairInRange::after { background: #88ff88; }
+
+/* Power gauge — 싱글 GamePage와 동일한 위치/스타일 */
+.gauge {
+  position: absolute;
+  bottom: 3rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  pointer-events: none;
+}
+.gaugeReady { opacity: 0.4; }
+.gaugeLabel { color: #ff9944; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+.gaugeTrack {
+  width: 16px; height: 120px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  position: relative;
+}
+.gaugeNoRange { border-color: rgba(255,100,80,0.55); }
+.gaugeFill {
+  width: 100%;
+  background: linear-gradient(to top, #ff4400, #ffcc00);
+}
+.gaugeRecommended {
+  position: absolute; left: 0; right: 0;
+  background: rgba(80,220,120,0.22);
+  border-top: 1px solid rgba(80,220,120,0.55);
+  border-bottom: 1px solid rgba(80,220,120,0.55);
+  pointer-events: none;
+}
+.gaugeOptimalLine {
+  position: absolute; left: 0; right: 0;
+  height: 2px; background: rgba(80,220,120,0.85);
+  pointer-events: none;
+}
+.gaugeDistance { color: rgba(255,255,255,0.5); font-size: 0.7rem; letter-spacing: 0.04em; }
+.gaugeAimHint { color: rgba(255,110,80,0.85); font-size: 0.65rem; letter-spacing: 0.04em; }
+
+/* Flash overlay */
+.flash {
+  position: fixed; inset: 0; display: flex;
+  flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem;
+  pointer-events: none; z-index: 20;
+}
+.flashText { font-size: 4rem; font-weight: 900; text-shadow: 0 0 20px currentColor; }
+.flashSuccess { color: #88ff88; }
+.flashMiss { color: #ff6655; }
+.flashGameSet { color: #ffd700; text-shadow: 0 0 30px rgba(255, 215, 0, 0.6); }
+.flashSub { font-size: 1.05rem; font-weight: 600; color: rgba(255,255,255,0.75); letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* Hint */
+.hint {
+  position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
+  color: #555; font-size: 0.72rem; z-index: 5;
+  background: rgba(0,0,0,0.4); padding: 0.3rem 1rem; border-radius: 20px;
+}
+
+/* Result screen */
+.resultCard {
+  background: #1a1a2e; border: 1px solid #333; border-radius: 16px;
+  padding: 2.5rem 3rem; display: flex; flex-direction: column;
+  align-items: center; gap: 1.5rem;
+  width: min(360px, calc(100vw - 2rem));
+}
+.resultTitle { font-size: 1.6rem; font-weight: 700; }
+.resultWinner { font-size: 1.8rem; font-weight: 900; color: #ff6600; }
+.resultTable { width: 100%; display: flex; flex-direction: column; gap: 0.5rem; }
+.resultRow {
+  display: flex; gap: 1rem; align-items: center;
+  padding: 0.4rem 0.5rem; border-radius: 8px; background: rgba(255,255,255,0.05);
+}
+.resultRank { color: #888; width: 30px; text-align: center; }
+.resultName { flex: 1; font-weight: 600; }
+.resultGoals { color: #ff9944; font-weight: 700; }
+.resultShots { color: #888; font-size: 0.85rem; }
+.resultPct { color: #66aaff; font-size: 0.82rem; min-width: 36px; text-align: right; }
+.resultMeta { color: #555; font-size: 0.8rem; }
+.resultActions { display: flex; flex-direction: column; gap: 0.75rem; width: 100%; }
+.rematchWaiting {
+  padding: 0.75rem; border-radius: 8px;
+  background: rgba(255, 102, 0, 0.1); border: 1px solid rgba(255, 102, 0, 0.35);
+  color: #ff9944; font-size: 0.9rem; text-align: center;
+}
+.primaryBtn {
+  padding: 0.75rem 2.5rem; border-radius: 8px; border: none;
+  background: #ff6600; color: #fff; font-size: 1rem; font-weight: 700;
+  cursor: pointer;
+}
+.primaryBtn:hover { background: #ff8833; }
+
+/* ─── 개발 대리 조작 배지 ──────────────────────────────────────────────────── */
+
+/* ─── 개발 디버그 패널 ─────────────────────────────────────────────────────── */
+
+.devPanel {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.88);
+  color: #00ff88;
+  font-family: monospace;
+  font-size: 0.62rem;
+  line-height: 1.5;
+  padding: 0.3rem 0.6rem 0.5rem;
+  z-index: 200;
+  max-width: 300px;
+  border-top-left-radius: 8px;
+  border: 1px solid rgba(0, 255, 136, 0.15);
+  border-bottom: none;
+  border-right: none;
+}
+.devPanelToggle {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #ffcc00;
+  font-family: monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  padding: 0.1rem 0;
+  letter-spacing: 0.05em;
+}
+.devPanelToggle:hover { color: #ffe066; }
+.devPanelTitle { color: #ffcc00; font-weight: 700; margin-bottom: 0.2rem; margin-top: 0.15rem; }
+.devPanelRow { color: #aaffcc; }
+.devPanelLabel { color: #666; }
+.devPanelPlayers { margin-top: 0.25rem; border-top: 1px solid #333; padding-top: 0.25rem; }
+.devPanelPlayer { color: #88ccff; }
+
+@media (max-width: 480px) {
+  .multiHud {
+    gap: 0.6rem;
+    padding: 0.4rem 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .hudTurn {
+    font-size: 0.85rem;
+    min-width: 0;
+  }
+
+  .hudPlayers {
+    gap: 0.4rem;
+  }
+
+  .hudPlayer {
+    font-size: 0.72rem;
+    padding: 0.15rem 0.4rem;
+  }
+
+  .flashText {
+    font-size: 2.8rem;
+  }
+
+  .resultCard {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .hint {
+    font-size: 0.65rem;
+    white-space: normal;
+    text-align: center;
+    padding: 0.3rem 0.75rem;
+  }
+}
+
+.devProxyBadge {
+  position: fixed;
+  bottom: 5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 200, 0, 0.15);
+  border: 1px solid rgba(255, 200, 0, 0.4);
+  color: #e6be00;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  z-index: 30;
+}

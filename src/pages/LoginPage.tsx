@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { signInWithGoogle } from '../firebase/auth'
+import { signInWithGoogle, signInAnonymouslyDev } from '../firebase/auth'
 import { useAuth } from '../contexts/AuthContext'
 import styles from './LoginPage.module.css'
+
+const isDev = import.meta.env.DEV
 
 export default function LoginPage() {
   const { user, loading } = useAuth()
@@ -26,6 +28,19 @@ export default function LoginPage() {
       } else {
         setError('로그인 중 오류가 발생했습니다. 다시 시도해주세요.')
       }
+    } finally {
+      setIsSigningIn(false)
+    }
+  }
+
+  async function handleDevLogin() {
+    setIsSigningIn(true)
+    setError(null)
+    try {
+      await signInAnonymouslyDev()
+      navigate('/', { replace: true })
+    } catch {
+      setError('익명 로그인 실패. Firebase 콘솔에서 Anonymous 제공업체를 활성화해주세요.')
     } finally {
       setIsSigningIn(false)
     }
@@ -56,6 +71,16 @@ export default function LoginPage() {
           <GoogleIcon />
           {isSigningIn ? '로그인 중...' : 'Google 계정으로 로그인'}
         </button>
+
+        {isDev && (
+          <button
+            className={styles.devButton}
+            onClick={handleDevLogin}
+            disabled={isSigningIn}
+          >
+            🔧 Dev 익명 로그인 (로컬 전용)
+          </button>
+        )}
       </div>
     </div>
   )

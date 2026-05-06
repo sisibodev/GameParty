@@ -1,4 +1,4 @@
-import { signInWithPopup, signOut } from 'firebase/auth'
+import { signInWithPopup, signOut, signInAnonymously, updateProfile } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, googleProvider, db } from './config'
 
@@ -24,4 +24,16 @@ export async function signInWithGoogle(): Promise<void> {
 /** 로그아웃 */
 export async function signOutUser(): Promise<void> {
   await signOut(auth)
+}
+
+/**
+ * DEV 전용 — Firebase Anonymous Auth로 즉시 로그인한다.
+ * Google 팝업 없이 실제 Firebase UID를 발급받아 RTDB 쓰기가 정상 동작한다.
+ * Firebase 콘솔에서 Authentication > Anonymous 제공업체가 활성화되어 있어야 한다.
+ */
+export async function signInAnonymouslyDev(): Promise<void> {
+  const result = await signInAnonymously(auth)
+  if (!result.user.displayName) {
+    await updateProfile(result.user, { displayName: 'Dev User' })
+  }
 }

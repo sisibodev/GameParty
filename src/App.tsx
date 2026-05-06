@@ -7,6 +7,7 @@ import StockGame from './games/stock/StockGame'
 import BaseballUmpireGame from './games/baseball-umpire/BaseballUmpireGame'
 import CopsAndRobbersGame from './games/cops-and-robbers/CopsAndRobbersGame'
 import TrainingArenaGame from './games/training-arena/TrainingArenaGame'
+import TwoBounceGame from './games/two-bounce/TwoBounceGame'
 
 const IS_DEV = import.meta.env.DEV
 
@@ -41,14 +42,24 @@ export default function App() {
             }
           />
           {IS_DEV && (
-            <Route
-              path="/game/cops-and-robbers/*"
-              element={
-                <ProtectedRoute>
-                  <CopsAndRobbersGame />
-                </ProtectedRoute>
-              }
-            />
+            <>
+              <Route
+                path="/game/two-bounce/*"
+                element={
+                  <ProtectedRoute>
+                    <TwoBounceGame />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/game/cops-and-robbers/*"
+                element={
+                  <ProtectedRoute>
+                    <CopsAndRobbersGame />
+                  </ProtectedRoute>
+                }
+              />
+            </>
           )}
           <Route
             path="/game/training-arena/*"
