@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
-import { createRoom, joinRoom, subscribeRooms, unsubscribeRoom } from '../utils/rtdb'
+import { createRoom, joinRoom, subscribeRooms, unsubscribeRoom, subscribeAllRooms, cleanupAbandonedRooms, autoCleanupStaleRooms } from '../utils/rtdb'
 import type { RoomSettings, Player } from '../types'
 import styles from './RoomEnter.module.css'
 
@@ -72,10 +72,23 @@ export default function RoomEnter() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rooms, setRooms] = useState<{ roomId: string; host: string; settings: RoomSettings; players: Record<string, Player> }[]>([])
+  const [allRooms, setAllRooms] = useState<{ roomId: string; status: string; createdAt?: number; roundStartAt?: number | null; playerCount: number }[]>([])
+  const [cleanupMsg, setCleanupMsg] = useState<string | null>(null)
+  const [cleanupLoading, setCleanupLoading] = useState(false)
+  const [showCleanupConfirm, setShowCleanupConfirm] = useState(false)
 
   useEffect(() => {
     const ref = subscribeRooms(setRooms)
     return () => unsubscribeRoom(ref)
+  }, [])
+
+  useEffect(() => {
+    const ref = subscribeAllRooms(setAllRooms)
+    return () => unsubscribeRoom(ref)
+  }, [])
+
+  useEffect(() => {
+    autoCleanupStaleRooms(3)
   }, [])
 
   if (!user) return null
@@ -97,6 +110,20 @@ export default function RoomEnter() {
     maxInfoThisRound: 1,
     draftChosen: null,
     refillTotal: 0,
+  }
+
+  async function handleCleanup() {
+    setCleanupLoading(true)
+    setCleanupMsg(null)
+    try {
+      const count = await cleanupAbandonedRooms()
+      setCleanupMsg(`✅ ${count}개 방 삭제 완료`)
+    } catch {
+      setCleanupMsg('❌ 정리 실패')
+    } finally {
+      setCleanupLoading(false)
+      setShowCleanupConfirm(false)
+    }
   }
 
   async function handleCreate() {
@@ -296,6 +323,32 @@ export default function RoomEnter() {
             emoji="🌐" title="경기 호황" effect="전 종목 +10%"
             color="#9d7aff" rotate={-4} top={210} left={90}
           />
+        </div>
+      </div>
+
+      {/* ── Admin bar ── */}
+      <div className={styles.adminBar}>
+        <div className={styles.adminBarStats}>
+          <span className={styles.adminStatChip} data-status="total">전체 {allRooms.length}개</span>
+          <span className={styles.adminStatChip} data-status="waiting">대기 {allRooms.filter(r => r.status === 'waiting').length}</span>
+          <span className={styles.adminStatChip} data-status="playing">진행 {allRooms.filter(r => r.status === 'playing').length}</span>
+          <span className={styles.adminStatChip} data-status="empty">빈방 {allRooms.filter(r => r.playerCount === 0).length}</span>
+        </div>
+        <div className={styles.adminBarRight}>
+          {cleanupMsg && <span className={styles.cleanupMsg}>{cleanupMsg}</span>}
+          {showCleanupConfirm ? (
+            <div className={styles.cleanupConfirm}>
+              <span className={styles.cleanupConfirmText}>빈 방 / 오래된 방을 모두 삭제할까요?</span>
+              <button className={styles.cleanupConfirmYes} onClick={handleCleanup} disabled={cleanupLoading}>
+                {cleanupLoading ? '삭제 중...' : '삭제'}
+              </button>
+              <button className={styles.cleanupConfirmNo} onClick={() => setShowCleanupConfirm(false)}>취소</button>
+            </div>
+          ) : (
+            <button className={styles.cleanupBtn} onClick={() => { setCleanupMsg(null); setShowCleanupConfirm(true) }}>
+              🗑 방 정리
+            </button>
+          )}
         </div>
       </div>
 

@@ -408,3 +408,113 @@
 .roomJoinBtn:hover {
   filter: brightness(1.12);
 }
+
+/* ── Admin bar ── */
+
+.adminBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 48px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.adminBarStats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.adminStatChip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #9098b7;
+}
+
+.adminStatChip[data-status="waiting"] { color: #4ade80; border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.08); }
+.adminStatChip[data-status="playing"] { color: #5de3ff; border-color: rgba(93,227,255,0.3); background: rgba(93,227,255,0.08); }
+.adminStatChip[data-status="empty"]   { color: #ff4d5e; border-color: rgba(255,77,94,0.3);  background: rgba(255,77,94,0.08);  }
+
+.adminBarRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.cleanupBtn {
+  appearance: none;
+  background: rgba(255,77,94,0.1);
+  border: 1px solid rgba(255,77,94,0.35);
+  color: #ff9aa4;
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.cleanupBtn:hover {
+  background: rgba(255,77,94,0.2);
+  border-color: rgba(255,77,94,0.6);
+}
+
+.cleanupMsg {
+  font-size: 12px;
+  color: #9098b7;
+}
+
+.cleanupConfirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cleanupConfirmText {
+  font-size: 12px;
+  color: #9098b7;
+}
+
+.cleanupConfirmYes {
+  appearance: none;
+  background: rgba(255,77,94,0.18);
+  border: 1px solid rgba(255,77,94,0.5);
+  color: #ff4d5e;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.cleanupConfirmYes:hover:not(:disabled) { background: rgba(255,77,94,0.32); }
+.cleanupConfirmYes:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.cleanupConfirmNo {
+  appearance: none;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #9098b7;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.cleanupConfirmNo:hover { background: rgba(255,255,255,0.06); }

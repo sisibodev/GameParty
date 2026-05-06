@@ -164,11 +164,17 @@
 
 .priceInfoRow {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
   padding: 0.35rem 0.4rem;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.03);
+}
+
+.priceInfoRowMain {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .priceInfoRowDelisted {
@@ -198,22 +204,52 @@
   text-overflow: ellipsis;
 }
 
-.priceInfoRate {
-  font-size: 0.88rem;
-  font-weight: 800;
+.priceInfoArrow {
+  font-size: 0.8rem;
+  color: #9098b7;
   font-variant-numeric: tabular-nums;
-  min-width: 4.5rem;
-  text-align: right;
-  transition: color 0.3s;
+  white-space: nowrap;
 }
 
-.priceInfoPrice {
-  font-size: 0.82rem;
-  font-weight: 600;
+.priceAfter {
+  color: #d8dcef;
+  font-weight: 700;
+}
+
+.priceInfoRate {
+  font-size: 0.75rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: #9098b7;
-  min-width: 5rem;
-  text-align: right;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.priceInfoRateBull {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+}
+
+.priceInfoRateBear {
+  background: rgba(255, 77, 94, 0.15);
+  color: #ff4d5e;
+}
+
+.priceInfoCardTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding-left: 0.2rem;
+}
+
+.cardTag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid;
+  white-space: nowrap;
 }
 
 .sparkline {
