@@ -76,3 +76,24 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.devButton {
+  width: 100%;
+  padding: 0.65rem 1.5rem;
+  background: rgba(255, 200, 0, 0.08);
+  color: #e6be00;
+  border: 1px dashed rgba(255, 200, 0, 0.4);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.devButton:hover:not(:disabled) {
+  background: rgba(255, 200, 0, 0.15);
+  border-color: rgba(255, 200, 0, 0.7);
+}
+.devButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

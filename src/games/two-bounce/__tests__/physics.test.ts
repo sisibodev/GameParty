@@ -4,6 +4,8 @@ import {
   stepBall,
   checkFloor,
   checkBackboard,
+  checkBackWall,
+  checkRim,
   checkGoal,
   isOutOfBounds,
   calcLaunchVelocity,
@@ -46,10 +48,12 @@ describe('stepBall', () => {
     expect(vel).toEqual(v(4, 5, 6))
   })
 
-  it('vx, vz는 중력 영향 없음', () => {
-    const result = stepBall(v(0, 0, 0), v(3, 0, -5), 0.5)
-    expect(result.vel.x).toBeCloseTo(3)
-    expect(result.vel.z).toBeCloseTo(-5)
+  it('vx, vz는 중력 영향 없음 (에어 댐핑만 적용)', () => {
+    const dt = 0.5
+    const damp = PHYSICS.AIR_DAMPING ** dt
+    const result = stepBall(v(0, 0, 0), v(3, 0, -5), dt)
+    expect(result.vel.x).toBeCloseTo(3 * damp)
+    expect(result.vel.z).toBeCloseTo(-5 * damp)
   })
 })
 
@@ -82,10 +86,10 @@ describe('checkFloor', () => {
     expect(result.pos.y).toBeCloseTo(PHYSICS.BALL_RADIUS)
   })
 
-  it('수평 속도는 바운스 후 유지', () => {
+  it('수평 속도는 바운스 후 마찰 적용', () => {
     const result = checkFloor(v(0, 0, 0), v(3, -5, -2))
-    expect(result.vel.x).toBeCloseTo(3)
-    expect(result.vel.z).toBeCloseTo(-2)
+    expect(result.vel.x).toBeCloseTo(3 * PHYSICS.FLOOR_FRICTION)
+    expect(result.vel.z).toBeCloseTo(-2 * PHYSICS.FLOOR_FRICTION)
   })
 
   it('결과는 새 객체 반환 (불변)', () => {
@@ -100,37 +104,37 @@ describe('checkFloor', () => {
 // ─── checkGoal ─────────────────────────────────────────────────────────────
 
 describe('checkGoal', () => {
-  it('링 중심 통과 + 하강 중 → 골', () => {
-    expect(checkGoal(v(HOOP.x, HOOP.y, HOOP.z), -1)).toBe(true)
+  const above = (x = HOOP.x, z = HOOP.z) => v(x, HOOP.y + 0.15, z)
+  const below = (x = HOOP.x, z = HOOP.z) => v(x, HOOP.y - 0.05, z)
+
+  it('링 중심 위→아래 교차 + 하강 중 → 골', () => {
+    expect(checkGoal(above(), below(), -1)).toBe(true)
   })
 
-  it('링 반지름 내 + 하강 중 → 골', () => {
+  it('링 반지름 내 교차 → 골', () => {
     const offset = PHYSICS.HOOP_RADIUS - PHYSICS.BALL_RADIUS - 0.01
-    expect(checkGoal(v(HOOP.x + offset, HOOP.y, HOOP.z), -1)).toBe(true)
+    expect(checkGoal(above(HOOP.x + offset), below(HOOP.x + offset), -1)).toBe(true)
   })
 
-  it('링 반지름 밖 → 미스', () => {
-    expect(checkGoal(v(HOOP.x + PHYSICS.HOOP_RADIUS + 0.1, HOOP.y, HOOP.z), -1)).toBe(false)
+  it('링 반지름 밖 교차 → 미스', () => {
+    const x = HOOP.x + PHYSICS.HOOP_RADIUS + 0.1
+    expect(checkGoal(above(x), below(x), -1)).toBe(false)
   })
 
-  it('상승 중 링 통과 → 미스 (아래에서 위로)', () => {
-    expect(checkGoal(v(HOOP.x, HOOP.y, HOOP.z), 1)).toBe(false)
+  it('상승 중 → 미스', () => {
+    expect(checkGoal(above(), below(), 1)).toBe(false)
   })
 
   it('vy = 0 → 미스', () => {
-    expect(checkGoal(v(HOOP.x, HOOP.y, HOOP.z), 0)).toBe(false)
+    expect(checkGoal(above(), below(), 0)).toBe(false)
   })
 
-  it('링보다 y 너무 높음 → 미스', () => {
-    expect(checkGoal(v(HOOP.x, HOOP.y + PHYSICS.GOAL_Y_TOLERANCE + 0.1, HOOP.z), -1)).toBe(false)
+  it('이미 아래에서 시작 (교차 없음) → 미스', () => {
+    expect(checkGoal(below(), v(HOOP.x, HOOP.y - 0.2, HOOP.z), -1)).toBe(false)
   })
 
-  it('링보다 y 너무 낮음 → 미스', () => {
-    expect(checkGoal(v(HOOP.x, HOOP.y - PHYSICS.GOAL_Y_TOLERANCE - 0.1, HOOP.z), -1)).toBe(false)
-  })
-
-  it('y 허용 범위 경계 안쪽 → 골', () => {
-    expect(checkGoal(v(HOOP.x, HOOP.y + PHYSICS.GOAL_Y_TOLERANCE - 0.01, HOOP.z), -1)).toBe(true)
+  it('위에서 위로 끝남 (교차 없음) → 미스', () => {
+    expect(checkGoal(above(), v(HOOP.x, HOOP.y + 0.05, HOOP.z), -1)).toBe(false)
   })
 })
 
@@ -139,16 +143,17 @@ describe('checkGoal', () => {
 describe('checkBackboard', () => {
   const bb = PHYSICS.BACKBOARD
   const midY = (bb.yMin + bb.yMax) / 2
-  const inBoundsPos = v(0, midY, bb.z)
+  // Ball slightly in front of the board so it overlaps the front face (AABB)
+  const inBoundsPos = v(0, midY, bb.z + 0.05)
 
   it('백보드 정면 충돌 → 바운스', () => {
     expect(checkBackboard(inBoundsPos, v(0, 0, -3)).bounced).toBe(true)
   })
 
-  it('반사 vz = -(입사 vz) * 0.5', () => {
+  it('반사 vz = -(입사 vz) * BACKBOARD_RESTITUTION', () => {
     const inVz = -6
     const result = checkBackboard(inBoundsPos, v(0, 0, inVz))
-    expect(result.vel.z).toBeCloseTo(-inVz * 0.5)
+    expect(result.vel.z).toBeCloseTo(-inVz * PHYSICS.BACKBOARD_RESTITUTION)
   })
 
   it('공이 백보드에서 멀어지는 방향 → 바운스 없음', () => {
@@ -172,6 +177,141 @@ describe('checkBackboard', () => {
     const result = checkBackboard(inBoundsPos, v(2, -1, -5))
     expect(result.vel.x).toBeCloseTo(2)
     expect(result.vel.y).toBeCloseTo(-1)
+  })
+
+  it('백보드 뒤에서 접근 (vel.z > 0) → 바운스', () => {
+    // Ball slightly behind the back face so it overlaps (AABB)
+    const behindPos = v(0, midY, bb.z - PHYSICS.BACKBOARD_THICKNESS - 0.05)
+    expect(checkBackboard(behindPos, v(0, 0, 3)).bounced).toBe(true)
+  })
+
+  it('백보드 뒤에서 맞은 후 vz 반전 + BACKBOARD_RESTITUTION 적용', () => {
+    const behindPos = v(0, midY, bb.z - PHYSICS.BACKBOARD_THICKNESS - 0.05)
+    const result = checkBackboard(behindPos, v(0, 0, 4))
+    expect(result.vel.z).toBeCloseTo(-4 * PHYSICS.BACKBOARD_RESTITUTION)
+  })
+
+  it('백보드 뒤에서 맞은 후 z 위치 = bb.z - BACKBOARD_THICKNESS - BALL_RADIUS', () => {
+    const behindPos = v(0, midY, bb.z - PHYSICS.BACKBOARD_THICKNESS - 0.05)
+    const result = checkBackboard(behindPos, v(0, 0, 3))
+    expect(result.pos.z).toBeCloseTo(bb.z - PHYSICS.BACKBOARD_THICKNESS - PHYSICS.BALL_RADIUS)
+  })
+})
+
+// ─── checkBackWall ─────────────────────────────────────────────────────────
+
+describe('checkBackWall', () => {
+  const wallZ = PHYSICS.BACK_WALL_Z + PHYSICS.BALL_RADIUS
+
+  it('벽 접촉 + 음수 vz → 바운스', () => {
+    expect(checkBackWall(v(0, 2, wallZ - 0.001), v(0, 0, -4)).bounced).toBe(true)
+  })
+
+  it('벽 접촉 + 양수 vz → 바운스 없음', () => {
+    expect(checkBackWall(v(0, 2, wallZ - 0.001), v(0, 0, 4)).bounced).toBe(false)
+  })
+
+  it('반사 vz = -(입사 vz) * BACK_WALL_RESTITUTION', () => {
+    const inVz = -5
+    const result = checkBackWall(v(0, 2, wallZ - 0.001), v(0, 0, inVz))
+    expect(result.vel.z).toBeCloseTo(-inVz * PHYSICS.BACK_WALL_RESTITUTION)
+  })
+
+  it('벽에서 멀리 있을 때 → 바운스 없음', () => {
+    expect(checkBackWall(v(0, 2, 2), v(0, 0, -4)).bounced).toBe(false)
+  })
+
+  it('바운스 후 z 위치 = BACK_WALL_Z + BALL_RADIUS', () => {
+    const result = checkBackWall(v(0, 2, wallZ - 0.05), v(0, 0, -4))
+    expect(result.pos.z).toBeCloseTo(PHYSICS.BACK_WALL_Z + PHYSICS.BALL_RADIUS)
+  })
+
+  it('vx, vy는 벽 충돌 후 유지', () => {
+    const result = checkBackWall(v(0, 2, wallZ - 0.001), v(1.5, -2, -3))
+    expect(result.vel.x).toBeCloseTo(1.5)
+    expect(result.vel.y).toBeCloseTo(-2)
+  })
+
+  it('결과는 새 객체 반환 (불변)', () => {
+    const pos = v(0, 2, wallZ - 0.001)
+    const vel = v(0, 0, -4)
+    const result = checkBackWall(pos, vel)
+    expect(result.pos).not.toBe(pos)
+    expect(result.vel).not.toBe(vel)
+  })
+})
+
+// ─── checkRim ──────────────────────────────────────────────────────────────
+
+describe('checkRim', () => {
+  const contactDist = PHYSICS.BALL_RADIUS + PHYSICS.RIM_TUBE_RADIUS
+
+  // 림 튜브 표면에 딱 닿는 위치 계산 (림 앞쪽, 수평)
+  const rimFrontContact = () => {
+    const hoop = PHYSICS.HOOP_CENTER
+    // 림 고리의 앞쪽 점 (dz = HOOP_RADIUS)에서 공 중심이 contactDist 거리에 위치
+    const cx = hoop.x
+    const cy = hoop.y
+    const cz = hoop.z + PHYSICS.HOOP_RADIUS
+    return v(cx, cy + contactDist * 0.9, cz)
+  }
+
+  it('림 튜브와 겹침 + 접근 중 → 바운스', () => {
+    const pos = rimFrontContact()
+    const vel = v(0, -3, 0)
+    expect(checkRim(pos, vel).bounced).toBe(true)
+  })
+
+  it('림 튜브와 멀리 떨어짐 → 바운스 없음', () => {
+    const hoop = PHYSICS.HOOP_CENTER
+    const farPos = v(hoop.x, hoop.y + 1.0, hoop.z + PHYSICS.HOOP_RADIUS + 1.0)
+    expect(checkRim(farPos, v(0, -3, 0)).bounced).toBe(false)
+  })
+
+  it('림 중심 정확히 위치 (distXZ=0) → 바운스 없음 (guard)', () => {
+    const hoop = PHYSICS.HOOP_CENTER
+    expect(checkRim(v(hoop.x, hoop.y, hoop.z), v(0, -3, 0)).bounced).toBe(false)
+  })
+
+  it('바운스 후 속도 방향 반전 (법선 방향)', () => {
+    const pos = rimFrontContact()
+    const result = checkRim(pos, v(0, -3, 0))
+    if (result.bounced) {
+      expect(result.vel.y).toBeGreaterThan(0)
+    }
+  })
+
+  it('림에서 멀어지는 방향 → 바운스 없음', () => {
+    const pos = rimFrontContact()
+    // 이미 튜브에서 벗어나는 방향
+    const vel = v(0, 5, 3)
+    expect(checkRim(pos, vel).bounced).toBe(false)
+  })
+
+  it('결과는 새 객체 반환 (불변)', () => {
+    const pos = rimFrontContact()
+    const vel = v(0, -3, 0)
+    const result = checkRim(pos, vel)
+    expect(result.pos).not.toBe(pos)
+    expect(result.vel).not.toBe(vel)
+  })
+
+  it('바운스 후 공-튜브 거리 = contactDist', () => {
+    const pos = rimFrontContact()
+    const result = checkRim(pos, v(0, -4, 0))
+    if (!result.bounced) return
+    const hoop = PHYSICS.HOOP_CENTER
+    const dx = result.pos.x - hoop.x
+    const dz = result.pos.z - hoop.z
+    const distXZ = Math.sqrt(dx * dx + dz * dz)
+    const cx = hoop.x + (dx / distXZ) * PHYSICS.HOOP_RADIUS
+    const cy = hoop.y
+    const cz = hoop.z + (dz / distXZ) * PHYSICS.HOOP_RADIUS
+    const ex = result.pos.x - cx
+    const ey = result.pos.y - cy
+    const ez = result.pos.z - cz
+    const dist = Math.sqrt(ex * ex + ey * ey + ez * ez)
+    expect(dist).toBeCloseTo(contactDist, 4)
   })
 })
 
@@ -217,11 +357,10 @@ describe('calcLaunchVelocity', () => {
     expect(speed).toBeCloseTo(PHYSICS.MAX_SPEED)
   })
 
-  it('파워 0 → 속도 0', () => {
+  it('파워 0 → MIN_POWER_RATIO * MAX_SPEED 크기의 속도', () => {
     const result = calcLaunchVelocity(0, 0.5, 0)
-    expect(result.x).toBeCloseTo(0)
-    expect(result.y).toBeCloseTo(0)
-    expect(result.z).toBeCloseTo(0)
+    const speed = Math.sqrt(result.x ** 2 + result.y ** 2 + result.z ** 2)
+    expect(speed).toBeCloseTo(PHYSICS.MIN_POWER_RATIO * PHYSICS.MAX_SPEED)
   })
 
   it('정면(azimuth=0) 발사 → vx ≈ 0', () => {
@@ -237,12 +376,13 @@ describe('calcLaunchVelocity', () => {
     expect(calcLaunchVelocity(0, 0.5, 1).z).toBeLessThan(0)
   })
 
-  it('파워 0.5 = 풀파워 속도의 절반', () => {
+  it('파워 0.5 → effective power (MIN + 0.5*(1-MIN)) 비율의 속도', () => {
     const full = calcLaunchVelocity(0, Math.PI / 4, 1)
     const half = calcLaunchVelocity(0, Math.PI / 4, 0.5)
     const fullSpeed = Math.sqrt(full.x ** 2 + full.y ** 2 + full.z ** 2)
     const halfSpeed = Math.sqrt(half.x ** 2 + half.y ** 2 + half.z ** 2)
-    expect(halfSpeed).toBeCloseTo(fullSpeed / 2)
+    const expectedRatio = PHYSICS.MIN_POWER_RATIO + (1 - PHYSICS.MIN_POWER_RATIO) * 0.5
+    expect(halfSpeed).toBeCloseTo(fullSpeed * expectedRatio)
   })
 
   it('azimuth 90°(오른쪽) → vx > 0', () => {

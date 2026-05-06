@@ -6,7 +6,20 @@
   min-height: 100vh;
   background: #0f0f1a;
   color: #fff;
-  gap: 2rem;
+  gap: 1.2rem;
+}
+
+.newBestBanner {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 24px rgba(255, 215, 0, 0.6);
+  animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.6); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 .title {
@@ -28,9 +41,10 @@
 
 .row {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-around;
   width: 100%;
-  gap: 2rem;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .stat {
@@ -59,9 +73,39 @@
   background: #333;
 }
 
+.newBestMsg {
+  font-size: 0.9rem;
+  color: #ffd700;
+  text-align: center;
+  padding: 0.25rem 0;
+}
+
+.bestRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.2rem 0;
+}
+
+.bestLabel {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bestValue {
+  font-size: 0.95rem;
+  color: #aaa;
+  font-weight: 600;
+}
+
 .buttons {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
   margin-top: 0.5rem;
 }
 
@@ -95,4 +139,30 @@
 .btnSecondary:hover {
   border-color: #888;
   color: #fff;
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .card {
+    padding: 1.5rem 1.25rem;
+    min-width: 0;
+    width: calc(100vw - 2rem);
+  }
+
+  .statValue {
+    font-size: 1.25rem;
+  }
+
+  .statLabel {
+    font-size: 0.65rem;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+  }
 }

@@ -29,7 +29,7 @@
   flex-direction: column;
   align-items: center;
   gap: 1.5rem;
-  width: 320px;
+  width: min(320px, calc(100vw - 2rem));
 }
 
 .label {
@@ -42,6 +42,21 @@
 .buttons {
   display: flex;
   gap: 1rem;
+  align-items: flex-start;
+}
+
+.btnWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btnRecord {
+  font-size: 0.65rem;
+  color: #888;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .btn {
@@ -84,4 +99,86 @@
 
 .start:hover {
   background: #ff8833;
+}
+
+.clearBtn {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: color 0.15s;
+  letter-spacing: 0.04em;
+}
+
+.clearBtn:hover {
+  color: #ff6655;
+}
+
+.controls {
+  font-size: 0.72rem;
+  color: #666;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.multiSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: min(320px, calc(100vw - 2rem));
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #333 50%, transparent);
+}
+
+.multiBtn {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #ff6600;
+  background: transparent;
+  color: #ff9944;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.multiBtn:hover {
+  background: rgba(255, 102, 0, 0.12);
+  color: #ffaa66;
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.8rem;
+  }
+
+  .card {
+    padding: 1.5rem 1.25rem;
+  }
+
+  .btn {
+    width: 64px;
+    height: 64px;
+    font-size: 1.05rem;
+  }
+
+  .start {
+    width: 100%;
+    padding: 0.85rem 1rem;
+  }
+
+  .multiBtn {
+    padding: 0.85rem 1rem;
+    font-size: 0.95rem;
+  }
 }
